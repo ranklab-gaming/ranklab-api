@@ -3,6 +3,8 @@ extern crate rocket;
 
 use rocket::serde::{json::Json, Serialize};
 use rocket::{Build, Rocket};
+use rocket::http::RawStr;
+use rocket::fs::TempFile;
 use rusoto_core::credential::AwsCredentials;
 use rusoto_core::Region;
 use rusoto_s3::util::PreSignedRequest;
@@ -10,28 +12,36 @@ use rusoto_s3::PutObjectRequest;
 use uuid::Uuid;
 
 #[derive(Serialize)]
-struct UrlResponse {
-    url: String,
+struct Recording {
+    id: String,
+    upload_url: String,
 }
 
-#[get("/")]
-fn index() -> Json<UrlResponse> {
+#[post("/recordings")]
+fn create_recording() -> Json<Recording> {
+    let uuid = Uuid::new_v4();
+
     let req = PutObjectRequest {
         bucket: "ranklab-development".to_owned(),
-        key: Uuid::new_v4().to_string(),
+        key: uuid.to_string(),
         ..Default::default()
     };
 
-    let presigned_url = req.get_presigned_url(
+    let upload_url = req.get_presigned_url(
         &Region::EuWest2,
         &AwsCredentials::new("a", "b", None, None),
         &Default::default(),
     );
 
-    Json(UrlResponse { url: presigned_url })
+    Json(Recording { upload_url: "http://localhost:8000/upload".to_string(), id: uuid.to_string() })
+}
+
+#[put("/upload", data = "<input>")]
+fn upload(input: TempFile<'_>) -> Json<Recording> {
+    Json(Recording { upload_url: "".to_string(), id: "".to_string() })
 }
 
 #[launch]
 fn rocket() -> Rocket<Build> {
-    rocket::build().mount("/", routes![index])
+    rocket::build().mount("/", routes![create_recording, upload])
 }
