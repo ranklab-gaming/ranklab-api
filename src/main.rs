@@ -1,10 +1,10 @@
 #[macro_use]
 extern crate rocket;
 
+use rocket::fs::TempFile;
+use rocket::http::RawStr;
 use rocket::serde::{json::Json, Serialize};
 use rocket::{Build, Rocket};
-use rocket::http::RawStr;
-use rocket::fs::TempFile;
 use rusoto_core::credential::AwsCredentials;
 use rusoto_core::Region;
 use rusoto_s3::util::PreSignedRequest;
@@ -33,12 +33,18 @@ fn create_recording() -> Json<Recording> {
         &Default::default(),
     );
 
-    Json(Recording { upload_url: "http://localhost:8000/upload".to_string(), id: uuid.to_string() })
+    Json(Recording {
+        upload_url: "http://localhost:8000/upload".to_string(),
+        id: uuid.to_string(),
+    })
 }
 
 #[put("/upload", data = "<input>")]
 fn upload(input: TempFile<'_>) -> Json<Recording> {
-    Json(Recording { upload_url: "".to_string(), id: "".to_string() })
+    Json(Recording {
+        upload_url: "".to_string(),
+        id: "".to_string(),
+    })
 }
 
 #[launch]
