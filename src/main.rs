@@ -29,7 +29,7 @@ fn create_recording() -> Json<Recording> {
 
     let upload_url = req.get_presigned_url(
         &Region::EuWest2,
-        &AwsCredentials::new("b", "c", None, None),
+        &AwsCredentials::new("a", "b", None, None),
         &Default::default(),
     );
 

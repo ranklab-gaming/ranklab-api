@@ -13,6 +13,7 @@ RUN cargo build --release
 FROM debian:stable-slim
 
 WORKDIR /root/app
+RUN apt-get update && apt-get install -y openssl
 COPY --from=0 /usr/src/ranklab-api/target/release/ranklab-api .
 COPY Rocket.toml .
 

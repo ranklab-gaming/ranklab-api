@@ -43,7 +43,6 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
       - name: Deploy to EB
         run: |
-          sudo apt-get update -y
-          pip install --upgrade pip awsebcli
+          pip install awsebcli
           eb init --region eu-west-2 --platform docker ${{ env.APP }}
           eb deploy ${{ env.APP }}-production
