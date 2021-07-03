@@ -12,7 +12,3 @@ rusoto_core = "0.46.0"
 rusoto_s3 = "0.46.0"
 uuid = { version = "0.8.2", features = ["v4"] }
 serde = "1.0.126"
-openssl = { version = "0.10.35", optional = true }
-
-[features]
-vendored = ["openssl/vendored"]
