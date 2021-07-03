@@ -6,6 +6,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      APP: ranklab-api
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -26,10 +28,12 @@ jobs:
         with:
           push: true
           pull: true
-          tags: ${{ steps.ecr-login.outputs.registry }}/ranklab-api:latest
+          cache-from: type=registry,ref=${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
+          cache-to: type=registry,ref=${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest,mode=max
+          tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
       - name: Deploy to EB
         run: |
           sudo apt-get update -y
           pip install --upgrade pip awsebcli
-          eb init --region eu-west-2 --platform docker ranklab-api
-          eb deploy ranklab-api-production
+          eb init --region eu-west-2 --platform docker ${{ env.APP }}
+          eb deploy ${{ env.APP }}-production
