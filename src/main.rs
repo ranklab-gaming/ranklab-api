@@ -2,7 +2,6 @@
 extern crate rocket;
 
 use rocket::fs::TempFile;
-use rocket::http::RawStr;
 use rocket::serde::{json::Json, Serialize};
 use rocket::{Build, Rocket};
 use rusoto_core::credential::AwsCredentials;
