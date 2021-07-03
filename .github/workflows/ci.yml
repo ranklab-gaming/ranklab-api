@@ -29,7 +29,7 @@ jobs:
           push: true
           pull: true
           cache-from: type=registry,ref=${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
-          cache-to: type=registry,ref=${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest,mode=max
+          cache-to: type=registry,ref=${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
           tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
       - name: Deploy to EB
         run: |
