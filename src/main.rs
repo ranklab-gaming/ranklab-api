@@ -17,6 +17,11 @@ struct Recording {
     upload_url: String,
 }
 
+#[derive(Serialize)]
+struct Health {
+    status: String,
+}
+
 #[post("/recordings")]
 fn create_recording() -> Json<Recording> {
     let uuid = Uuid::new_v4();
@@ -47,7 +52,14 @@ fn upload(input: TempFile<'_>) -> Json<Recording> {
     })
 }
 
+#[get("/")]
+fn root() -> Json<Health> {
+    Json(Health {
+        status: "ok".to_string(),
+    })
+}
+
 #[launch]
 fn rocket() -> Rocket<Build> {
-    rocket::build().mount("/", routes![create_recording, upload])
+    rocket::build().mount("/", routes![root, create_recording, upload])
 }
