@@ -1,7 +1,7 @@
 {
   "AWSEBDockerrunVersion": "1",
   "Image": {
-    "Name": "600786191241.dkr.ecr.eu-west-2.amazonaws.com/ranklab-api:latest"
+    "Name": "<IMAGE_NAME>"
   },
   "Ports": [
     {
