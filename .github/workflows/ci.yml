@@ -37,7 +37,7 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v1
       - name: Build and push to ECR
-        id: docker_build
+        id: docker-build
         uses: docker/build-push-action@v2
         with:
           push: true
@@ -50,10 +50,13 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
       - name: Set up Dockerrun.aws.json
         run: |
-          json=$(jq '.Image.Name = "${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest"' Dockerrun.aws.json)
-          echo "${json}" > Dockerrun.aws.json
+          registry="${{ steps.ecr-login.outputs.registry }}"
+          digest="${{ steps.docker-build.outputs.digest }}"
+          content=$(jq ".Image.Name = \"${registry}/${{ env.APP }}@${digest}\"" Dockerrun.aws.json)
+          echo "${content}" > Dockerrun.aws.json
+          git add Dockerrun.aws.json
       - name: Deploy to EB
         run: |
           pip install awsebcli
           eb init --region eu-west-2 --platform docker ${{ env.APP }}
-          eb deploy ${{ env.APP }}-production
+          eb deploy --staged ${{ env.APP }}-production
