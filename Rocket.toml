@@ -1,5 +1,2 @@
-[global.limits]
-file = 100000000000
-
-[default]
+[release]
 address = "0.0.0.0"
