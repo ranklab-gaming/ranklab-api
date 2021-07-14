@@ -11,6 +11,7 @@ rusoto_s3 = "0.46.0"
 uuid = { version = "0.8.2", features = ["v4"] }
 serde = "1.0.126"
 diesel = { version = "1.4.7" }
+diesel_migrations = "1.4.0"
 
 [dependencies.rocket_sync_db_pools]
 version = "0.1.0-rc.1"
