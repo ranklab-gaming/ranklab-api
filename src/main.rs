@@ -54,4 +54,5 @@ fn rocket() -> Rocket<Build> {
     .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
     .mount("/", routes![root])
     .mount("/recordings", routes::recordings())
+    .mount("/users", routes::users())
 }
