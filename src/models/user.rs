@@ -1,7 +1,8 @@
 use rocket::serde::Serialize;
+use uuid::Uuid;
 
 #[derive(Queryable, Serialize)]
 pub struct User {
-  pub id: String,
+  pub id: Uuid,
   pub auth0_id: String,
 }
