@@ -32,7 +32,7 @@ async fn create_user(
   Json(user)
 }
 
-#[get("/")]
+#[get("/", format = "json")]
 async fn current_user(auth: Auth<User>) -> Json<User> {
   Json(auth.0)
 }
