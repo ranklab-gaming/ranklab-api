@@ -6,6 +6,7 @@ use ranklab_api::db::{run_migrations, DbConn};
 use ranklab_api::routes;
 use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
+use rocket::http::Accept;
 use rocket::{Build, Rocket};
 
 #[launch]
@@ -21,6 +22,9 @@ fn rocket() -> Rocket<Build> {
   rocket::custom(figment)
     .attach(DbConn::fairing())
     .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
+    .attach(AdHoc::on_request("Accept JSON", |req, _| Box::pin(async move {
+        req.replace_header(Accept::JSON);
+    })))
     .attach(AdHoc::config::<Config>())
     .mount("/", routes::root())
     .mount("/recordings", routes::recordings())
