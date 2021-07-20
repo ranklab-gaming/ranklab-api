@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::db::DbConn;
 use crate::models::User;
+use crate::try_result;
 use diesel::prelude::*;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use regex::Regex;
@@ -14,6 +15,15 @@ use uuid::Uuid;
 pub enum AuthError {
   Missing,
   Invalid,
+}
+
+impl From<AuthError> for (Status, AuthError) {
+  fn from(error: AuthError) -> Self {
+    match error {
+      AuthError::Missing => (Status::Unauthorized, error),
+      AuthError::Invalid => (Status::BadRequest, error),
+    }
+  }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -89,43 +99,36 @@ impl<'r> FromRequest<'r> for Auth<User> {
       .await
       .unwrap();
 
-    match req.headers().get_one("authorization") {
-      None => Outcome::Failure((Status::BadRequest, AuthError::Missing)),
-      Some(key) => {
-        let captures = jwt_regexp.captures(key).unwrap();
+    let authorization = try_result!(req
+      .headers()
+      .get_one("authorization")
+      .ok_or(AuthError::Missing));
 
-        match captures.name("jwt") {
-          None => Outcome::Failure((Status::Unauthorized, AuthError::Invalid)),
-          Some(jwt) => {
-            let jwt = jwt.as_str();
-            let header = decode_header(jwt).unwrap();
-            let kid = header.kid.unwrap();
-            let jwk = jwks.keys.iter().find(|jwk| jwk.kid == kid).unwrap();
+    let captures = try_result!(jwt_regexp.captures(authorization).ok_or(AuthError::Invalid));
+    let jwt = try_result!(captures.name("jwt").ok_or(AuthError::Invalid)).as_str();
+    let header = try_result!(decode_header(jwt).map_err(|_| AuthError::Invalid));
+    let kid = header.kid.unwrap();
+    let jwk = jwks.keys.iter().find(|jwk| jwk.kid == kid).unwrap();
 
-            let decoded_jwt = decode::<Claims>(
-              &jwt,
-              &DecodingKey::from_rsa_components(&jwk.n, &jwk.e).unwrap(),
-              &Validation {
-                algorithms: vec![Algorithm::RS256],
-                validate_exp: true,
-                ..Default::default()
-              },
-            )
-            .unwrap();
+    let decoded_jwt = try_result!(decode::<Claims>(
+      &jwt,
+      &DecodingKey::from_rsa_components(&jwk.n, &jwk.e).unwrap(),
+      &Validation {
+        algorithms: vec![Algorithm::RS256],
+        validate_exp: true,
+        ..Default::default()
+      },
+    )
+    .map_err(|_| AuthError::Invalid));
 
-            let user: User = db_conn
-              .run(move |conn| {
-                use crate::schema::users::dsl::*;
+    let user: User = db_conn
+      .run(move |conn| {
+        use crate::schema::users::dsl::*;
+        users.filter(id.eq(decoded_jwt.claims.id)).first(conn)
+      })
+      .await
+      .unwrap();
 
-                users.filter(id.eq(decoded_jwt.claims.id)).first(conn)
-              })
-              .await
-              .unwrap();
-
-            Outcome::Success(Auth(user))
-          }
-        }
-      }
-    }
+    Outcome::Success(Auth(user))
   }
 }
