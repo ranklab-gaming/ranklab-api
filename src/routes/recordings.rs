@@ -1,4 +1,3 @@
-use crate::models::Recording;
 use rocket::serde::json::Json;
 use rocket::{Route, State};
 use rusoto_core::credential::AwsCredentials;
@@ -7,6 +6,13 @@ use rusoto_s3::util::PreSignedRequest;
 use rusoto_s3::PutObjectRequest;
 use uuid::Uuid;
 use crate::config::Config;
+use rocket::serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize)]
+struct Recording {
+  id: Uuid,
+  upload_url: String
+}
 
 #[post("/")]
 fn create_recording(
@@ -22,13 +28,13 @@ fn create_recording(
 
   let response = req.get_presigned_url(
     &Region::EuWest2,
-    &AwsCredentials::new(config.aws_access_key_id, config.aws_secret_key, None, None),
+    &AwsCredentials::new(&config.aws_access_key_id, &config.aws_secret_key, None, None),
     &Default::default(),
   );
 
   Json(Recording {
     upload_url: response.to_string(),
-    id: uuid.to_string(),
+    id: uuid,
   })
 }
 
