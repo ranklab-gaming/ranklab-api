@@ -9,34 +9,34 @@ use rocket::Route;
 
 #[derive(Deserialize)]
 struct CreateUserRequest {
-  auth0_id: String,
+    auth0_id: String,
 }
 
 #[post("/", data = "<user>")]
 async fn create_user(
-  user: Json<CreateUserRequest>,
-  db_conn: DbConn,
-  _auth: Auth<ApiKey>,
+    user: Json<CreateUserRequest>,
+    db_conn: DbConn,
+    _auth: Auth<ApiKey>,
 ) -> Json<User> {
-  use crate::schema::users::dsl::*;
+    use crate::schema::users::dsl::*;
 
-  let user = db_conn
-    .run(move |conn| {
-      diesel::insert_into(users)
-        .values(&vec![(auth0_id.eq(user.auth0_id.clone()))])
-        .get_result(conn)
-        .unwrap()
-    })
-    .await;
+    let user = db_conn
+        .run(move |conn| {
+            diesel::insert_into(users)
+                .values(&vec![(auth0_id.eq(user.auth0_id.clone()))])
+                .get_result(conn)
+                .unwrap()
+        })
+        .await;
 
-  Json(user)
+    Json(user)
 }
 
 #[get("/")]
 async fn current_user(auth: Auth<User>) -> Json<User> {
-  Json(auth.0)
+    Json(auth.0)
 }
 
 pub fn build() -> Vec<Route> {
-  routes![create_user, current_user]
+    routes![create_user, current_user]
 }

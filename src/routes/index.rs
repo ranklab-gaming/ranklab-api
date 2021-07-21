@@ -4,16 +4,16 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 struct Health {
-  status: String,
+    status: String,
 }
 
 #[get("/")]
 async fn get_health() -> Json<Health> {
-  Json(Health {
-    status: "ok".into(),
-  })
+    Json(Health {
+        status: "ok".into(),
+    })
 }
 
 pub fn build() -> Vec<Route> {
-  routes![get_health]
+    routes![get_health]
 }
