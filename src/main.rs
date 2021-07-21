@@ -28,4 +28,5 @@ fn rocket() -> Rocket<Build> {
         .attach(AdHoc::config::<Config>())
         .mount("/", routes::index())
         .mount("/users", routes::users())
+        .mount("/recordings", routes::recordings())
 }
