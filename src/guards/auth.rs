@@ -9,11 +9,14 @@ use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum AuthError {
+  #[error("missing authorization header")]
   Missing,
+  #[error("invalid token")]
   Invalid,
 }
 

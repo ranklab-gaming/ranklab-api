@@ -1164,6 +1164,7 @@ dependencies = [
  "rusoto_core",
  "rusoto_s3",
  "serde",
+ "thiserror",
  "uuid",
 ]
 

@@ -22,9 +22,9 @@ fn rocket() -> Rocket<Build> {
   rocket::custom(figment)
     .attach(DbConn::fairing())
     .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
-    .attach(AdHoc::on_request("Accept JSON", |req, _| Box::pin(async move {
-        req.replace_header(Accept::JSON);
-    })))
+    .attach(AdHoc::on_request("Accept JSON", |req, _| {
+      Box::pin(async move { req.replace_header(Accept::JSON) })
+    }))
     .attach(AdHoc::config::<Config>())
     .mount("/", routes::root())
     .mount("/recordings", routes::recordings())
