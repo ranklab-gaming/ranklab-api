@@ -26,7 +26,6 @@ fn rocket() -> Rocket<Build> {
       Box::pin(async move { req.replace_header(Accept::JSON) })
     }))
     .attach(AdHoc::config::<Config>())
-    .mount("/", routes::root())
-    .mount("/recordings", routes::recordings())
+    .mount("/", routes::index())
     .mount("/users", routes::users())
 }

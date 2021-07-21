@@ -1,7 +1,5 @@
-mod recordings;
-mod root;
+mod index;
 mod users;
 
-pub use recordings::build as recordings;
-pub use root::build as root;
+pub use index::build as index;
 pub use users::build as users;
