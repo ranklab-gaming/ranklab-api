@@ -7,7 +7,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      APP: ranklab-api
+      APP: ranklab-api-production
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -60,4 +60,4 @@ jobs:
       - name: Deploy to EB
         run: |
           eb init --region eu-west-2 --platform docker ${{ env.APP }}
-          eb deploy --staged ${{ env.APP }}-production
+          eb deploy --staged ${{ env.APP }}
