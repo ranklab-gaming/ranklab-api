@@ -29,4 +29,5 @@ fn rocket() -> Rocket<Build> {
         .mount("/", routes::index())
         .mount("/users", routes::users())
         .mount("/recordings", routes::recordings())
+        .mount("/reviews", routes::reviews())
 }

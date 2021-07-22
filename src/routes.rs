@@ -1,7 +1,9 @@
 mod index;
-mod users;
 mod recordings;
+mod reviews;
+mod users;
 
 pub use index::build as index;
-pub use users::build as users;
 pub use recordings::build as recordings;
+pub use reviews::build as reviews;
+pub use users::build as users;
