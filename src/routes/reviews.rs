@@ -22,6 +22,44 @@ struct CreateReviewRequest {
     game: Game,
 }
 
+#[get("/")]
+async fn list_reviews(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
+    let reviews = db_conn
+        .run(move |conn| {
+            use crate::schema::reviews::dsl::*;
+            reviews.filter(user_id.eq(auth.0.id)).load(conn).unwrap()
+        })
+        .await;
+
+    Json(reviews)
+}
+
+#[get("/<id>")]
+async fn get_review(
+    id: Uuid,
+    auth: Auth<User>,
+    db_conn: DbConn,
+) -> Result<Option<Json<Review>>, Status> {
+    let result = db_conn
+        .run(move |conn| {
+            use crate::schema::reviews;
+            reviews::table.find(id).first::<Review>(conn)
+        })
+        .await;
+
+    match result {
+        Ok(review) => {
+            if review.user_id != auth.0.id {
+                return Err(Status::Forbidden);
+            }
+
+            Ok(Some(Json(review)))
+        }
+        Err(diesel::result::Error::NotFound) => Ok(None),
+        Err(error) => panic!("Error: {}", error),
+    }
+}
+
 #[post("/", data = "<review>")]
 async fn create_review(
     review: Json<CreateReviewRequest>,
@@ -71,5 +109,5 @@ async fn create_review(
 }
 
 pub fn build() -> Vec<Route> {
-    routes![create_review]
+    routes![create_review, list_reviews, get_review]
 }
