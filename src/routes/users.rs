@@ -2,10 +2,11 @@ use crate::db::DbConn;
 use crate::guards::auth::ApiKey;
 use crate::guards::Auth;
 use crate::models::User;
+use crate::response::Response;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
-use rocket::serde::Deserialize;
 use rocket::Route;
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 struct CreateUserRequest {
@@ -17,7 +18,7 @@ async fn create_user(
     user: Json<CreateUserRequest>,
     db_conn: DbConn,
     _auth: Auth<ApiKey>,
-) -> Json<User> {
+) -> Response<User> {
     let user = db_conn
         .run(move |conn| {
             use crate::schema::users::dsl::*;
@@ -29,7 +30,7 @@ async fn create_user(
         })
         .await;
 
-    Json(user)
+    Response::Success(user)
 }
 
 #[get("/current")]

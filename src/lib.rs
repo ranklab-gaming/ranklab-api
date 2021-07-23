@@ -11,5 +11,6 @@ pub mod config;
 pub mod db;
 pub mod guards;
 pub mod models;
+pub mod response;
 pub mod routes;
 pub mod schema;

@@ -2,6 +2,7 @@ use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Game, Review, User};
+use crate::response::Response;
 use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::serde_json::to_string;
@@ -27,11 +28,11 @@ async fn create_review(
     auth: Auth<User>,
     config: &State<Config>,
     db_conn: DbConn,
-) -> Result<Json<Review>, Status> {
+) -> Response<Review> {
     let s3 = S3Client::new(Region::EuWest2);
 
-    if let Err(_) = review.validate() {
-        return Err(Status::UnprocessableEntity);
+    if let Err(errors) = review.validate() {
+        return Response::ValidationErrors(errors);
     }
 
     let get_obj_req = GetObjectRequest {
@@ -41,7 +42,7 @@ async fn create_review(
     };
 
     if let Err(_) = s3.get_object(get_obj_req).await {
-        return Err(Status::UnprocessableEntity);
+        return Response::Status(Status::UnprocessableEntity);
     }
 
     let video_url_value = format!(
@@ -66,7 +67,7 @@ async fn create_review(
         })
         .await;
 
-    Ok(Json(review))
+    Response::Success(review)
 }
 
 pub fn build() -> Vec<Route> {
