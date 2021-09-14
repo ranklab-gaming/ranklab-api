@@ -1,0 +1,17 @@
+{
+	"name": "Ranklab API",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "workspace",
+	"shutdownAction": "stopCompose",
+	"overrideCommand": true,
+	"postCreateCommand": "diesel setup",
+	"workspaceFolder": "/workspace",
+	"remoteUser": "vscode",
+	"waitFor": "postCreateCommand",
+	"runServices": [
+		"app"
+	],
+	"forwardPorts": [
+		3000
+	]
+}

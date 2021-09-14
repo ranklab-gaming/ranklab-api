@@ -1,0 +1,33 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:13.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+  app:
+    image: workspace
+    env_file: .env
+    volumes:
+      - local:/usr/local
+      - ../:/workspace
+    depends_on:
+      - postgres
+    working_dir: /workspace/ranklab-api
+    command: cargo run
+    ports:
+      - "3000:3000"
+  workspace:
+    image: workspace
+    env_file: .env
+    build:
+      context: ../
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - local:/usr/local
+      - ../:/workspace
+volumes:
+  postgres:
+  local:
