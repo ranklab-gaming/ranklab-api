@@ -8,9 +8,12 @@ use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
 use rocket::http::Accept;
 use rocket::{Build, Rocket};
+use dotenv::dotenv;
 
 #[launch]
 fn rocket() -> Rocket<Build> {
+    dotenv().ok();
+
     let mut figment = rocket::Config::figment()
         .merge(Toml::file("Ranklab.toml").nested())
         .merge(Env::prefixed("RANKLAB_").global());

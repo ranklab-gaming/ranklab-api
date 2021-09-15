@@ -18,7 +18,7 @@ services:
     working_dir: /workspace/ranklab-api
     command: cargo run
     ports:
-      - "3000:3000"
+      - "8000:8000"
   workspace:
     image: workspace
     env_file: .env
