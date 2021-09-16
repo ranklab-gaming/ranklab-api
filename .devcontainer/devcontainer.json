@@ -4,10 +4,8 @@
 	"service": "workspace",
 	"shutdownAction": "stopCompose",
 	"overrideCommand": true,
-	"postCreateCommand": "diesel setup",
 	"workspaceFolder": "/workspace",
 	"remoteUser": "vscode",
-	"waitFor": "postCreateCommand",
 	"runServices": [
 		"app"
 	],

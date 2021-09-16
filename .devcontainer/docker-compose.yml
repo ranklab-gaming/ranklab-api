@@ -16,7 +16,7 @@ services:
     depends_on:
       - postgres
     working_dir: /workspace/ranklab-api
-    command: cargo run
+    command: bash -c "diesel setup && cargo run"
     ports:
       - "8000:8000"
   workspace:
