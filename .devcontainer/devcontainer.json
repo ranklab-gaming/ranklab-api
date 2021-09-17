@@ -6,10 +6,12 @@
 	"overrideCommand": true,
 	"workspaceFolder": "/workspace",
 	"remoteUser": "vscode",
-	"runServices": [
-		"app"
-	],
+  "postCreateCommand": "diesel setup && cargo build",
 	"forwardPorts": [
 		8000
-	]
+	],
+  "remoteEnv": {
+    "RANKLAB_AWS_ACCESS_KEY_ID": "${localEnv:RANKLAB_AWS_ACCESS_KEY_ID}",
+    "RANKLAB_AWS_SECRET_ACCESS_KEY": "${localEnv:RANKLAB_AWS_SECRET_ACCESS_KEY}"
+  }
 }

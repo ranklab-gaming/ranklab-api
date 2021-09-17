@@ -7,18 +7,6 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres:/var/lib/postgresql/data
-  app:
-    image: workspace
-    env_file: .env
-    volumes:
-      - local:/usr/local
-      - ../:/workspace
-    depends_on:
-      - postgres
-    working_dir: /workspace/ranklab-api
-    command: bash -c "diesel setup && cargo run"
-    ports:
-      - "8000:8000"
   workspace:
     image: workspace
     env_file: .env
