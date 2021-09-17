@@ -1,17 +1,74 @@
 {
-	"name": "Ranklab API",
-	"dockerComposeFile": "docker-compose.yml",
-	"service": "workspace",
-	"shutdownAction": "stopCompose",
-	"overrideCommand": true,
-	"workspaceFolder": "/workspace",
-	"remoteUser": "vscode",
+  "name": "Ranklab API",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "shutdownAction": "stopCompose",
+  "overrideCommand": true,
+  "workspaceFolder": "/workspace",
+  "remoteUser": "vscode",
   "postCreateCommand": "diesel setup && cargo build",
-	"forwardPorts": [
-		8000
-	],
+  "forwardPorts": [
+    8000
+  ],
   "remoteEnv": {
     "RANKLAB_AWS_ACCESS_KEY_ID": "${localEnv:RANKLAB_AWS_ACCESS_KEY_ID}",
     "RANKLAB_AWS_SECRET_ACCESS_KEY": "${localEnv:RANKLAB_AWS_SECRET_ACCESS_KEY}"
+  },
+  "extensions": [
+    "esbenp.prettier-vscode",
+    "rust-lang.rust"
+  ],
+  "settings": {
+    "editor.tabSize": 2,
+    "editor.wordWrap": "on",
+    "editor.detectIndentation": false,
+    "files.trimTrailingWhitespace": true,
+    "files.watcherExclude": {
+      "**/.git": true,
+      "**/.svn": true,
+      "**/.hg": true,
+      "**/.DS_Store": true,
+      "**/.git/objects/**": true,
+      "**/node_modules/**": true,
+      "**/bower_components/**": true,
+      "**/tmp/**": true
+    },
+    "search.exclude": {
+      "**/.git/objects/**": true,
+      "**/.next/**": true,
+      "**/bower_components/**": true,
+      "**/node_modules/**": true,
+      "**/tmp/**": true
+    },
+    "files.autoSave": "onFocusChange",
+    "editor.rulers": [
+      100
+    ],
+    "editor.codeLens": false,
+    "editor.minimap.enabled": false,
+    "workbench.editor.closeEmptyGroups": false,
+    "workbench.editor.enablePreviewFromQuickOpen": false,
+    "explorer.confirmDelete": false,
+    "explorer.confirmDragAndDrop": false,
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "editor.codeActionsOnSave": [
+      "source.addMissingImports"
+    ],
+    "extensions.ignoreRecommendations": false,
+    "workbench.settings.useSplitJSON": true,
+    "rust.all_features": true,
+    "search.followSymlinks": false,
+    "security.workspace.trust.untrustedFiles": "open",
+    "editor.inlineSuggest.enabled": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust",
+    "prettier.requireConfig": true,
+    "git.autofetch": true,
+    "github.copilot.enable": {
+      "*": true,
+      "yaml": false,
+      "plaintext": true,
+      "markdown": false
+    }
   }
 }
