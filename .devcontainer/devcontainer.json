@@ -12,7 +12,7 @@
   ],
   "remoteEnv": {
     "RANKLAB_AWS_ACCESS_KEY_ID": "${localEnv:RANKLAB_AWS_ACCESS_KEY_ID}",
-    "RANKLAB_AWS_SECRET_ACCESS_KEY": "${localEnv:RANKLAB_AWS_SECRET_ACCESS_KEY}"
+    "RANKLAB_AWS_SECRET_KEY": "${localEnv:RANKLAB_AWS_SECRET_KEY}",
   },
   "extensions": [
     "esbenp.prettier-vscode",
