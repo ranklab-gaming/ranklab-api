@@ -5,10 +5,7 @@
 	"shutdownAction": "stopCompose",
 	"overrideCommand": true,
 	"workspaceFolder": "/workspace",
-	"remoteUser": "vscode",
-	"runServices": [
-		"app"
-	],
+	"postCreateCommand": "diesel setup && cargo build",
 	"forwardPorts": [
 		8000
 	]
