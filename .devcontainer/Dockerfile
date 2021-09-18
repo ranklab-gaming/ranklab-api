@@ -3,8 +3,6 @@ FROM rust:latest
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
-ENV WORKSPACE /workspace
-
 RUN apt-get update -qq \
   && apt-get install -qq --no-install-recommends lsb-release \
   && echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
@@ -18,6 +16,9 @@ RUN groupadd --gid $USER_GID vscode \
   && useradd --uid $USER_UID --gid $USER_GID -m vscode -s /bin/bash
 
 USER $USER_UID
-WORKDIR $WORKSPACE
+WORKDIR /workspace
+ENV AUTOENV_ASSUME_YES y
 
 RUN cargo install diesel_cli --no-default-features --features postgres
+RUN git clone git://github.com/inishchith/autoenv.git ~/.autoenv
+RUN echo "source ~/.autoenv/activate.sh" >> ~/.bashrc

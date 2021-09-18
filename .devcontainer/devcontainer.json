@@ -1,12 +1,62 @@
 {
-	"name": "Ranklab API",
-	"dockerComposeFile": "docker-compose.yml",
-	"service": "workspace",
-	"shutdownAction": "stopCompose",
-	"overrideCommand": true,
-	"workspaceFolder": "/workspace",
-	"postCreateCommand": "diesel setup && cargo build",
-	"forwardPorts": [
-		8000
-	]
+  "name": "Ranklab API",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "shutdownAction": "stopCompose",
+  "overrideCommand": true,
+  "workspaceFolder": "/workspace",
+  "postCreateCommand": ["bash", "-ic", "diesel setup && cargo build"],
+  "forwardPorts": [
+    8000
+  ],
+  "remoteEnv": {
+    "RANKLAB_AWS_ACCESS_KEY_ID": "${localEnv:RANKLAB_AWS_ACCESS_KEY_ID}",
+    "RANKLAB_AWS_SECRET_KEY": "${localEnv:RANKLAB_AWS_SECRET_KEY}",
+  },
+  "extensions": [
+    "esbenp.prettier-vscode",
+    "rust-lang.rust"
+  ],
+  "settings": {
+    "editor.codeActionsOnSave": [
+      "source.addMissingImports"
+    ],
+    "editor.codeLens": false,
+    "editor.defaultFormatter": "rust-lang.rust",
+    "editor.detectIndentation": false,
+    "editor.formatOnSave": true,
+    "editor.inlineSuggest.enabled": true,
+    "editor.minimap.enabled": false,
+    "editor.rulers": [
+      100
+    ],
+    "editor.tabSize": 2,
+    "editor.wordWrap": "on",
+    "explorer.confirmDelete": false,
+    "explorer.confirmDragAndDrop": false,
+    "extensions.ignoreRecommendations": false,
+    "files.autoSave": "onFocusChange",
+    "files.trimTrailingWhitespace": true,
+    "files.watcherExclude": {
+      "**/.git": true,
+      "**/.DS_Store": true,
+      "**/.git/objects/**": true,
+      "**/tmp/**": true
+    },
+    "git.autofetch": true,
+    "github.copilot.enable": {
+      "*": true,
+      "yaml": false,
+      "plaintext": true,
+      "markdown": false
+    },
+    "prettier.requireConfig": true,
+    "rust.all_features": true,
+    "search.followSymlinks": false,
+    "security.workspace.trust.untrustedFiles": "open",
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "workbench.editor.closeEmptyGroups": false,
+    "workbench.editor.enablePreviewFromQuickOpen": false,
+    "workbench.settings.useSplitJSON": true
+  }
 }

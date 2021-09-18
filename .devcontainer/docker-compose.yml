@@ -8,7 +8,9 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data
   workspace:
-    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
+      - ROCKET_ADDRESS=0.0.0.0
     build:
       context: ../
       dockerfile: .devcontainer/Dockerfile
