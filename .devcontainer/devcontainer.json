@@ -4,7 +4,7 @@
   "service": "workspace",
   "shutdownAction": "stopCompose",
   "overrideCommand": true,
-  "postCreateCommand": ["sudo chown -R vscode . && sudo chown -R vscode /usr/local && bash -ic diesel setup && cargo build"],
+  "postCreateCommand": ["bash", "-i", ".devcontainer/setup.sh"],
   "forwardPorts": [
     8000
   ],
