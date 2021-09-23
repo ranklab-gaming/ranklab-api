@@ -8,9 +8,11 @@ RUN apt-get update -qq \
   && echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
   && curl --silent https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
   && apt-get update -qq \
-  && apt-get install -qq --no-install-recommends postgresql-client-13 gnupg2 \
+  && apt-get install -qq --no-install-recommends postgresql-client-13 gnupg2 sudo \
   && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* \
+  && echo vscode ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/vscode \
+  && chmod 0440 /etc/sudoers.d/vscode
 
 RUN groupadd --gid $USER_GID vscode \
   && useradd --uid $USER_UID --gid $USER_GID -m vscode -s /bin/bash
