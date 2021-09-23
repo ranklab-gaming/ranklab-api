@@ -16,7 +16,6 @@ RUN groupadd --gid $USER_GID vscode \
   && useradd --uid $USER_UID --gid $USER_GID -m vscode -s /bin/bash
 
 USER $USER_UID
-WORKDIR /workspace
 ENV AUTOENV_ASSUME_YES y
 
 RUN cargo install diesel_cli --no-default-features --features postgres

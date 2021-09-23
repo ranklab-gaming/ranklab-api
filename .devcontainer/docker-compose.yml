@@ -18,7 +18,6 @@ services:
       - "8000:8000"
     volumes:
       - local:/usr/local
-      - ../:/workspace
 volumes:
   postgres:
   local:
