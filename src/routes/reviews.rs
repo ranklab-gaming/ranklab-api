@@ -11,11 +11,12 @@ use rocket::{Route, State};
 use rocket_okapi::{openapi, openapi_get_routes as routes};
 use rusoto_core::Region;
 use rusoto_s3::{GetObjectRequest, S3Client, S3};
+use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, JsonSchema)]
 struct CreateReviewRequest {
   recording_id: Uuid,
   #[validate(length(min = 1))]

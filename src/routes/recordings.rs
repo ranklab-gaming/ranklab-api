@@ -6,10 +6,11 @@ use rusoto_core::credential::AwsCredentials;
 use rusoto_core::Region;
 use rusoto_s3::util::PreSignedRequest;
 use rusoto_s3::PutObjectRequest;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 struct Recording {
   id: Uuid,
   upload_url: String,

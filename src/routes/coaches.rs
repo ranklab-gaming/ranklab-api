@@ -6,7 +6,7 @@ use diesel::prelude::*;
 use rocket::serde::json::serde_json::to_string;
 use rocket::serde::json::Json;
 use rocket::Route;
-use rocket_okapi::{openapi, openapi_get_routes as routes, JsonSchema};
+use rocket_okapi::{openapi, openapi_get_routes as routes};
 use serde::Deserialize;
 use validator::Validate;
 

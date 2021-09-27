@@ -7,9 +7,10 @@ use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket::Route;
 use rocket_okapi::{openapi, openapi_get_routes as routes};
+use schemars::JsonSchema;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
 struct CreateUserRequest {
   auth0_id: String,
 }

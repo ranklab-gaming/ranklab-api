@@ -972,7 +972,7 @@ version = "0.7.0-alpha-1"
 source = "git+https://github.com/GREsau/okapi#867e5061d1383f95e99cd0b74654f89886ed0ade"
 dependencies = [
  "log",
- "schemars 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "schemars",
  "serde",
  "serde_json",
 ]
@@ -1253,7 +1253,7 @@ dependencies = [
  "rocket_sync_db_pools",
  "rusoto_core",
  "rusoto_s3",
- "schemars 0.8.5 (git+https://github.com/GREsau/schemars)",
+ "schemars",
  "serde",
  "thiserror",
  "uuid",
@@ -1470,7 +1470,7 @@ dependencies = [
  "okapi",
  "rocket",
  "rocket_okapi_codegen",
- "schemars 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "schemars",
  "serde",
  "serde_json",
 ]
@@ -1639,18 +1639,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b82485a532ef0af18878ad4281f73e58161cdba1db7918176e9294f0ca5498a5"
 dependencies = [
  "dyn-clone",
- "schemars_derive 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "schemars"
-version = "0.8.5"
-source = "git+https://github.com/GREsau/schemars#dec8bcc3b7adfdffe8d242a1f1d88076e6b20491"
-dependencies = [
- "dyn-clone",
- "schemars_derive 0.8.5 (git+https://github.com/GREsau/schemars)",
+ "schemars_derive",
  "serde",
  "serde_json",
  "uuid",
@@ -1661,17 +1650,6 @@ name = "schemars_derive"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "791c2c848cff1abaeae34fef7e70da5f93171d9eea81ce0fe969a1df627a61a8"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde_derive_internals",
- "syn",
-]
-
-[[package]]
-name = "schemars_derive"
-version = "0.8.5"
-source = "git+https://github.com/GREsau/schemars#dec8bcc3b7adfdffe8d242a1f1d88076e6b20491"
 dependencies = [
  "proc-macro2",
  "quote",
