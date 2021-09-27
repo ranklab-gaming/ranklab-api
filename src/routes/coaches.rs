@@ -6,52 +6,52 @@ use diesel::prelude::*;
 use rocket::serde::json::serde_json::to_string;
 use rocket::serde::json::Json;
 use rocket::Route;
+use rocket_okapi::{openapi, openapi_get_routes as routes, JsonSchema};
 use serde::Deserialize;
 use validator::Validate;
-use rocket_okapi::{openapi, impl_from_param, openapi_get_routes as routes, JsonSchema};
 
 #[derive(Deserialize, Validate)]
 struct CreateCoachRequest {
-    #[validate(email)]
-    email: String,
-    #[validate(length(min = 1))]
-    name: String,
-    #[validate(length(min = 1))]
-    bio: String,
-    game: Game,
+  #[validate(email)]
+  email: String,
+  #[validate(length(min = 1))]
+  name: String,
+  #[validate(length(min = 1))]
+  bio: String,
+  game: Game,
 }
 
 #[openapi]
 #[post("/", data = "<coach>")]
 async fn create_coach(
-    coach: Json<CreateCoachRequest>,
-    auth: Auth<User>,
-    db_conn: DbConn,
+  coach: Json<CreateCoachRequest>,
+  auth: Auth<User>,
+  db_conn: DbConn,
 ) -> Response<Coach> {
-    if let Err(errors) = coach.validate() {
-        return Response::ValidationErrors(errors);
-    }
+  if let Err(errors) = coach.validate() {
+    return Response::ValidationErrors(errors);
+  }
 
-    let coach = db_conn
-        .run(move |conn| {
-            use crate::schema::coaches::dsl::*;
+  let coach = db_conn
+    .run(move |conn| {
+      use crate::schema::coaches::dsl::*;
 
-            diesel::insert_into(coaches)
-                .values((
-                    email.eq(coach.email.clone()),
-                    name.eq(coach.name.clone()),
-                    bio.eq(coach.bio.clone()),
-                    game.eq(to_string(&coach.game).unwrap()),
-                    user_id.eq(auth.0.id.clone()),
-                ))
-                .get_result(conn)
-                .unwrap()
-        })
-        .await;
+      diesel::insert_into(coaches)
+        .values((
+          email.eq(coach.email.clone()),
+          name.eq(coach.name.clone()),
+          bio.eq(coach.bio.clone()),
+          game.eq(to_string(&coach.game).unwrap()),
+          user_id.eq(auth.0.id.clone()),
+        ))
+        .get_result(conn)
+        .unwrap()
+    })
+    .await;
 
-    Response::Success(coach)
+  Response::Success(coach)
 }
 
 pub fn build() -> Vec<Route> {
-    routes![create_coach]
+  routes![create_coach]
 }

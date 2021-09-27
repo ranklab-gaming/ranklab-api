@@ -11,7 +11,6 @@ use rocket::figment::providers::{Env, Format, Toml};
 use rocket::http::Accept;
 use rocket::{Build, Rocket};
 use rocket_contrib::json::Json;
-use rocket_okapi::{openapi, routes_with_openapi, JsonSchema};
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 
 fn get_docs() -> SwaggerUIConfig {

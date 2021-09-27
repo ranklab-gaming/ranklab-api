@@ -6,41 +6,41 @@ use crate::response::Response;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket::Route;
+use rocket_okapi::{openapi, openapi_get_routes as routes};
 use serde::Deserialize;
-use rocket_okapi::{openapi, openapi_get_routes as routes, JsonSchema};
 
 #[derive(Deserialize)]
 struct CreateUserRequest {
-    auth0_id: String,
+  auth0_id: String,
 }
 
 #[openapi]
 #[post("/", data = "<user>")]
 async fn create_user(
-    user: Json<CreateUserRequest>,
-    db_conn: DbConn,
-    _auth: Auth<ApiKey>,
+  user: Json<CreateUserRequest>,
+  db_conn: DbConn,
+  _auth: Auth<ApiKey>,
 ) -> Response<User> {
-    let user = db_conn
-        .run(move |conn| {
-            use crate::schema::users::dsl::*;
+  let user = db_conn
+    .run(move |conn| {
+      use crate::schema::users::dsl::*;
 
-            diesel::insert_into(users)
-                .values(&vec![(auth0_id.eq(user.auth0_id.clone()))])
-                .get_result(conn)
-                .unwrap()
-        })
-        .await;
+      diesel::insert_into(users)
+        .values(&vec![(auth0_id.eq(user.auth0_id.clone()))])
+        .get_result(conn)
+        .unwrap()
+    })
+    .await;
 
-    Response::Success(user)
+  Response::Success(user)
 }
 
 #[openapi]
 #[get("/current")]
 async fn get_current_user(auth: Auth<User>) -> Json<User> {
-    Json(auth.0)
+  Json(auth.0)
 }
 
 pub fn build() -> Vec<Route> {
-    routes![create_user, get_current_user]
+  routes![create_user, get_current_user]
 }
