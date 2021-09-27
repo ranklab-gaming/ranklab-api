@@ -7,6 +7,7 @@ use rusoto_s3::util::PreSignedRequest;
 use rusoto_s3::PutObjectRequest;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use rocket_okapi::{openapi, openapi_get_routes as routes, JsonSchema};
 
 #[derive(Serialize, Deserialize)]
 struct Recording {
@@ -14,6 +15,7 @@ struct Recording {
     upload_url: String,
 }
 
+#[openapi]
 #[post("/")]
 fn create_recording(config: &State<Config>) -> Json<Recording> {
     let uuid = Uuid::new_v4();

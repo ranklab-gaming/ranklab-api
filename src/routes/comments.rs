@@ -9,6 +9,7 @@ use rocket::Route;
 use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
+use rocket_okapi::{openapi, openapi_get_routes as routes, JsonSchema};
 
 #[derive(Deserialize, Validate)]
 struct CreateCommentRequest {
@@ -18,6 +19,7 @@ struct CreateCommentRequest {
     review_id: Uuid,
 }
 
+#[openapi]
 #[post("/", data = "<comment>")]
 async fn create_comment(
     comment: Json<CreateCommentRequest>,

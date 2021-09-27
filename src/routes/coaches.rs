@@ -8,6 +8,7 @@ use rocket::serde::json::Json;
 use rocket::Route;
 use serde::Deserialize;
 use validator::Validate;
+use rocket_okapi::{openapi, impl_from_param, openapi_get_routes as routes, JsonSchema};
 
 #[derive(Deserialize, Validate)]
 struct CreateCoachRequest {
@@ -20,6 +21,7 @@ struct CreateCoachRequest {
     game: Game,
 }
 
+#[openapi]
 #[post("/", data = "<coach>")]
 async fn create_coach(
     coach: Json<CreateCoachRequest>,

@@ -7,12 +7,14 @@ use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket::Route;
 use serde::Deserialize;
+use rocket_okapi::{openapi, openapi_get_routes as routes, JsonSchema};
 
 #[derive(Deserialize)]
 struct CreateUserRequest {
     auth0_id: String,
 }
 
+#[openapi]
 #[post("/", data = "<user>")]
 async fn create_user(
     user: Json<CreateUserRequest>,
@@ -33,6 +35,7 @@ async fn create_user(
     Response::Success(user)
 }
 
+#[openapi]
 #[get("/current")]
 async fn get_current_user(auth: Auth<User>) -> Json<User> {
     Json(auth.0)

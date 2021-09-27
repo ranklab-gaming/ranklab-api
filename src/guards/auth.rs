@@ -11,6 +11,7 @@ use rocket::State;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
+use rocket_okapi::impl_from_param;
 
 #[derive(Error, Debug)]
 pub enum AuthError {
@@ -66,6 +67,9 @@ pub struct Jwks {
 
 pub struct ApiKey;
 pub struct Auth<T>(pub T);
+
+impl_from_param!(Auth<User>);
+impl_from_param!(Auth<ApiKey>);
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Auth<ApiKey> {

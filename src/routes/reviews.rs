@@ -13,6 +13,7 @@ use rusoto_s3::{GetObjectRequest, S3Client, S3};
 use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
+use rocket_okapi::{openapi, openapi_get_routes as routes, JsonSchema};
 
 #[derive(Deserialize, Validate)]
 struct CreateReviewRequest {
@@ -22,6 +23,7 @@ struct CreateReviewRequest {
     game: Game,
 }
 
+#[openapi]
 #[get("/")]
 async fn list_reviews(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
     let reviews = db_conn
@@ -34,6 +36,7 @@ async fn list_reviews(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
     Json(reviews)
 }
 
+#[openapi]
 #[get("/<id>")]
 async fn get_review(
     id: Uuid,
@@ -60,6 +63,7 @@ async fn get_review(
     }
 }
 
+#[openapi]
 #[post("/", data = "<review>")]
 async fn create_review(
     review: Json<CreateReviewRequest>,
