@@ -8,6 +8,10 @@ use regex::Regex;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
+use rocket_okapi::{
+  gen::OpenApiGenerator,
+  request::{OpenApiFromRequest, RequestHeaderInput},
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -133,5 +137,25 @@ impl<'r> FromRequest<'r> for Auth<User> {
       .unwrap();
 
     Outcome::Success(Auth(user))
+  }
+}
+
+impl<'a> OpenApiFromRequest<'a> for Auth<User> {
+  fn from_request_input(
+    _gen: &mut OpenApiGenerator,
+    _name: String,
+    _required: bool,
+  ) -> rocket_okapi::Result<RequestHeaderInput> {
+    Ok(RequestHeaderInput::None)
+  }
+}
+
+impl<'a> OpenApiFromRequest<'a> for Auth<ApiKey> {
+  fn from_request_input(
+    _gen: &mut OpenApiGenerator,
+    _name: String,
+    _required: bool,
+  ) -> rocket_okapi::Result<RequestHeaderInput> {
+    Ok(RequestHeaderInput::None)
   }
 }

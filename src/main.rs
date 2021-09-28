@@ -9,11 +9,10 @@ use rocket::figment::providers::{Env, Format, Toml};
 
 use rocket::http::Accept;
 use rocket::{Build, Rocket};
-use rocket_contrib::json::Json;
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 
 fn get_docs() -> SwaggerUIConfig {
-  use rocket_okapi::swagger_ui::UrlObject;
+  use rocket_okapi::settings::UrlObject;
 
   SwaggerUIConfig {
     urls: vec![

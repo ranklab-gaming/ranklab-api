@@ -7,11 +7,12 @@ use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::Route;
 use rocket_okapi::{openapi, openapi_get_routes as routes};
+use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, JsonSchema)]
 struct CreateCommentRequest {
   #[validate(length(min = 1))]
   body: String,
