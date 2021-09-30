@@ -3,28 +3,29 @@ extern crate rocket;
 
 use ranklab_api::config::Config;
 use ranklab_api::db::{run_migrations, DbConn};
-use ranklab_api::routes;
+use ranklab_api::routes::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
 
 use rocket::http::Accept;
 use rocket::{Build, Rocket};
-use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
+use rocket_okapi::{openapi, openapi_get_routes};
 
-fn get_docs() -> SwaggerUIConfig {
-  use rocket_okapi::settings::UrlObject;
+use rocket::serde::json::Json;
+use schemars::JsonSchema;
+use serde::Serialize;
 
-  SwaggerUIConfig {
-    urls: vec![
-      UrlObject::new("Root", "/openapi.json"),
-      UrlObject::new("Users", "/users/openapi.json"),
-      UrlObject::new("Recordings", "/recordings/openapi.json"),
-      UrlObject::new("Reviews", "/reviews/openapi.json"),
-      UrlObject::new("Coaches", "/coaches/openapi.json"),
-      UrlObject::new("Comments", "/comments/openapi.json"),
-    ],
-    ..Default::default()
-  }
+#[derive(Serialize, JsonSchema)]
+pub struct Health {
+  status: String,
+}
+
+#[openapi]
+#[get("/")]
+pub async fn get_health() -> Json<Health> {
+  Json(Health {
+    status: "ok".into(),
+  })
 }
 
 #[launch]
@@ -44,11 +45,18 @@ fn rocket() -> Rocket<Build> {
       Box::pin(async move { req.replace_header(Accept::JSON) })
     }))
     .attach(AdHoc::config::<Config>())
-    .mount("/", routes::index())
-    .mount("/users", routes::users())
-    .mount("/recordings", routes::recordings())
-    .mount("/reviews", routes::reviews())
-    .mount("/coaches", routes::coaches())
-    .mount("/comments", routes::comments())
-    .mount("/swagger", make_swagger_ui(&get_docs()))
+    .mount(
+      "/",
+      openapi_get_routes![
+        get_health,
+        users::get_current,
+        recordings::create,
+        users::create,
+        reviews::get,
+        reviews::list,
+        reviews::create,
+        coaches::create,
+        comments::create
+      ],
+    )
 }

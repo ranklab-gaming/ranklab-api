@@ -1,7 +1,7 @@
 use crate::config::Config;
 use rocket::serde::json::Json;
-use rocket::{Route, State};
-use rocket_okapi::{openapi, openapi_get_routes as routes};
+use rocket::State;
+use rocket_okapi::openapi;
 use rusoto_core::credential::AwsCredentials;
 use rusoto_core::Region;
 use rusoto_s3::util::PreSignedRequest;
@@ -11,14 +11,14 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
-struct Recording {
+pub struct Recording {
   id: Uuid,
   upload_url: String,
 }
 
 #[openapi]
-#[post("/")]
-fn create_recording(config: &State<Config>) -> Json<Recording> {
+#[post("/recordings")]
+pub fn create(config: &State<Config>) -> Json<Recording> {
   let uuid = Uuid::new_v4();
 
   let req = PutObjectRequest {
@@ -42,8 +42,4 @@ fn create_recording(config: &State<Config>) -> Json<Recording> {
     upload_url: response.to_string(),
     id: uuid,
   })
-}
-
-pub fn build() -> Vec<Route> {
-  routes![create_recording]
 }

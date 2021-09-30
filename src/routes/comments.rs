@@ -5,15 +5,14 @@ use crate::response::Response;
 use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::Json;
-use rocket::Route;
-use rocket_okapi::{openapi, openapi_get_routes as routes};
+use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Deserialize, Validate, JsonSchema)]
-struct CreateCommentRequest {
+pub struct CreateCommentRequest {
   #[validate(length(min = 1))]
   body: String,
   video_timestamp: i32,
@@ -21,8 +20,8 @@ struct CreateCommentRequest {
 }
 
 #[openapi]
-#[post("/", data = "<comment>")]
-async fn create_comment(
+#[post("/comments", data = "<comment>")]
+pub async fn create(
   comment: Json<CreateCommentRequest>,
   auth: Auth<User>,
   db_conn: DbConn,
@@ -61,8 +60,4 @@ async fn create_comment(
     .await;
 
   Response::Success(comment)
-}
-
-pub fn build() -> Vec<Route> {
-  routes![create_comment]
 }

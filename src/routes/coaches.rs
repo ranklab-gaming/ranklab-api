@@ -5,14 +5,13 @@ use crate::response::Response;
 use diesel::prelude::*;
 use rocket::serde::json::serde_json::to_string;
 use rocket::serde::json::Json;
-use rocket::Route;
-use rocket_okapi::{openapi, openapi_get_routes as routes};
+use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use validator::Validate;
 
 #[derive(Deserialize, Validate, JsonSchema)]
-struct CreateCoachRequest {
+pub struct CreateCoachRequest {
   #[validate(email)]
   email: String,
   #[validate(length(min = 1))]
@@ -23,8 +22,8 @@ struct CreateCoachRequest {
 }
 
 #[openapi]
-#[post("/", data = "<coach>")]
-async fn create_coach(
+#[post("/coaches", data = "<coach>")]
+pub async fn create(
   coach: Json<CreateCoachRequest>,
   auth: Auth<User>,
   db_conn: DbConn,
@@ -51,8 +50,4 @@ async fn create_coach(
     .await;
 
   Response::Success(coach)
-}
-
-pub fn build() -> Vec<Route> {
-  routes![create_coach]
 }

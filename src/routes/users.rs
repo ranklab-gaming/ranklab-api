@@ -5,19 +5,18 @@ use crate::models::User;
 use crate::response::Response;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
-use rocket::Route;
-use rocket_okapi::{openapi, openapi_get_routes as routes};
+use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 #[derive(Deserialize, JsonSchema)]
-struct CreateUserRequest {
+pub struct CreateUserRequest {
   auth0_id: String,
 }
 
 #[openapi]
-#[post("/", data = "<user>")]
-async fn create_user(
+#[post("/users", data = "<user>")]
+pub async fn create(
   user: Json<CreateUserRequest>,
   db_conn: DbConn,
   _auth: Auth<ApiKey>,
@@ -37,11 +36,7 @@ async fn create_user(
 }
 
 #[openapi]
-#[get("/current")]
-async fn get_current_user(auth: Auth<User>) -> Json<User> {
+#[get("/users/current")]
+pub async fn get_current(auth: Auth<User>) -> Json<User> {
   Json(auth.0)
-}
-
-pub fn build() -> Vec<Route> {
-  routes![create_user, get_current_user]
 }

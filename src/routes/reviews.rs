@@ -7,8 +7,8 @@ use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::serde_json::to_string;
 use rocket::serde::json::Json;
-use rocket::{Route, State};
-use rocket_okapi::{openapi, openapi_get_routes as routes};
+use rocket::State;
+use rocket_okapi::openapi;
 use rusoto_core::Region;
 use rusoto_s3::{GetObjectRequest, S3Client, S3};
 use schemars::JsonSchema;
@@ -17,7 +17,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Deserialize, Validate, JsonSchema)]
-struct CreateReviewRequest {
+pub struct CreateReviewRequest {
   recording_id: Uuid,
   #[validate(length(min = 1))]
   title: String,
@@ -25,8 +25,8 @@ struct CreateReviewRequest {
 }
 
 #[openapi]
-#[get("/")]
-async fn list_reviews(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
+#[get("/reviews")]
+pub async fn list(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
   let reviews = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
@@ -38,8 +38,8 @@ async fn list_reviews(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
 }
 
 #[openapi]
-#[get("/<id>")]
-async fn get_review(
+#[get("/reviews/<id>")]
+pub async fn get(
   id: Uuid,
   auth: Auth<User>,
   db_conn: DbConn,
@@ -65,8 +65,8 @@ async fn get_review(
 }
 
 #[openapi]
-#[post("/", data = "<review>")]
-async fn create_review(
+#[post("/reviews", data = "<review>")]
+pub async fn create(
   review: Json<CreateReviewRequest>,
   auth: Auth<User>,
   config: &State<Config>,
@@ -111,8 +111,4 @@ async fn create_review(
     .await;
 
   Response::Success(review)
-}
-
-pub fn build() -> Vec<Route> {
-  routes![create_review, list_reviews, get_review]
 }
