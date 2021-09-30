@@ -7,17 +7,22 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres:/var/lib/postgresql/data
-  workspace:
+    networks:
+      - ranklab
+  ranklab-api:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
       - ROCKET_ADDRESS=0.0.0.0
     build:
       context: ../
       dockerfile: .devcontainer/Dockerfile
-    ports:
-      - "8000:8000"
     volumes:
       - local:/usr/local
+    networks:
+      - ranklab
 volumes:
   postgres:
   local:
+networks:
+  ranklab:
+    name: ranklab

@@ -1,10 +1,11 @@
 {
   "name": "Ranklab API",
   "dockerComposeFile": "docker-compose.yml",
-  "service": "workspace",
+  "service": "ranklab-api",
   "shutdownAction": "stopCompose",
   "overrideCommand": true,
   "postCreateCommand": ["bash", "-i", ".devcontainer/setup.sh"],
+  "workspaceFolder": "/workspaces/ranklab-api",
   "forwardPorts": [
     8000
   ],
