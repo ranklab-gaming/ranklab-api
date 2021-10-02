@@ -24,7 +24,7 @@ pub struct CreateReviewRequest {
   game: Game,
 }
 
-#[openapi]
+#[openapi(tag = "Ranklab")]
 #[get("/reviews")]
 pub async fn list(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
   let reviews = db_conn
@@ -37,7 +37,7 @@ pub async fn list(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
   Json(reviews)
 }
 
-#[openapi]
+#[openapi(tag = "Ranklab")]
 #[get("/reviews/<id>")]
 pub async fn get(
   id: Uuid,
@@ -64,7 +64,7 @@ pub async fn get(
   }
 }
 
-#[openapi]
+#[openapi(tag = "Ranklab")]
 #[post("/reviews", data = "<review>")]
 pub async fn create(
   review: Json<CreateReviewRequest>,

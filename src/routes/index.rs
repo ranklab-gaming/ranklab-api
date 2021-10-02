@@ -8,7 +8,7 @@ pub struct Health {
   status: String,
 }
 
-#[openapi]
+#[openapi(tag = "Ranklab")]
 #[get("/")]
 pub async fn get_health() -> Json<Health> {
   Json(Health {

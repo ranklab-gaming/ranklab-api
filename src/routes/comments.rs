@@ -19,7 +19,7 @@ pub struct CreateCommentRequest {
   review_id: Uuid,
 }
 
-#[openapi]
+#[openapi(tag = "Ranklab")]
 #[post("/comments", data = "<comment>")]
 pub async fn create(
   comment: Json<CreateCommentRequest>,

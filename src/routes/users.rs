@@ -14,7 +14,7 @@ pub struct CreateUserRequest {
   auth0_id: String,
 }
 
-#[openapi]
+#[openapi(tag = "Ranklab")]
 #[post("/users", data = "<user>")]
 pub async fn create(
   user: Json<CreateUserRequest>,
@@ -35,7 +35,7 @@ pub async fn create(
   Response::Success(user)
 }
 
-#[openapi]
+#[openapi(tag = "Ranklab")]
 #[get("/users/current")]
 pub async fn get_current(auth: Auth<User>) -> Json<User> {
   Json(auth.0)

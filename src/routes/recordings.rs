@@ -16,7 +16,7 @@ pub struct Recording {
   upload_url: String,
 }
 
-#[openapi]
+#[openapi(tag = "Ranklab")]
 #[post("/recordings")]
 pub fn create(config: &State<Config>) -> Json<Recording> {
   let uuid = Uuid::new_v4();

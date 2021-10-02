@@ -21,7 +21,7 @@ pub struct CreateCoachRequest {
   game: Game,
 }
 
-#[openapi]
+#[openapi(tag = "Ranklab")]
 #[post("/coaches", data = "<coach>")]
 pub async fn create(
   coach: Json<CreateCoachRequest>,
