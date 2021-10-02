@@ -14,7 +14,6 @@ use rocket_okapi::{
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use uuid::Uuid;
 
 #[derive(Error, Debug)]
 pub enum AuthError {
@@ -36,12 +35,6 @@ impl From<AuthError> for (Status, AuthError) {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Claims {
   pub sub: String,
-
-  #[serde(rename(
-    deserialize = "https://ranklab.gg/id",
-    serialize = "https://ranklab.gg/id"
-  ))]
-  pub id: Uuid,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -56,8 +49,10 @@ enum KeyType {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Jwk {
-  kty: KeyType,
-  alg: KeyAlgorithm,
+  #[serde(rename = "kty")]
+  _kty: KeyType,
+  #[serde(rename = "alg")]
+  _alg: KeyAlgorithm,
   kid: String,
   n: String,
   e: String,
@@ -93,6 +88,8 @@ impl<'r> FromRequest<'r> for Auth<User> {
   type Error = AuthError;
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    use crate::schema::users::dsl::*;
+
     let jwt_regexp = Regex::new(r"Bearer (?P<jwt>.+)").unwrap();
     let config = req.guard::<&State<Config>>().await;
     let db_conn = req.guard::<DbConn>().await.unwrap();
@@ -128,15 +125,32 @@ impl<'r> FromRequest<'r> for Auth<User> {
     )
     .map_err(|_| AuthError::Invalid));
 
-    let user: User = db_conn
-      .run(move |conn| {
-        use crate::schema::users::dsl::*;
-        users.filter(id.eq(decoded_jwt.claims.id)).first(conn)
-      })
-      .await
-      .unwrap();
+    let sub = decoded_jwt.claims.sub.clone();
 
-    Outcome::Success(Auth(user))
+    let user = db_conn
+      .run(|conn| {
+        users
+          .filter(auth0_id.eq(decoded_jwt.claims.sub))
+          .first(conn)
+      })
+      .await;
+
+    match user {
+      Ok(user) => Outcome::Success(Auth(user)),
+      Err(diesel::result::Error::NotFound) => {
+        let user: User = db_conn
+          .run(|conn| {
+            diesel::insert_into(users)
+              .values(&vec![(auth0_id.eq(sub))])
+              .get_result(conn)
+              .unwrap()
+          })
+          .await;
+
+        Outcome::Success(Auth(user))
+      }
+      Err(_) => panic!("Failure creating user"),
+    }
   }
 }
 

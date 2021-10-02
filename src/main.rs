@@ -51,7 +51,6 @@ fn rocket() -> Rocket<Build> {
         get_health,
         users::get_current,
         recordings::create,
-        users::create,
         reviews::get,
         reviews::list,
         reviews::create,

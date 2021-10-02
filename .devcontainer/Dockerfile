@@ -18,10 +18,8 @@ RUN groupadd --gid $USER_GID vscode \
   && useradd --uid $USER_UID --gid $USER_GID -m vscode -s /bin/bash
 
 USER $USER_UID
-ENV AUTOENV_ASSUME_YES y
 
 RUN rustup toolchain add nightly
 RUN rustup default nightly
 RUN cargo install diesel_cli --no-default-features --features postgres
-RUN git clone git://github.com/inishchith/autoenv.git ~/.autoenv
-RUN echo "source ~/.autoenv/activate.sh" >> ~/.bashrc
+RUN cargo install cargo-watch
