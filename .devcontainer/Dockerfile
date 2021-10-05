@@ -14,12 +14,12 @@ RUN apt-get update -qq \
   && echo vscode ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/vscode \
   && chmod 0440 /etc/sudoers.d/vscode
 
-RUN groupadd --gid $USER_GID vscode \
-  && useradd --uid $USER_UID --gid $USER_GID -m vscode -s /bin/bash
-
-USER $USER_UID
-
 RUN rustup toolchain add nightly
 RUN rustup default nightly
 RUN cargo install diesel_cli --no-default-features --features postgres
 RUN cargo install cargo-watch
+
+RUN groupadd --gid $USER_GID vscode \
+  && useradd --uid $USER_UID --gid $USER_GID -m vscode -s /bin/bash
+
+USER $USER_UID
