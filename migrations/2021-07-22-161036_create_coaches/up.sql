@@ -4,5 +4,5 @@ CREATE TABLE coaches (
     name text NOT NULL DEFAULT '',
     email text UNIQUE NOT NULL DEFAULT '',
     bio text NOT NULL DEFAULT '',
-    game text NOT NULL
+    game_id uuid NOT NULL REFERENCES games(id)
 );

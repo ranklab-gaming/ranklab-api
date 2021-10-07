@@ -1,11 +1,10 @@
 use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Game, Review, User};
+use crate::models::{Review, User};
 use crate::response::Response;
 use diesel::prelude::*;
 use rocket::http::Status;
-use rocket::serde::json::serde_json::to_string;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -21,7 +20,7 @@ pub struct CreateReviewRequest {
   recording_id: Uuid,
   #[validate(length(min = 1))]
   title: String,
-  game: Game,
+  game_id: Uuid,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -84,9 +83,9 @@ pub async fn create(
     ..Default::default()
   };
 
-  if let Err(_) = s3.get_object(get_obj_req).await {
-    return Response::Status(Status::UnprocessableEntity);
-  }
+  // if let Err(_) = s3.get_object(get_obj_req).await {
+  //   return Response::Status(Status::UnprocessableEntity);
+  // }
 
   let video_url_value = format!(
     "https://{}.s3.eu-west-2.amazonaws.com/{}",
@@ -102,7 +101,7 @@ pub async fn create(
         .values((
           video_url.eq(video_url_value.clone()),
           title.eq(review.title.clone()),
-          game.eq(to_string(&review.game).unwrap()),
+          game_id.eq(review.game_id.clone()),
           user_id.eq(auth.0.id.clone()),
         ))
         .get_result(conn)

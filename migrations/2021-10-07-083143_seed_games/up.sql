@@ -1,0 +1,1 @@
+INSERT INTO games (name) VALUES ('Overwatch'), ('Chess');

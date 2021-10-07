@@ -1,9 +1,9 @@
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum Game {
-  Overwatch,
-  Chess,
+#[derive(Queryable, Serialize, JsonSchema)]
+pub struct Game {
+  pub id: Uuid,
+  pub name: String,
 }

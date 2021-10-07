@@ -9,5 +9,5 @@ pub struct Coach {
   pub name: String,
   pub email: String,
   pub bio: String,
-  pub game: String,
+  pub game_id: Uuid,
 }

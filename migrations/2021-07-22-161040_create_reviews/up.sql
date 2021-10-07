@@ -4,5 +4,5 @@ CREATE TABLE reviews (
     coach_id uuid REFERENCES coaches(id),
     title text NOT NULL DEFAULT '',
     video_url text NOT NULL,
-    game text NOT NULL
+    game_id uuid NOT NULL REFERENCES games(id)
 );
