@@ -4,15 +4,12 @@
   "service": "ranklab-api",
   "shutdownAction": "stopCompose",
   "overrideCommand": true,
-  "postCreateCommand": ["bash", "-i", ".devcontainer/setup.sh"],
+  "postCreateCommand": ["bash", "-ic", ".devcontainer/setup"],
   "workspaceFolder": "/workspaces/ranklab-api",
+  "remoteUser": "vscode",
   "forwardPorts": [
     8000
   ],
-  "remoteEnv": {
-    "RANKLAB_AWS_ACCESS_KEY_ID": "${localEnv:RANKLAB_AWS_ACCESS_KEY_ID}",
-    "RANKLAB_AWS_SECRET_KEY": "${localEnv:RANKLAB_AWS_SECRET_KEY}",
-  },
   "extensions": [
     "esbenp.prettier-vscode",
     "rust-lang.rust"

@@ -1,0 +1,6 @@
+#!/bin/sh
+
+sudo chown -R vscode .
+diesel setup
+cargo build
+aws s3 cp s3://ranklab-development-secrets/.env.api .env

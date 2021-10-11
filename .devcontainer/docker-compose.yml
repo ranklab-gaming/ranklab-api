@@ -16,13 +16,10 @@ services:
     build:
       context: ../
       dockerfile: .devcontainer/Dockerfile
-    volumes:
-      - local:/usr/local
     networks:
       - ranklab
 volumes:
   postgres:
-  local:
 networks:
   ranklab:
     name: ranklab
