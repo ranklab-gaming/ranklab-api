@@ -7,9 +7,6 @@
   "postCreateCommand": ["bash", "-ic", ".devcontainer/setup"],
   "workspaceFolder": "/workspaces/ranklab-api",
   "remoteUser": "vscode",
-  "forwardPorts": [
-    8000
-  ],
   "extensions": [
     "esbenp.prettier-vscode",
     "rust-lang.rust"

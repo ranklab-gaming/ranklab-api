@@ -9,6 +9,8 @@ services:
       - postgres:/var/lib/postgresql/data
     networks:
       - ranklab
+    ports:
+      - "5432:5432"
   ranklab-api:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
