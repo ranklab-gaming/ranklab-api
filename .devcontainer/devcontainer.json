@@ -4,7 +4,7 @@
   "service": "ranklab-api",
   "shutdownAction": "stopCompose",
   "overrideCommand": true,
-  "postCreateCommand": ["bash", "-ic", ".devcontainer/setup"],
+  "postCreateCommand": ["bash", "-ic", "./bin/setup"],
   "workspaceFolder": "/workspaces/ranklab-api",
   "remoteUser": "vscode",
   "extensions": [
