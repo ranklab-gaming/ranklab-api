@@ -9,7 +9,8 @@
   "remoteUser": "vscode",
   "extensions": [
     "esbenp.prettier-vscode",
-    "rust-lang.rust"
+    "rust-lang.rust",
+    "vadimcn.vscode-lldb"
   ],
   "settings": {
     "editor.codeActionsOnSave": [
