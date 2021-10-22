@@ -61,3 +61,28 @@ pub async fn create(
 
   Response::Success(comment)
 }
+
+#[derive(FromForm, JsonSchema)]
+pub struct ListCommentsQuery {
+  review_id: Uuid,
+}
+
+#[openapi(tag = "Ranklab")]
+#[get("/comments?<params..>")]
+pub async fn list(
+  params: ListCommentsQuery,
+  _auth: Auth<User>,
+  db_conn: DbConn,
+) -> Json<Vec<Comment>> {
+  let comments = db_conn
+    .run(move |conn| {
+      use crate::schema::comments::dsl::*;
+      comments
+        .filter(review_id.eq(params.review_id))
+        .load(conn)
+        .unwrap()
+    })
+    .await;
+
+  Json(comments)
+}

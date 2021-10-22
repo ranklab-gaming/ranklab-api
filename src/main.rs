@@ -56,7 +56,8 @@ fn rocket() -> Rocket<Build> {
         reviews::create,
         coaches::create,
         comments::create,
-        games::list
+        games::list,
+        comments::list
       ],
     )
 }
