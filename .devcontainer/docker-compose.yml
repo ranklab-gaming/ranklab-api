@@ -18,6 +18,8 @@ services:
     build:
       context: ../
       dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
     networks:
       - ranklab
 volumes:

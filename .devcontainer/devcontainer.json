@@ -4,8 +4,12 @@
   "service": "ranklab-api",
   "shutdownAction": "stopCompose",
   "overrideCommand": true,
-  "postCreateCommand": ["bash", "-ic", "./bin/setup"],
-  "workspaceFolder": "/workspaces/ranklab-api",
+  "postCreateCommand": [
+    "bash",
+    "-ic",
+    "./bin/setup"
+  ],
+  "workspaceFolder": "/workspace",
   "remoteUser": "vscode",
   "extensions": [
     "esbenp.prettier-vscode",
