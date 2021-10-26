@@ -34,6 +34,7 @@ table! {
         title -> Text,
         video_url -> Text,
         game_id -> Uuid,
+        notes -> Text,
     }
 }
 

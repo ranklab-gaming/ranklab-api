@@ -20,6 +20,7 @@ pub struct CreateReviewRequest {
   recording_id: Uuid,
   #[validate(length(min = 1))]
   title: String,
+  notes: String,
   game_id: Uuid,
 }
 
@@ -103,6 +104,7 @@ pub async fn create(
           title.eq(review.title.clone()),
           game_id.eq(review.game_id.clone()),
           user_id.eq(auth.0.id.clone()),
+          notes.eq(review.notes.clone())
         ))
         .get_result(conn)
         .unwrap()

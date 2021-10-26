@@ -10,4 +10,5 @@ pub struct Review {
   pub title: String,
   pub video_url: String,
   pub game_id: Uuid,
+  pub notes: String
 }
