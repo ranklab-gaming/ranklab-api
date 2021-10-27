@@ -63,25 +63,7 @@ pub struct Jwks {
   keys: Vec<Jwk>,
 }
 
-pub struct ApiKey;
 pub struct Auth<T>(pub T);
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for Auth<ApiKey> {
-  type Error = AuthError;
-
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    let config = req.guard::<&State<Config>>().await;
-    let api_key = config.as_ref().unwrap().api_key.clone();
-    let is_valid = |key: &str| -> bool { key == format!("Bearer {}", api_key) };
-
-    match req.headers().get_one("authorization") {
-      None => Outcome::Failure((Status::BadRequest, AuthError::Missing)),
-      Some(key) if is_valid(key) => Outcome::Success(Auth(ApiKey)),
-      Some(_) => Outcome::Failure((Status::Unauthorized, AuthError::Invalid)),
-    }
-  }
-}
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Auth<User> {
@@ -155,16 +137,6 @@ impl<'r> FromRequest<'r> for Auth<User> {
 }
 
 impl<'a> OpenApiFromRequest<'a> for Auth<User> {
-  fn from_request_input(
-    _gen: &mut OpenApiGenerator,
-    _name: String,
-    _required: bool,
-  ) -> rocket_okapi::Result<RequestHeaderInput> {
-    Ok(RequestHeaderInput::None)
-  }
-}
-
-impl<'a> OpenApiFromRequest<'a> for Auth<ApiKey> {
   fn from_request_input(
     _gen: &mut OpenApiGenerator,
     _name: String,

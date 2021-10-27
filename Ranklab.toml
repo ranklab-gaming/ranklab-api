@@ -1,4 +1,3 @@
 [debug]
-api_key = "e226edcff674fbb1178ae5aec6e9f123"
 auth0_domain = "https://ranklab-development.eu.auth0.com/"
 s3_bucket = "ranklab-dev"
