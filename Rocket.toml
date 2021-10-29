@@ -1,5 +1,8 @@
 [default.databases.default]
-url = "postgres://postgres:postgres@localhost:5432/ranklab_api"
+url = "postgres://postgres:postgres@postgres:5432/app"
 
 [release]
 address = "0.0.0.0"
+
+[test.databases.default]
+url = "postgres://postgres:postgres@postgres:5432/app_test"
