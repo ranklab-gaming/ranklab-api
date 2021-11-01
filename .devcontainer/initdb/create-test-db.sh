@@ -1,8 +1,8 @@
 #!/bin/sh
 
-createdb app_test
+createdb -U "$POSTGRES_USER" app_test
 
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname app_test <<-EOSQL
+psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d app_test <<-"EOSQL"
   CREATE OR REPLACE FUNCTION reset_db() RETURNS void AS $$
   DECLARE
       statements CURSOR FOR
