@@ -4,5 +4,5 @@ url = "postgres://postgres:postgres@postgres:5432/app"
 [release]
 address = "0.0.0.0"
 
-[test.databases.default]
+[test]
 url = "postgres://postgres:postgres@postgres:5432/app_test"

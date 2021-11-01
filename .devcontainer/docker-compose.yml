@@ -7,6 +7,7 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d
     networks:
       - ranklab
     ports:
