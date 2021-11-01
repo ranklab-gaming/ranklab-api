@@ -1,5 +1,0 @@
-DATABASE_URL=postgres://postgres:postgres@postgres:5432
-DATABASE_URL=$DATABASE_URL/app_test diesel database reset
-DATABASE_URL=$DATABASE_URL/app_test_template diesel database reset
-psql $DATABASE_URL -c 'ALTER DATABASE app_test_template WITH is_template TRUE;'
-ROCKET_PROFILE=test cargo watch -x run

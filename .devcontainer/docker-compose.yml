@@ -22,6 +22,8 @@ services:
       - ..:/workspace:cached
     networks:
       - ranklab
+    depends_on:
+      - postgres
 volumes:
   postgres:
 networks:
