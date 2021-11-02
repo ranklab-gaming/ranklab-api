@@ -53,7 +53,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           tags: |
             ${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
-            ghcr.io/${{ env.APP }}:latest
+            ghcr.io/${{ github.repository }}:latest
       - name: Move Docker cache
         run: |
           rm -rf /tmp/.buildx-cache
