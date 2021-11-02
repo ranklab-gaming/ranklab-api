@@ -44,21 +44,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push to ECR
+      - name: Build and push to ECR and Github Container Registry
         id: docker-build
         uses: docker/build-push-action@v2
         with:
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-          tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
-      - name: Build and push Docker image to Github Container Registry
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-          tags: ghcr.io/${{ env.APP }}:latest
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
+            ghcr.io/${{ env.APP }}:latest
       - name: Move Docker cache
         run: |
           rm -rf /tmp/.buildx-cache
