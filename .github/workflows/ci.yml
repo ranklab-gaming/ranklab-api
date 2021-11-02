@@ -38,6 +38,12 @@ jobs:
       - name: Login to ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v1
+      - name: Log in to the Github Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push to ECR
         id: docker-build
         uses: docker/build-push-action@v2
@@ -46,6 +52,13 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
+      - name: Build and push Docker image to Github Container Registry
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          tags: ghcr.io/${{ env.APP }}:latest
       - name: Move Docker cache
         run: |
           rm -rf /tmp/.buildx-cache
