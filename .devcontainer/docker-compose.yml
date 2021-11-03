@@ -13,7 +13,6 @@ services:
       - "5432:5432"
   ranklab-api:
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app
       - ROCKET_ADDRESS=0.0.0.0
     build:
       context: ../
