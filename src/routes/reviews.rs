@@ -84,9 +84,9 @@ pub async fn create(
     ..Default::default()
   };
 
-  if let Err(_) = s3.get_object(get_obj_req).await {
-    return Response::Status(Status::UnprocessableEntity);
-  }
+  // if let Err(_) = s3.get_object(get_obj_req).await {
+    // return Response::Status(Status::UnprocessableEntity);
+  // }
 
   let video_url_value = format!(
     "https://{}.s3.eu-west-2.amazonaws.com/{}",
