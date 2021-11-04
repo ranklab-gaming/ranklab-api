@@ -30,6 +30,14 @@ pub async fn get_health() -> Json<Health> {
 
 #[launch]
 fn rocket() -> Rocket<Build> {
+  let _guard = sentry::init((
+    "https://c7b459471051450abcfb5b4e25fa2b2c@o1059892.ingest.sentry.io/6048906",
+    sentry::ClientOptions {
+      release: sentry::release_name!(),
+      ..Default::default()
+    },
+  ));
+
   let mut figment = rocket::Config::figment()
     .merge(Toml::file("Ranklab.toml").nested())
     .merge(Env::prefixed("RANKLAB_").global());

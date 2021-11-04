@@ -1,0 +1,4 @@
+#!/bin/sh
+
+./test-prepare
+ROCKET_PROFILE=test cargo run
