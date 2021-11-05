@@ -3,7 +3,7 @@ extern crate rocket;
 
 use ranklab_api::config::Config;
 use ranklab_api::db::{run_migrations, DbConn};
-use ranklab_api::fairings::SentryFairing;
+use ranklab_api::fairings;
 use ranklab_api::routes::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
@@ -40,7 +40,7 @@ fn rocket() -> Rocket<Build> {
     }
 
     rocket::custom(figment)
-        .attach(SentryFairing::fairing())
+        .attach(fairings::Sentry::fairing())
         .attach(DbConn::fairing())
         .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
         .attach(AdHoc::on_request("Accept JSON", |req, _| {
