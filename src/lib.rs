@@ -9,6 +9,7 @@ extern crate diesel_migrations;
 
 pub mod config;
 pub mod db;
+pub mod fairings;
 pub mod guards;
 pub mod models;
 pub mod response;

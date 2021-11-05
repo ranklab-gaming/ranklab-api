@@ -4,11 +4,11 @@ use uuid::Uuid;
 
 #[derive(Queryable, Serialize, JsonSchema)]
 pub struct Review {
-  pub id: Uuid,
-  pub user_id: Uuid,
-  pub coach_id: Option<Uuid>,
-  pub title: String,
-  pub video_url: String,
-  pub game_id: Uuid,
-  pub notes: String
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub coach_id: Option<Uuid>,
+    pub title: String,
+    pub video_url: String,
+    pub game_id: Uuid,
+    pub notes: String,
 }
