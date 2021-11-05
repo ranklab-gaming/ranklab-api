@@ -1,4 +1,4 @@
 #!/bin/sh
 
-./test-prepare
+./bin/test-prepare
 ROCKET_PROFILE=test cargo run
