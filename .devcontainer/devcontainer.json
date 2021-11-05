@@ -14,7 +14,8 @@
   "extensions": [
     "esbenp.prettier-vscode",
     "rust-lang.rust",
-    "vadimcn.vscode-lldb"
+    "vadimcn.vscode-lldb",
+    "github.vscode-pull-request-github"
   ],
   "settings": {
     "editor.codeActionsOnSave": [
