@@ -1,3 +1,2 @@
 [default]
 auth0_domain = "https://ranklab-development.eu.auth0.com/"
-s3_bucket = "ranklab-development-uploads"
