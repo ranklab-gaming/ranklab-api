@@ -4,10 +4,23 @@ on:
     branches:
       - master
 jobs:
+  build_and_test:
+    name: Rust project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --nightly --all-features
   deploy:
     runs-on: ubuntu-latest
     env:
       APP: ranklab-api-production
+    needs: build_and_test
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
