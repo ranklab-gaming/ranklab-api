@@ -1,6 +1,6 @@
 /target
 /.idea
-/.env
+/.env.development
 /.vscode
 /tmp
 /.env.test
