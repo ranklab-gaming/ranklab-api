@@ -23,6 +23,7 @@ rocket_okapi = { git = "https://github.com/GREsau/okapi", features = ["uuid"] }
 schemars = "0.8.6"
 okapi = { git = "https://github.com/GREsau/okapi", features = ["derive_json_schema"] }
 sentry = "0.23.0"
+dotenv = "0.15.0"
 
 [dependencies.rocket_sync_db_pools]
 version = "0.1.0-rc.1"

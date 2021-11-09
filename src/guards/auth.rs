@@ -59,6 +59,11 @@ pub struct Jwk {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct OidcConfiguration {
+  jwks_uri: String
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Jwks {
   keys: Vec<Jwk>,
 }
@@ -76,9 +81,16 @@ impl<'r> FromRequest<'r> for Auth<User> {
     let config = req.guard::<&State<Config>>().await;
     let db_conn = req.guard::<DbConn>().await.unwrap();
     let auth0_domain = config.as_ref().unwrap().auth0_domain.clone();
-    let jwks_url = format!("{}{}", auth0_domain, ".well-known/jwks.json");
+    let oidc_configuration_url = format!("{}{}", auth0_domain, ".well-known/openid-configuration");
 
-    let jwks = reqwest::get(&jwks_url)
+    let oidc_configuration = reqwest::get(&oidc_configuration_url)
+    .await
+    .unwrap()
+    .json::<OidcConfiguration>()
+    .await
+    .unwrap();
+
+    let jwks = reqwest::get(&oidc_configuration.jwks_uri)
       .await
       .unwrap()
       .json::<Jwks>()

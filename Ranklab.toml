@@ -1,2 +1,5 @@
 [default]
 auth0_domain = "https://ranklab-development.eu.auth0.com/"
+
+[test]
+auth0_domain = "http://ranklab-test:3000/oidc/"

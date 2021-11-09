@@ -21,6 +21,12 @@ pub struct Health {
     status: String,
 }
 
+fn load_envs() {
+  let profile = std::env::var("ROCKET_PROFILE").unwrap_or_else(|_| "development".to_string());
+  dotenv::from_filename(format!(".env.{}", profile)).ok();
+  dotenv::dotenv().ok();
+}
+
 #[openapi]
 #[get("/")]
 pub async fn get_health() -> Json<Health> {
@@ -31,6 +37,8 @@ pub async fn get_health() -> Json<Health> {
 
 #[launch]
 fn rocket() -> Rocket<Build> {
+    load_envs();
+
     let mut figment = rocket::Config::figment()
         .merge(Toml::file("Ranklab.toml").nested())
         .merge(Env::prefixed("RANKLAB_").global());
