@@ -16,6 +16,7 @@ table! {
         user_id -> Uuid,
         body -> Text,
         video_timestamp -> Int4,
+        drawing -> Text,
     }
 }
 
