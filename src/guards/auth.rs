@@ -60,7 +60,7 @@ pub struct Jwk {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct OidcConfiguration {
-  jwks_uri: String
+  jwks_uri: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -80,15 +80,18 @@ impl<'r> FromRequest<'r> for Auth<User> {
     let jwt_regexp = Regex::new(r"Bearer (?P<jwt>.+)").unwrap();
     let config = req.guard::<&State<Config>>().await;
     let db_conn = req.guard::<DbConn>().await.unwrap();
-    let auth0_issuer_url = config.as_ref().unwrap().auth0_issuer_url.clone();
-    let oidc_configuration_url = format!("{}{}", auth0_issuer_url, ".well-known/openid-configuration");
+    let auth0_issuer_base_url = config.as_ref().unwrap().auth0_issuer_base_url.clone();
+    let oidc_configuration_url = format!(
+      "{}{}",
+      auth0_issuer_base_url, ".well-known/openid-configuration"
+    );
 
     let oidc_configuration = reqwest::get(&oidc_configuration_url)
-    .await
-    .unwrap()
-    .json::<OidcConfiguration>()
-    .await
-    .unwrap();
+      .await
+      .unwrap()
+      .json::<OidcConfiguration>()
+      .await
+      .unwrap();
 
     let jwks = reqwest::get(&oidc_configuration.jwks_uri)
       .await
