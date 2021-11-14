@@ -80,8 +80,8 @@ impl<'r> FromRequest<'r> for Auth<User> {
     let jwt_regexp = Regex::new(r"Bearer (?P<jwt>.+)").unwrap();
     let config = req.guard::<&State<Config>>().await;
     let db_conn = req.guard::<DbConn>().await.unwrap();
-    let auth0_domain = config.as_ref().unwrap().auth0_domain.clone();
-    let oidc_configuration_url = format!("{}{}", auth0_domain, ".well-known/openid-configuration");
+    let auth0_issuer_url = config.as_ref().unwrap().auth0_issuer_url.clone();
+    let oidc_configuration_url = format!("{}{}", auth0_issuer_url, ".well-known/openid-configuration");
 
     let oidc_configuration = reqwest::get(&oidc_configuration_url)
     .await
