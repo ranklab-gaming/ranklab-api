@@ -99,19 +99,13 @@ pub async fn create(
     return Response::Status(Status::UnprocessableEntity);
   }
 
-  let video_url_value = format!(
-    "https://{}.s3.eu-west-2.amazonaws.com/{}",
-    config.s3_bucket,
-    review.recording_id.to_string()
-  );
-
   let review = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
 
       diesel::insert_into(reviews)
         .values((
-          video_url.eq(video_url_value.clone()),
+          video_key.eq(review.recording_id.to_string()),
           title.eq(review.title.clone()),
           game_id.eq(review.game_id.clone()),
           user_id.eq(auth.0.id.clone()),

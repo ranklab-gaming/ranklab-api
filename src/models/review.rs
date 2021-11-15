@@ -8,7 +8,7 @@ pub struct Review {
     pub user_id: Uuid,
     pub coach_id: Option<Uuid>,
     pub title: String,
-    pub video_url: String,
+    pub video_key: String,
     pub game_id: Uuid,
     pub notes: String,
 }

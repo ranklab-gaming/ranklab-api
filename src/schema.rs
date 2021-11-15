@@ -33,7 +33,7 @@ table! {
         user_id -> Uuid,
         coach_id -> Nullable<Uuid>,
         title -> Text,
-        video_url -> Text,
+        video_key -> Text,
         game_id -> Uuid,
         notes -> Text,
     }
