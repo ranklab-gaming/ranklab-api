@@ -105,7 +105,7 @@ pub async fn create(
 
       diesel::insert_into(reviews)
         .values((
-          video_key.eq(review.recording_id.to_string()),
+          video_key.eq(format!("{}.mp4", review.recording_id.to_string())),
           title.eq(review.title.clone()),
           game_id.eq(review.game_id.clone()),
           user_id.eq(auth.0.id.clone()),
