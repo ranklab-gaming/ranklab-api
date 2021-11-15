@@ -23,7 +23,7 @@ pub fn create(config: &State<Config>) -> Json<Recording> {
 
   let req = PutObjectRequest {
     bucket: config.s3_bucket.to_owned(),
-    key: uuid.to_string(),
+    key: format!("{}.mp4", uuid.to_string()),
     acl: Some("public-read".to_string()),
     ..Default::default()
   };
