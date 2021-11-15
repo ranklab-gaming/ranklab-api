@@ -58,6 +58,7 @@ jobs:
       - name: Build and push to ECR and Github Container Registry
         id: docker-build
         uses: docker/build-push-action@v2
+        timeout-minutes: 40
         with:
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
