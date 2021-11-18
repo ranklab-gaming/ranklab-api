@@ -5,4 +5,4 @@ auth0_issuer_base_url = "https://ranklab-development.eu.auth0.com/"
 auth0_issuer_base_url = "http://ranklab-test:3000/oidc/"
 
 [release]
-auth0_issuer_base_url = "https://ranklab.eu.auth0.com/"
+auth0_issuer_base_url = "https://auth.ranklab.gg/"
