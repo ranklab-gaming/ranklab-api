@@ -6,4 +6,5 @@ pub struct Config {
   pub s3_bucket: String,
   pub aws_access_key_id: String,
   pub aws_secret_key: String,
+  pub sentry_dsn: Option<String>,
 }

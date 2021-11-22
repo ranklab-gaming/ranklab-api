@@ -5,37 +5,40 @@ use rocket::{Build, Rocket};
 use sentry::ClientInitGuard;
 
 pub struct SentryFairing {
-    guard: Mutex<Option<ClientInitGuard>>,
+  dsn: String,
+  guard: Mutex<Option<ClientInitGuard>>,
 }
 
 impl SentryFairing {
-    pub fn fairing() -> impl Fairing {
-        SentryFairing {
-            guard: Mutex::new(None),
-        }
+  pub fn fairing(dsn: String) -> impl Fairing {
+    SentryFairing {
+      dsn: dsn,
+      guard: Mutex::new(None),
     }
+  }
 
-    fn init(&self, dsn: &str) {
-        let guard = sentry::init(dsn);
-
-        if guard.is_enabled() {
-            let mut self_guard = self.guard.lock().unwrap();
-            *self_guard = Some(guard);
-        }
+  fn init(&self) {
+    match &self.dsn.len() {
+      0 => {}
+      _length => {
+        let guard = sentry::init(self.dsn.clone());
+        *self.guard.lock().unwrap() = Some(guard);
+      }
     }
+  }
 }
 
 #[rocket::async_trait]
 impl Fairing for SentryFairing {
-    fn info(&self) -> Info {
-        Info {
-            name: "sentry",
-            kind: Kind::Ignite,
-        }
+  fn info(&self) -> Info {
+    Info {
+      name: "sentry",
+      kind: Kind::Ignite,
     }
+  }
 
-    async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
-        self.init("https://c7b459471051450abcfb5b4e25fa2b2c@o1059892.ingest.sentry.io/6048906");
-        Ok(rocket)
-    }
+  async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
+    self.init();
+    Ok(rocket)
+  }
 }

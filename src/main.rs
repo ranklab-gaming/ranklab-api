@@ -18,7 +18,7 @@ use serde::Serialize;
 
 #[derive(Serialize, JsonSchema)]
 pub struct Health {
-    status: String,
+  status: String,
 }
 
 fn load_envs() {
@@ -30,44 +30,46 @@ fn load_envs() {
 #[openapi]
 #[get("/")]
 pub async fn get_health() -> Json<Health> {
-    Json(Health {
-        status: "ok".into(),
-    })
+  Json(Health {
+    status: "ok".into(),
+  })
 }
 
 #[launch]
 fn rocket() -> Rocket<Build> {
-    load_envs();
+  load_envs();
 
-    let mut figment = rocket::Config::figment()
-        .merge(Toml::file("Ranklab.toml").nested())
-        .merge(Env::prefixed("RANKLAB_").global());
+  let mut figment = rocket::Config::figment()
+    .merge(Toml::file("Ranklab.toml").nested())
+    .merge(Env::prefixed("RANKLAB_").global());
 
-    if let Some(database_url) = Env::var("DATABASE_URL") {
-        figment = figment.merge(("databases.default.url", database_url));
-    }
+  if let Some(database_url) = Env::var("DATABASE_URL") {
+    figment = figment.merge(("databases.default.url", database_url));
+  }
 
-    rocket::custom(figment)
-        .attach(fairings::Sentry::fairing())
-        .attach(DbConn::fairing())
-        .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
-        .attach(AdHoc::on_request("Accept JSON", |req, _| {
-            Box::pin(async move { req.replace_header(Accept::JSON) })
-        }))
-        .attach(AdHoc::config::<Config>())
-        .mount(
-            "/",
-            openapi_get_routes![
-                get_health,
-                users::get_current,
-                recordings::create,
-                reviews::get,
-                reviews::list,
-                reviews::create,
-                coaches::create,
-                comments::create,
-                games::list,
-                comments::list
-            ],
-        )
+  let sentry_dsn: String = figment.extract_inner("sentry_dsn").unwrap();
+
+  rocket::custom(figment)
+    .attach(fairings::Sentry::fairing(sentry_dsn))
+    .attach(DbConn::fairing())
+    .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
+    .attach(AdHoc::on_request("Accept JSON", |req, _| {
+      Box::pin(async move { req.replace_header(Accept::JSON) })
+    }))
+    .attach(AdHoc::config::<Config>())
+    .mount(
+      "/",
+      openapi_get_routes![
+        get_health,
+        users::get_current,
+        recordings::create,
+        reviews::get,
+        reviews::list,
+        reviews::create,
+        coaches::create,
+        comments::create,
+        games::list,
+        comments::list
+      ],
+    )
 }
