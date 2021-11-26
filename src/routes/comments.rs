@@ -20,6 +20,13 @@ pub struct CreateCommentRequest {
   drawing: String,
 }
 
+#[derive(Deserialize, Validate, JsonSchema)]
+pub struct UpdateCommentRequest {
+  #[validate(length(min = 1))]
+  body: String,
+  drawing: String,
+}
+
 #[openapi(tag = "Ranklab")]
 #[post("/comments", data = "<comment>")]
 pub async fn create(
@@ -62,6 +69,37 @@ pub async fn create(
     .await;
 
   Response::Success(comment)
+}
+
+#[openapi(tag = "Ranklab")]
+#[put("/comments/<id>", data = "<comment>")]
+pub async fn update(
+  id: Uuid,
+  comment: Json<UpdateCommentRequest>,
+  _auth: Auth<User>,
+  db_conn: DbConn,
+) -> Response<Comment> {
+  if let Err(errors) = comment.validate() {
+    return Response::ValidationErrors(errors);
+  }
+
+  let existing_comment = crate::schema::comments::table.find(id);
+
+  let updated_comment = db_conn
+    .run(move |conn| {
+      use crate::schema::comments::dsl::*;
+
+      diesel::update(existing_comment)
+        .set((
+          body.eq(comment.body.clone()),
+          drawing.eq(comment.drawing.clone()),
+        ))
+        .get_result(conn)
+        .unwrap()
+    })
+    .await;
+
+  Response::Success(updated_comment)
 }
 
 #[derive(FromForm, JsonSchema)]

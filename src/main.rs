@@ -68,6 +68,7 @@ fn rocket() -> Rocket<Build> {
         reviews::create,
         coaches::create,
         comments::create,
+        comments::update,
         games::list,
         comments::list
       ],
