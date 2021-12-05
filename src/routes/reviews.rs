@@ -87,7 +87,7 @@ pub async fn create(
     return Response::ValidationErrors(errors);
   }
 
-  let key = format!("{}.mp4", review.recording_id.to_string());
+  let key = format!("{}", review.recording_id.to_string());
 
   let get_obj_req = GetObjectRequest {
     bucket: config.s3_bucket.clone(),
@@ -107,7 +107,7 @@ pub async fn create(
 
       diesel::insert_into(reviews)
         .values((
-          video_key.eq(key),
+          recording_id.eq(review.recording_id.clone()),
           title.eq(review.title.clone()),
           game_id.eq(review.game_id.clone()),
           user_id.eq(auth.0.id.clone()),

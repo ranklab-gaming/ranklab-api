@@ -3,7 +3,7 @@ CREATE TABLE reviews (
     user_id uuid NOT NULL REFERENCES users(id),
     coach_id uuid REFERENCES coaches(id),
     title text NOT NULL DEFAULT '',
-    video_key text NOT NULL,
+    recording_id uuid NOT NULL REFERENCES recordings(id),
     game_id uuid NOT NULL REFERENCES games(id),
     notes text NOT NULL DEFAULT ''
 );
