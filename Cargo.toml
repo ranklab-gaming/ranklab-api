@@ -24,6 +24,8 @@ schemars = "0.8.7"
 okapi = { git = "https://github.com/GREsau/okapi", features = ["derive_json_schema"] }
 sentry = "0.23.0"
 dotenv = "0.15.0"
+mime_guess = "2.0.3"
+lazy_static = "1.4.0"
 
 [dependencies.rocket_sync_db_pools]
 version = "0.1.0-rc.1"

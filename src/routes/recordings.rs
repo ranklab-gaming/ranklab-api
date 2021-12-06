@@ -1,7 +1,10 @@
 use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Recording, User};
+use crate::models::User;
+use crate::response::Response;
+use lazy_static::lazy_static;
+use regex::Regex;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -12,16 +15,22 @@ use rusoto_s3::PutObjectRequest;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use validator::Validate;
 
-#[derive(Deserialize, JsonSchema)]
+lazy_static! {
+  static ref MIME_TYPE_REGEX: Regex = Regex::new(r"^video/.*$").unwrap();
+}
+
+#[derive(Deserialize, JsonSchema, Validate)]
 pub struct CreateRecordingRequest {
   extension: String,
   size: usize,
+  #[validate(regex = "self::MIME_TYPE_REGEX")]
   mime_type: String,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
-pub struct RecordingResponse {
+pub struct CreateRecordingResponse {
   id: Uuid,
   upload_url: String,
 }
@@ -32,7 +41,12 @@ pub async fn create(
   config: &State<Config>,
   db_conn: DbConn,
   auth: Auth<User>,
-) -> Json<RecordingResponse> {
+  recording: Json<CreateRecordingRequest>,
+) -> Response<CreateRecordingResponse> {
+  if let Err(errors) = recording.validate() {
+    return Response::ValidationErrors(errors);
+  }
+
   let recording = db_conn
     .run(move |conn| {
       use crate::schema::recordings::dsl::*;
@@ -62,7 +76,7 @@ pub async fn create(
     &Default::default(),
   );
 
-  Json(RecordingResponse {
+  Json(CreateRecordingResponse {
     upload_url: response.to_string(),
     id: uuid,
   })
