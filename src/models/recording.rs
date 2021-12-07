@@ -6,6 +6,7 @@ use uuid::Uuid;
 pub struct Recording {
   pub id: Uuid,
   pub user_id: Uuid,
-  pub extension: String,
+  pub video_key: String,
+  pub upload_url: String,
   pub uploaded: bool,
 }

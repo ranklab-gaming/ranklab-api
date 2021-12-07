@@ -1,10 +1,12 @@
 use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::User;
+use crate::models::{Recording, User};
 use crate::response::Response;
+use diesel::prelude::*;
 use lazy_static::lazy_static;
 use regex::Regex;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -13,7 +15,7 @@ use rusoto_credential::AwsCredentials;
 use rusoto_s3::util::PreSignedRequest;
 use rusoto_s3::PutObjectRequest;
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -23,16 +25,10 @@ lazy_static! {
 
 #[derive(Deserialize, JsonSchema, Validate)]
 pub struct CreateRecordingRequest {
-  extension: String,
+  #[validate(range(min = 1usize, max = 2147483648usize))]
   size: usize,
   #[validate(regex = "self::MIME_TYPE_REGEX")]
   mime_type: String,
-}
-
-#[derive(Serialize, Deserialize, JsonSchema)]
-pub struct CreateRecordingResponse {
-  id: Uuid,
-  upload_url: String,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -42,42 +38,53 @@ pub async fn create(
   db_conn: DbConn,
   auth: Auth<User>,
   recording: Json<CreateRecordingRequest>,
-) -> Response<CreateRecordingResponse> {
+) -> Response<Recording> {
   if let Err(errors) = recording.validate() {
     return Response::ValidationErrors(errors);
   }
 
-  let recording = db_conn
-    .run(move |conn| {
-      use crate::schema::recordings::dsl::*;
+  let extensions = mime_guess::get_mime_extensions_str(&recording.mime_type);
 
-      diesel::insert_into(recordings)
-        .values((user_id.eq(auth.0.id.clone()), extension.eq("123")))
-        .get_result(conn)
-        .unwrap()
-    })
-    .await;
+  match extensions {
+    None => Response::Status(Status::UnprocessableEntity),
+    Some(extensions) => {
+      let extension = extensions.first().unwrap();
+      let key = format!("{}.{}", Uuid::new_v4().to_string(), extension);
 
-  let req = PutObjectRequest {
-    bucket: config.s3_bucket.to_owned(),
-    key: format!("{}", recording.id.to_string()),
-    acl: Some("public-read".to_string()),
-    ..Default::default()
-  };
+      let req = PutObjectRequest {
+        bucket: config.s3_bucket.to_owned(),
+        key: key.clone(),
+        acl: Some("public-read".to_string()),
+        ..Default::default()
+      };
 
-  let response = req.get_presigned_url(
-    &Region::EuWest2,
-    &AwsCredentials::new(
-      &config.aws_access_key_id,
-      &config.aws_secret_key,
-      None,
-      None,
-    ),
-    &Default::default(),
-  );
+      let url = req.get_presigned_url(
+        &Region::EuWest2,
+        &AwsCredentials::new(
+          &config.aws_access_key_id,
+          &config.aws_secret_key,
+          None,
+          None,
+        ),
+        &Default::default(),
+      );
 
-  Json(CreateRecordingResponse {
-    upload_url: response.to_string(),
-    id: uuid,
-  })
+      let recording = db_conn
+        .run(move |conn| {
+          use crate::schema::recordings::dsl::*;
+
+          diesel::insert_into(recordings)
+            .values((
+              user_id.eq(auth.0.id.clone()),
+              upload_url.eq(url),
+              video_key.eq(key),
+            ))
+            .get_result(conn)
+            .unwrap()
+        })
+        .await;
+
+      Response::Success(recording)
+    }
+  }
 }

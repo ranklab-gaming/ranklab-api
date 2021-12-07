@@ -31,7 +31,8 @@ table! {
     recordings (id) {
         id -> Uuid,
         user_id -> Uuid,
-        extension -> Text,
+        video_key -> Text,
+        upload_url -> Text,
         uploaded -> Bool,
     }
 }
