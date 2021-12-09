@@ -11,7 +11,7 @@ pub struct SentryFairing {
 
 impl SentryFairing {
   pub fn fairing(dsn: String) -> impl Fairing {
-    SentryFairing {
+    Self {
       dsn: dsn,
       guard: Mutex::new(None),
     }

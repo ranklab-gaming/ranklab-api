@@ -10,6 +10,7 @@ rusoto_core = "0.47.0"
 rusoto_s3 = "0.47.0"
 rusoto_credential = "0.47.0"
 rusoto_signature = "0.47.0"
+rusoto_sqs = "0.47.0"
 uuid = { version = "0.8.2", features = ["v4", "serde"] }
 serde = "1.0.130"
 diesel = { version = "1.4.8", features = ["uuidv07"] }

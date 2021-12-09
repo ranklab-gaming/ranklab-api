@@ -51,6 +51,7 @@ fn rocket() -> Rocket<Build> {
 
   rocket::custom(figment)
     .attach(fairings::Sentry::fairing(sentry_dsn))
+    .attach(fairings::Sqs::fairing())
     .attach(DbConn::fairing())
     .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
     .attach(AdHoc::on_request("Accept JSON", |req, _| {
