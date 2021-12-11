@@ -1,19 +1,48 @@
 use crate::aws;
 use crate::config::Config;
+use crate::db::DbConn;
+use diesel::prelude::*;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
 use rusoto_core::HttpClient;
 use rusoto_core::Region;
 use rusoto_sqs::{DeleteMessageRequest, ReceiveMessageRequest, Sqs, SqsClient};
+use serde::Deserialize;
 
 pub struct SqsFairing;
+
+#[derive(Deserialize)]
+struct RecordS3Object {
+  key: String,
+}
+
+#[derive(Deserialize)]
+struct RecordS3 {
+  object: RecordS3Object,
+}
+
+#[derive(Deserialize)]
+struct Record {
+  s3: RecordS3,
+}
+
+#[derive(Deserialize)]
+struct SqsMessageBody {
+  #[serde(rename = "Records")]
+  records: Vec<Record>,
+}
 
 impl SqsFairing {
   pub fn fairing() -> impl Fairing {
     Self
   }
 
-  fn init(&self, config: &Config) {
+  async fn init(&self, rocket: &Rocket<Orbit>) {
+    let db_conn = DbConn::get_one(&rocket)
+      .await
+      .expect("Failed to get db connection");
+
+    let config = rocket.state::<Config>().unwrap();
     let queue_url = config.s3_bucket_queue.clone();
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
@@ -37,11 +66,25 @@ impl SqsFairing {
         match response.messages {
           Some(messages) => {
             for message in messages {
-              println!(
-                "Received message '{}' with id {}",
-                message.body.clone().unwrap(),
-                message.message_id.clone().unwrap()
-              );
+              use crate::schema::recordings;
+              use crate::schema::recordings::dsl::*;
+
+              let body = message.body.unwrap();
+              let message_body: SqsMessageBody = serde_json::from_str(&body).unwrap();
+
+              for record in message_body.records {
+                db_conn
+                  .run(move |conn| {
+                    let existing_recording =
+                      recordings::table.filter(recordings::video_key.eq(&record.s3.object.key));
+
+                    diesel::update(existing_recording)
+                      .set(uploaded.eq(true))
+                      .execute(conn)
+                      .unwrap();
+                  })
+                  .await;
+              }
 
               let delete_request = DeleteMessageRequest {
                 queue_url: queue_url.clone(),
@@ -68,6 +111,6 @@ impl Fairing for SqsFairing {
   }
 
   async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
-    self.init(rocket.state::<Config>().unwrap());
+    self.init(rocket).await;
   }
 }
