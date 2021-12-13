@@ -28,12 +28,22 @@ table! {
 }
 
 table! {
+    recordings (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        video_key -> Text,
+        upload_url -> Text,
+        uploaded -> Bool,
+    }
+}
+
+table! {
     reviews (id) {
         id -> Uuid,
         user_id -> Uuid,
         coach_id -> Nullable<Uuid>,
         title -> Text,
-        video_key -> Text,
+        recording_id -> Uuid,
         game_id -> Uuid,
         notes -> Text,
     }
@@ -50,14 +60,17 @@ joinable!(coaches -> games (game_id));
 joinable!(coaches -> users (user_id));
 joinable!(comments -> reviews (review_id));
 joinable!(comments -> users (user_id));
+joinable!(recordings -> users (user_id));
 joinable!(reviews -> coaches (coach_id));
 joinable!(reviews -> games (game_id));
+joinable!(reviews -> recordings (recording_id));
 joinable!(reviews -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     coaches,
     comments,
     games,
+    recordings,
     reviews,
     users,
 );

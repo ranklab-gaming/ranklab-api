@@ -1,5 +1,3 @@
-use crate::aws;
-use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Review, User};
@@ -7,11 +5,7 @@ use crate::response::Response;
 use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::Json;
-use rocket::State;
 use rocket_okapi::openapi;
-use rusoto_core::HttpClient;
-use rusoto_s3::{GetObjectRequest, S3Client, S3};
-use rusoto_signature::region::Region;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -71,34 +65,10 @@ pub async fn get(
 pub async fn create(
   review: Json<CreateReviewRequest>,
   auth: Auth<User>,
-  config: &State<Config>,
   db_conn: DbConn,
 ) -> Response<Review> {
-  let s3 = S3Client::new_with(
-    HttpClient::new().unwrap(),
-    aws::CredentialsProvider::new(
-      config.aws_access_key_id.clone(),
-      config.aws_secret_key.clone(),
-    ),
-    Region::EuWest2,
-  );
-
   if let Err(errors) = review.validate() {
     return Response::ValidationErrors(errors);
-  }
-
-  let key = format!("{}.mp4", review.recording_id.to_string());
-
-  let get_obj_req = GetObjectRequest {
-    bucket: config.s3_bucket.clone(),
-    key: key.clone(),
-    ..Default::default()
-  };
-
-  if let Err(err) = s3.get_object(get_obj_req).await {
-    let message = format!("{:?}", err);
-    sentry::capture_message(&message, sentry::Level::Info);
-    return Response::Status(Status::UnprocessableEntity);
   }
 
   let review = db_conn
@@ -107,7 +77,7 @@ pub async fn create(
 
       diesel::insert_into(reviews)
         .values((
-          video_key.eq(key),
+          recording_id.eq(review.recording_id.clone()),
           title.eq(review.title.clone()),
           game_id.eq(review.game_id.clone()),
           user_id.eq(auth.0.id.clone()),

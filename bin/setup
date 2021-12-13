@@ -3,5 +3,5 @@
 sudo chown -R vscode .
 aws s3 cp s3://ranklab-development-secrets/.env.api .env.development
 aws s3 cp s3://ranklab-test-secrets/.env.api .env.test --profile test
-DATABASE_URL=postgres://postgres:postgres@postgres:5432/app diesel setup
+./bin/diesel setup
 cargo build
