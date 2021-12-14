@@ -9,4 +9,5 @@ pub struct Recording {
   pub video_key: String,
   pub upload_url: String,
   pub uploaded: bool,
+  pub mime_type: String,
 }

@@ -34,6 +34,7 @@ table! {
         video_key -> Text,
         upload_url -> Text,
         uploaded -> Bool,
+        mime_type -> Text,
     }
 }
 

@@ -78,6 +78,7 @@ pub async fn create(
               user_id.eq(auth.0.id.clone()),
               upload_url.eq(url),
               video_key.eq(key),
+              mime_type.eq(recording.mime_type.clone()),
             ))
             .get_result(conn)
             .unwrap()
@@ -86,5 +87,32 @@ pub async fn create(
 
       Response::Success(recording)
     }
+  }
+}
+
+#[openapi(tag = "Ranklab")]
+#[get("/recordings/<id>")]
+pub async fn get(
+  id: Uuid,
+  auth: Auth<User>,
+  db_conn: DbConn,
+) -> Result<Option<Json<Recording>>, Status> {
+  let result = db_conn
+    .run(move |conn| {
+      use crate::schema::recordings;
+      recordings::table.find(id).first::<Recording>(conn)
+    })
+    .await;
+
+  match result {
+    Ok(recording) => {
+      if recording.user_id != auth.0.id {
+        return Err(Status::Forbidden);
+      }
+
+      Ok(Some(Json(recording)))
+    }
+    Err(diesel::result::Error::NotFound) => Ok(None),
+    Err(error) => panic!("Error: {}", error),
   }
 }

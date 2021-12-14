@@ -71,7 +71,8 @@ fn rocket() -> Rocket<Build> {
         comments::create,
         comments::update,
         games::list,
-        comments::list
+        comments::list,
+        recordings::get
       ],
     )
 }
