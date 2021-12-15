@@ -13,9 +13,9 @@ use validator::{Validate, ValidationError};
 
 fn validate_game_id(game_id: &str) -> Result<(), ValidationError> {
   if crate::games::all().iter().any(|g| g.id() == game_id) {
-    Err(ValidationError::new("Game ID is not valid"))
-  } else {
     Ok(())
+  } else {
+    Err(ValidationError::new("Game ID is not valid"))
   }
 }
 
