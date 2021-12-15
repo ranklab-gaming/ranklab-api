@@ -9,7 +9,15 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
-use validator::Validate;
+use validator::{Validate, ValidationError};
+
+fn validate_game_id(game_id: &str) -> Result<(), ValidationError> {
+  if crate::games::all().iter().any(|g| g.id() == game_id) {
+    Err(ValidationError::new("Game ID is not valid"))
+  } else {
+    Ok(())
+  }
+}
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateReviewRequest {
@@ -17,7 +25,8 @@ pub struct CreateReviewRequest {
   #[validate(length(min = 1))]
   title: String,
   notes: String,
-  game_id: Uuid,
+  #[validate(custom = "validate_game_id")]
+  game_id: String,
 }
 
 #[openapi(tag = "Ranklab")]
