@@ -45,7 +45,7 @@ table! {
         coach_id -> Nullable<Uuid>,
         title -> Text,
         recording_id -> Uuid,
-        game_id -> Uuid,
+        game_id -> Text,
         notes -> Text,
     }
 }
@@ -63,7 +63,6 @@ joinable!(comments -> reviews (review_id));
 joinable!(comments -> users (user_id));
 joinable!(recordings -> users (user_id));
 joinable!(reviews -> coaches (coach_id));
-joinable!(reviews -> games (game_id));
 joinable!(reviews -> recordings (recording_id));
 joinable!(reviews -> users (user_id));
 
