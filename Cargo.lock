@@ -1376,6 +1376,7 @@ dependencies = [
  "rusoto_core",
  "rusoto_credential",
  "rusoto_s3",
+ "rusoto_sesv2",
  "rusoto_signature",
  "rusoto_sqs",
  "schemars",
@@ -1692,6 +1693,21 @@ dependencies = [
  "futures",
  "rusoto_core",
  "xml-rs",
+]
+
+[[package]]
+name = "rusoto_sesv2"
+version = "0.47.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbd849f449fa0f4c370a099faee6aa365f9ade8e7c366ce0a442bf4fcf0a02d7"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "rusoto_core",
+ "serde",
+ "serde_derive",
+ "serde_json",
 ]
 
 [[package]]

@@ -80,7 +80,7 @@ pub async fn create(
               video_key.eq(key),
               mime_type.eq(recording.mime_type.clone()),
             ))
-            .get_result(conn)
+            .get_result::<Recording>(conn)
             .unwrap()
         })
         .await;

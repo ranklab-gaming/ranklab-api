@@ -5,7 +5,7 @@ table! {
         name -> Text,
         email -> Text,
         bio -> Text,
-        game_id -> Uuid,
+        game_id -> Text,
     }
 }
 
@@ -57,7 +57,6 @@ table! {
     }
 }
 
-joinable!(coaches -> games (game_id));
 joinable!(coaches -> users (user_id));
 joinable!(comments -> reviews (review_id));
 joinable!(comments -> users (user_id));

@@ -1,13 +1,24 @@
+use crate::aws;
+use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Review, User};
+use crate::models::{Coach, Review, User};
 use crate::response::Response;
 use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::Json;
+use rocket::tokio;
+use rocket::State;
 use rocket_okapi::openapi;
+use rusoto_core::HttpClient;
+use rusoto_core::Region;
+use rusoto_sesv2::{
+  BulkEmailContent, BulkEmailEntry, Destination, ReplacementEmailContent, ReplacementTemplate,
+  SendBulkEmailRequest, SesV2, SesV2Client, Template,
+};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use serde_json::json;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
@@ -75,6 +86,7 @@ pub async fn create(
   review: Json<CreateReviewRequest>,
   auth: Auth<User>,
   db_conn: DbConn,
+  config: &State<Config>,
 ) -> Response<Review> {
   if let Err(errors) = review.validate() {
     return Response::ValidationErrors(errors);
@@ -92,10 +104,71 @@ pub async fn create(
           user_id.eq(auth.0.id.clone()),
           notes.eq(review.notes.clone()),
         ))
-        .get_result(conn)
+        .get_result::<Review>(conn)
         .unwrap()
     })
     .await;
+
+  let aws_access_key_id = config.aws_access_key_id.clone();
+  let aws_secret_key = config.aws_secret_key.clone();
+
+  tokio::spawn(async move {
+    let coaches = db_conn
+      .run(move |conn| {
+        use crate::schema::coaches::dsl::*;
+        coaches.load::<Coach>(conn).unwrap()
+      })
+      .await;
+
+    let client = SesV2Client::new_with(
+      HttpClient::new().unwrap(),
+      aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
+      Region::EuWest2,
+    );
+
+    let email_request = SendBulkEmailRequest {
+      from_email_address: Some("noreply@ranklab.gg".to_owned()),
+      default_content: BulkEmailContent {
+        template: Some(Template {
+          template_name: Some("notification".to_owned()),
+          template_data: Some(
+            json!({
+              "subject": "New VODs are available",
+              "title": "There are new VODs available for review!",
+              "body": "Go to your dashboard to start analyzing them.",
+              "cta" : "View Available VODs",
+              "cta_url" : "https://ranklab.gg/dashboard",
+            })
+            .to_string(),
+          ),
+          ..Default::default()
+        }),
+      },
+      bulk_email_entries: coaches
+        .iter()
+        .map(|coach| BulkEmailEntry {
+          destination: Destination {
+            to_addresses: Some(vec![coach.email.clone()]),
+            ..Default::default()
+          },
+          replacement_email_content: Some(ReplacementEmailContent {
+            replacement_template: Some(ReplacementTemplate {
+              replacement_template_data: Some(
+                json!({
+                  "name": coach.name.clone(),
+                })
+                .to_string(),
+              ),
+            }),
+          }),
+          ..Default::default()
+        })
+        .collect(),
+      ..Default::default()
+    };
+
+    client.send_bulk_email(email_request).await.unwrap();
+  });
 
   Response::Success(review)
 }
