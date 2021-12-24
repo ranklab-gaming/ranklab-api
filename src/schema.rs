@@ -21,13 +21,6 @@ table! {
 }
 
 table! {
-    games (id) {
-        id -> Uuid,
-        name -> Text,
-    }
-}
-
-table! {
     recordings (id) {
         id -> Uuid,
         user_id -> Uuid,
@@ -68,7 +61,6 @@ joinable!(reviews -> users (user_id));
 allow_tables_to_appear_in_same_query!(
     coaches,
     comments,
-    games,
     recordings,
     reviews,
     users,
