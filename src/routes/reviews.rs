@@ -2,7 +2,7 @@ use crate::aws;
 use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Coach, Review, User};
+use crate::models::{Coach, Player, Review};
 use crate::response::Response;
 use diesel::prelude::*;
 use rocket::http::Status;
@@ -42,11 +42,11 @@ pub struct CreateReviewRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/reviews")]
-pub async fn list(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
+pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> Json<Vec<Review>> {
   let reviews = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
-      reviews.filter(user_id.eq(auth.0.id)).load(conn).unwrap()
+      reviews.filter(player_id.eq(auth.0.id)).load(conn).unwrap()
     })
     .await;
 
@@ -57,7 +57,7 @@ pub async fn list(auth: Auth<User>, db_conn: DbConn) -> Json<Vec<Review>> {
 #[get("/reviews/<id>")]
 pub async fn get(
   id: Uuid,
-  auth: Auth<User>,
+  auth: Auth<Player>,
   db_conn: DbConn,
 ) -> Result<Option<Json<Review>>, Status> {
   let result = db_conn
@@ -69,7 +69,7 @@ pub async fn get(
 
   match result {
     Ok(review) => {
-      if review.user_id != auth.0.id {
+      if review.player_id != auth.0.id {
         return Err(Status::Forbidden);
       }
 
@@ -84,7 +84,7 @@ pub async fn get(
 #[post("/reviews", data = "<review>")]
 pub async fn create(
   review: Json<CreateReviewRequest>,
-  auth: Auth<User>,
+  auth: Auth<Player>,
   db_conn: DbConn,
   config: &State<Config>,
 ) -> Response<Review> {
@@ -101,7 +101,7 @@ pub async fn create(
           recording_id.eq(review.recording_id.clone()),
           title.eq(review.title.clone()),
           game_id.eq(review.game_id.clone()),
-          user_id.eq(auth.0.id.clone()),
+          player_id.eq(auth.0.id.clone()),
           notes.eq(review.notes.clone()),
         ))
         .get_result::<Review>(conn)

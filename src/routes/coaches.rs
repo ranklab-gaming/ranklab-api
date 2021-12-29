@@ -1,6 +1,6 @@
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Coach, User};
+use crate::models::{Coach, Player};
 use crate::response::Response;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
@@ -24,7 +24,7 @@ pub struct CreateCoachRequest {
 #[post("/coaches", data = "<coach>")]
 pub async fn create(
   coach: Json<CreateCoachRequest>,
-  auth: Auth<User>,
+  auth: Auth<Player>,
   db_conn: DbConn,
 ) -> Response<Coach> {
   if let Err(errors) = coach.validate() {
@@ -41,7 +41,7 @@ pub async fn create(
           name.eq(coach.name.clone()),
           bio.eq(coach.bio.clone()),
           game_id.eq(coach.game_id.clone()),
-          user_id.eq(auth.0.id.clone()),
+          auth0_id.eq(auth.0.auth0_id),
         ))
         .get_result(conn)
         .unwrap()

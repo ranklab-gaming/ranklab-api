@@ -1,9 +1,9 @@
 use crate::config::Config;
 use crate::db::DbConn;
-use crate::models::User;
+use crate::models::{Coach, Player};
 use crate::try_result;
 use diesel::prelude::*;
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, TokenData, Validation};
 use regex::Regex;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome, Request};
@@ -70,16 +70,10 @@ pub struct Jwks {
 
 pub struct Auth<T>(pub T);
 
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for Auth<User> {
-  type Error = AuthError;
-
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    use crate::schema::users::dsl::*;
-
+impl<'r, T> Auth<T> {
+  async fn decode_jwt(req: &'r Request<'_>) -> Result<TokenData<Claims>, AuthError> {
     let jwt_regexp = Regex::new(r"Bearer (?P<jwt>.+)").unwrap();
     let config = req.guard::<&State<Config>>().await;
-    let db_conn = req.guard::<DbConn>().await.unwrap();
     let auth0_issuer_base_url = config.as_ref().unwrap().auth0_issuer_base_url.clone();
     let oidc_configuration_url = format!(
       "{}{}",
@@ -100,55 +94,116 @@ impl<'r> FromRequest<'r> for Auth<User> {
       .await
       .unwrap();
 
-    let authorization = try_result!(req
+    let authorization = req
       .headers()
       .get_one("authorization")
-      .ok_or(AuthError::Missing));
+      .ok_or(AuthError::Missing)?;
 
-    let captures = try_result!(jwt_regexp.captures(authorization).ok_or(AuthError::Invalid));
-    let jwt = try_result!(captures.name("jwt").ok_or(AuthError::Invalid)).as_str();
-    let header = try_result!(decode_header(jwt).map_err(|_| AuthError::Invalid));
+    let captures = jwt_regexp
+      .captures(authorization)
+      .ok_or(AuthError::Invalid)?;
+    let jwt = captures.name("jwt").ok_or(AuthError::Invalid)?.as_str();
+    let header = decode_header(jwt).map_err(|_| AuthError::Invalid)?;
     let kid = header.kid.unwrap();
     let jwk = jwks.keys.iter().find(|jwk| jwk.kid == kid).unwrap();
     let validation = Validation::new(Algorithm::RS256);
 
-    let decoded_jwt = try_result!(decode::<Claims>(
+    decode::<Claims>(
       &jwt,
       &DecodingKey::from_rsa_components(&jwk.n, &jwk.e).unwrap(),
-      &validation
+      &validation,
     )
-    .map_err(|_| AuthError::Invalid));
+    .map_err(|_| AuthError::Invalid)
+  }
+}
 
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for Auth<Player> {
+  type Error = AuthError;
+
+  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    use crate::schema::players::dsl::*;
+
+    let db_conn = req.guard::<DbConn>().await.unwrap();
+    let decoded_jwt = try_result!(Auth::<Player>::decode_jwt(req).await);
     let sub = decoded_jwt.claims.sub.clone();
 
-    let user = db_conn
+    let player = db_conn
       .run(|conn| {
-        users
+        players
           .filter(auth0_id.eq(decoded_jwt.claims.sub))
           .first(conn)
       })
       .await;
 
-    match user {
-      Ok(user) => Outcome::Success(Auth(user)),
+    match player {
+      Ok(player) => Outcome::Success(Auth(player)),
       Err(diesel::result::Error::NotFound) => {
-        let user: User = db_conn
+        let player: Player = db_conn
           .run(|conn| {
-            diesel::insert_into(users)
+            diesel::insert_into(players)
               .values(&vec![(auth0_id.eq(sub))])
               .get_result(conn)
               .unwrap()
           })
           .await;
 
-        Outcome::Success(Auth(user))
+        Outcome::Success(Auth(player))
       }
-      Err(_) => panic!("Failure creating user"),
+      Err(_) => panic!("Failure creating player"),
     }
   }
 }
 
-impl<'a> OpenApiFromRequest<'a> for Auth<User> {
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for Auth<Coach> {
+  type Error = AuthError;
+
+  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    use crate::schema::coaches::dsl::*;
+
+    let db_conn = req.guard::<DbConn>().await.unwrap();
+    let decoded_jwt = try_result!(Auth::<Coach>::decode_jwt(req).await);
+    let sub = decoded_jwt.claims.sub.clone();
+
+    let coach = db_conn
+      .run(|conn| {
+        coaches
+          .filter(auth0_id.eq(decoded_jwt.claims.sub))
+          .first(conn)
+      })
+      .await;
+
+    match coach {
+      Ok(coach) => Outcome::Success(Auth(coach)),
+      Err(diesel::result::Error::NotFound) => {
+        let coach: Coach = db_conn
+          .run(|conn| {
+            diesel::insert_into(coaches)
+              .values(&vec![(auth0_id.eq(sub))])
+              .get_result(conn)
+              .unwrap()
+          })
+          .await;
+
+        Outcome::Success(Auth(coach))
+      }
+      Err(_) => panic!("Failure creating coach"),
+    }
+  }
+}
+
+impl<'a> OpenApiFromRequest<'a> for Auth<Player> {
+  fn from_request_input(
+    _gen: &mut OpenApiGenerator,
+    _name: String,
+    _required: bool,
+  ) -> rocket_okapi::Result<RequestHeaderInput> {
+    Ok(RequestHeaderInput::None)
+  }
+}
+
+impl<'a> OpenApiFromRequest<'a> for Auth<Coach> {
   fn from_request_input(
     _gen: &mut OpenApiGenerator,
     _name: String,
