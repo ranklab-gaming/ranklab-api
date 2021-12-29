@@ -1,6 +1,6 @@
 CREATE TABLE reviews (
     id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id uuid NOT NULL REFERENCES users(id),
+    player_id uuid NOT NULL REFERENCES players(id),
     coach_id uuid REFERENCES coaches(id),
     title text NOT NULL DEFAULT '',
     recording_id uuid NOT NULL REFERENCES recordings(id),

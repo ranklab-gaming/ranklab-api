@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Recording, User};
+use crate::models::{Player, Recording};
 use crate::response::Response;
 use diesel::prelude::*;
 use lazy_static::lazy_static;
@@ -36,7 +36,7 @@ pub struct CreateRecordingRequest {
 pub async fn create(
   config: &State<Config>,
   db_conn: DbConn,
-  auth: Auth<User>,
+  auth: Auth<Player>,
   recording: Json<CreateRecordingRequest>,
 ) -> Response<Recording> {
   if let Err(errors) = recording.validate() {
@@ -75,7 +75,7 @@ pub async fn create(
 
           diesel::insert_into(recordings)
             .values((
-              user_id.eq(auth.0.id.clone()),
+              player_id.eq(auth.0.id.clone()),
               upload_url.eq(url),
               video_key.eq(key),
               mime_type.eq(recording.mime_type.clone()),
@@ -94,7 +94,7 @@ pub async fn create(
 #[get("/recordings/<id>")]
 pub async fn get(
   id: Uuid,
-  auth: Auth<User>,
+  auth: Auth<Player>,
   db_conn: DbConn,
 ) -> Result<Option<Json<Recording>>, Status> {
   let result = db_conn
@@ -106,7 +106,7 @@ pub async fn get(
 
   match result {
     Ok(recording) => {
-      if recording.user_id != auth.0.id {
+      if recording.player_id != auth.0.id {
         return Err(Status::Forbidden);
       }
 
