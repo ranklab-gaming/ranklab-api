@@ -42,7 +42,7 @@ pub struct CreateReviewRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/reviews")]
-pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> Json<Vec<Review>> {
+pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> Json<Vec<Review>> {
   let reviews = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
@@ -57,7 +57,7 @@ pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> Json<Vec<Review>> {
 #[get("/reviews/<id>")]
 pub async fn get(
   id: Uuid,
-  auth: Auth<Player>,
+  auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> Result<Option<Json<Review>>, Status> {
   let result = db_conn

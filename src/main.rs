@@ -62,7 +62,7 @@ fn rocket() -> Rocket<Build> {
       "/",
       openapi_get_routes![
         get_health,
-        me::get_me,
+        users::get_me,
         recordings::create,
         reviews::get,
         reviews::list,

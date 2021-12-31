@@ -1,6 +1,7 @@
 use crate::db::DbConn;
+use crate::guards::auth::Claims;
 use crate::guards::Auth;
-use crate::models::{Coach, Player};
+use crate::models::Coach;
 use crate::response::Response;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
@@ -11,8 +12,6 @@ use validator::Validate;
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateCoachRequest {
-  #[validate(email)]
-  email: String,
   #[validate(length(min = 1))]
   name: String,
   #[validate(length(min = 1))]
@@ -24,7 +23,7 @@ pub struct CreateCoachRequest {
 #[post("/coaches", data = "<coach>")]
 pub async fn create(
   coach: Json<CreateCoachRequest>,
-  auth: Auth<Player>,
+  auth: Auth<Claims>,
   db_conn: DbConn,
 ) -> Response<Coach> {
   if let Err(errors) = coach.validate() {
@@ -37,11 +36,11 @@ pub async fn create(
 
       diesel::insert_into(coaches)
         .values((
-          email.eq(coach.email.clone()),
+          email.eq(auth.0.email.clone()),
           name.eq(coach.name.clone()),
           bio.eq(coach.bio.clone()),
           game_id.eq(coach.game_id.clone()),
-          auth0_id.eq(auth.0.auth0_id),
+          auth0_id.eq(auth.0.sub.clone()),
         ))
         .get_result(conn)
         .unwrap()

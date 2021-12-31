@@ -24,6 +24,8 @@ table! {
     players (id) {
         id -> Uuid,
         auth0_id -> Text,
+        name -> Text,
+        email -> Text,
     }
 }
 

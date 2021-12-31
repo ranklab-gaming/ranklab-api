@@ -1,6 +1,6 @@
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Comment, Player, Review};
+use crate::models::{Coach, Comment, Review, User};
 use crate::response::Response;
 use diesel::prelude::*;
 use rocket::http::Status;
@@ -31,7 +31,7 @@ pub struct UpdateCommentRequest {
 #[post("/comments", data = "<comment>")]
 pub async fn create(
   comment: Json<CreateCommentRequest>,
-  auth: Auth<Player>,
+  auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> Response<Comment> {
   if let Err(errors) = comment.validate() {
@@ -76,7 +76,7 @@ pub async fn create(
 pub async fn update(
   id: Uuid,
   comment: Json<UpdateCommentRequest>,
-  _auth: Auth<Player>,
+  _auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> Response<Comment> {
   if let Err(errors) = comment.validate() {
@@ -111,7 +111,7 @@ pub struct ListCommentsQuery {
 #[get("/comments?<params..>")]
 pub async fn list(
   params: ListCommentsQuery,
-  _auth: Auth<Player>,
+  _auth: Auth<User>,
   db_conn: DbConn,
 ) -> Json<Vec<Comment>> {
   let comments = db_conn
