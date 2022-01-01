@@ -78,54 +78,52 @@ pub struct Jwks {
 
 pub struct Auth<T>(pub T);
 
-impl<'r, T> Auth<T> {
-  async fn decode_jwt(req: &'r Request<'_>) -> Result<Claims, AuthError> {
-    let jwt_regexp = Regex::new(r"Bearer (?P<jwt>.+)").unwrap();
-    let config = req.guard::<&State<Config>>().await;
-    let auth0_issuer_base_url = config.as_ref().unwrap().auth0_issuer_base_url.clone();
+async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
+  let jwt_regexp = Regex::new(r"Bearer (?P<jwt>.+)").unwrap();
+  let config = req.guard::<&State<Config>>().await;
+  let auth0_issuer_base_url = config.as_ref().unwrap().auth0_issuer_base_url.clone();
 
-    let oidc_configuration_url = format!(
-      "{}{}",
-      auth0_issuer_base_url, ".well-known/openid-configuration"
-    );
+  let oidc_configuration_url = format!(
+    "{}{}",
+    auth0_issuer_base_url, ".well-known/openid-configuration"
+  );
 
-    let oidc_configuration = reqwest::get(&oidc_configuration_url)
-      .await
-      .unwrap()
-      .json::<OidcConfiguration>()
-      .await
-      .unwrap();
+  let oidc_configuration = reqwest::get(&oidc_configuration_url)
+    .await
+    .unwrap()
+    .json::<OidcConfiguration>()
+    .await
+    .unwrap();
 
-    let jwks = reqwest::get(&oidc_configuration.jwks_uri)
-      .await
-      .unwrap()
-      .json::<Jwks>()
-      .await
-      .unwrap();
+  let jwks = reqwest::get(&oidc_configuration.jwks_uri)
+    .await
+    .unwrap()
+    .json::<Jwks>()
+    .await
+    .unwrap();
 
-    let authorization = req
-      .headers()
-      .get_one("authorization")
-      .ok_or(AuthError::Missing)?;
+  let authorization = req
+    .headers()
+    .get_one("authorization")
+    .ok_or(AuthError::Missing)?;
 
-    let captures = jwt_regexp
-      .captures(authorization)
-      .ok_or(AuthError::Invalid)?;
+  let captures = jwt_regexp
+    .captures(authorization)
+    .ok_or(AuthError::Invalid)?;
 
-    let jwt = captures.name("jwt").ok_or(AuthError::Invalid)?.as_str();
-    let header = decode_header(jwt).map_err(|_| AuthError::Invalid)?;
-    let kid = header.kid.unwrap();
-    let jwk = jwks.keys.iter().find(|jwk| jwk.kid == kid).unwrap();
-    let validation = Validation::new(Algorithm::RS256);
+  let jwt = captures.name("jwt").ok_or(AuthError::Invalid)?.as_str();
+  let header = decode_header(jwt).map_err(|_| AuthError::Invalid)?;
+  let kid = header.kid.unwrap();
+  let jwk = jwks.keys.iter().find(|jwk| jwk.kid == kid).unwrap();
+  let validation = Validation::new(Algorithm::RS256);
 
-    decode::<Claims>(
-      &jwt,
-      &DecodingKey::from_rsa_components(&jwk.n, &jwk.e).unwrap(),
-      &validation,
-    )
-    .map_err(|_| AuthError::Invalid)
-    .map(|data| data.claims)
-  }
+  decode::<Claims>(
+    &jwt,
+    &DecodingKey::from_rsa_components(&jwk.n, &jwk.e).unwrap(),
+    &validation,
+  )
+  .map_err(|_| AuthError::Invalid)
+  .map(|data| data.claims)
 }
 
 impl Auth<Coach> {
@@ -159,7 +157,7 @@ impl<'r> FromRequest<'r> for Auth<Player> {
   type Error = AuthError;
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    let decoded_jwt = try_result!(Auth::<Player>::decode_jwt(req).await);
+    let decoded_jwt = try_result!(decode_jwt(req).await);
     let db_conn = req.guard::<DbConn>().await.unwrap();
     let auth = try_result!(Auth::<Player>::from_jwt(db_conn, decoded_jwt).await);
     Outcome::Success(auth)
@@ -171,7 +169,7 @@ impl<'r> FromRequest<'r> for Auth<Coach> {
   type Error = AuthError;
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    let decoded_jwt = try_result!(Auth::<Coach>::decode_jwt(req).await);
+    let decoded_jwt = try_result!(decode_jwt(req).await);
     let db_conn = req.guard::<DbConn>().await.unwrap();
     let auth = try_result!(Auth::<Coach>::from_jwt(db_conn, decoded_jwt).await);
     Outcome::Success(auth)
@@ -183,7 +181,7 @@ impl<'r> FromRequest<'r> for Auth<Claims> {
   type Error = AuthError;
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    let decoded_jwt = try_result!(Auth::<Claims>::decode_jwt(req).await);
+    let decoded_jwt = try_result!(decode_jwt(req).await);
     Outcome::Success(Auth(decoded_jwt))
   }
 }
@@ -194,7 +192,7 @@ impl<'r> FromRequest<'r> for Auth<User> {
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
     let db_conn = req.guard::<DbConn>().await.unwrap();
-    let decoded_jwt = try_result!(Auth::<Claims>::decode_jwt(req).await);
+    let decoded_jwt = try_result!(decode_jwt(req).await);
 
     let user: User = match decoded_jwt.user_type {
       UserType::Player => {
