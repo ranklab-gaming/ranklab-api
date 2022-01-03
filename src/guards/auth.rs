@@ -42,6 +42,7 @@ pub enum UserType {
 pub struct Claims {
   pub sub: String,
   pub email: String,
+  #[serde(rename = "https://ranklab.gg/user_type")]
   pub user_type: UserType,
 }
 
