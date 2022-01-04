@@ -46,7 +46,7 @@ pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> Json<Vec<Review>> {
   let reviews = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
-      reviews.filter(player_id.eq(auth.0.id)).load(conn).unwrap()
+      reviews.filter(coach_id.eq(auth.0.id)).load(conn).unwrap()
     })
     .await;
 
