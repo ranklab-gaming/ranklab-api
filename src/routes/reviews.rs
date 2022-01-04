@@ -69,12 +69,15 @@ pub async fn get(
 
   match result {
     Ok(review) => {
-      if review.player_id != auth.0.id {
-        return Err(Status::Forbidden);
+      match review.coach_id {
+        Some(coach_id) => if coach_id == auth.0.id {
+          Ok(Some(Json(review)))
+        } else {
+          Err(Status::Forbidden)
+        },
+        _ => Err(Status::Forbidden)
       }
-
-      Ok(Some(Json(review)))
-    }
+    },
     Err(diesel::result::Error::NotFound) => Ok(None),
     Err(error) => panic!("Error: {}", error),
   }
@@ -119,6 +122,10 @@ pub async fn create(
         coaches.load::<Coach>(conn).unwrap()
       })
       .await;
+
+    if coaches.len() == 0 {
+      return;
+    }
 
     let client = SesV2Client::new_with(
       HttpClient::new().unwrap(),

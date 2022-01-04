@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Player, Recording};
+use crate::models::{Player, Recording, User};
 use crate::response::Response;
 use diesel::prelude::*;
 use lazy_static::lazy_static;
@@ -94,7 +94,7 @@ pub async fn create(
 #[get("/recordings/<id>")]
 pub async fn get(
   id: Uuid,
-  auth: Auth<Player>,
+  _auth: Auth<User>,
   db_conn: DbConn,
 ) -> Result<Option<Json<Recording>>, Status> {
   let result = db_conn
@@ -106,10 +106,6 @@ pub async fn get(
 
   match result {
     Ok(recording) => {
-      if recording.player_id != auth.0.id {
-        return Err(Status::Forbidden);
-      }
-
       Ok(Some(Json(recording)))
     }
     Err(diesel::result::Error::NotFound) => Ok(None),
