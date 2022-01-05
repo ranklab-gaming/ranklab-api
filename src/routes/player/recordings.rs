@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Player, Recording, User};
+use crate::models::{Player, Recording};
 use crate::response::Response;
 use diesel::prelude::*;
 use lazy_static::lazy_static;
@@ -32,7 +32,7 @@ pub struct CreateRecordingRequest {
 }
 
 #[openapi(tag = "Ranklab")]
-#[post("/recordings", data = "<recording>")]
+#[post("/player/recordings", data = "<recording>")]
 pub async fn create(
   config: &State<Config>,
   db_conn: DbConn,
@@ -91,10 +91,10 @@ pub async fn create(
 }
 
 #[openapi(tag = "Ranklab")]
-#[get("/recordings/<id>")]
+#[get("/player/recordings/<id>")]
 pub async fn get(
   id: Uuid,
-  _auth: Auth<User>,
+  _auth: Auth<Player>,
   db_conn: DbConn,
 ) -> Result<Option<Json<Recording>>, Status> {
   let result = db_conn
@@ -105,9 +105,7 @@ pub async fn get(
     .await;
 
   match result {
-    Ok(recording) => {
-      Ok(Some(Json(recording)))
-    }
+    Ok(recording) => Ok(Some(Json(recording))),
     Err(diesel::result::Error::NotFound) => Ok(None),
     Err(error) => panic!("Error: {}", error),
   }

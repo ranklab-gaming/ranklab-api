@@ -62,17 +62,20 @@ fn rocket() -> Rocket<Build> {
       "/",
       openapi_get_routes![
         get_health,
-        users::get_me,
-        recordings::create,
-        reviews::get,
-        reviews::list,
-        reviews::create,
-        coaches::create,
-        comments::create,
-        comments::update,
-        games::list,
-        comments::list,
-        recordings::get
+        claims::coaches::create,
+        coach::comments::create,
+        coach::comments::list,
+        coach::comments::update,
+        coach::recordings::get,
+        coach::reviews::get,
+        coach::reviews::list,
+        player::comments::list,
+        player::recordings::create,
+        player::reviews::create,
+        player::reviews::get,
+        player::reviews::list,
+        user::games::list,
+        user::users::get_me
       ],
     )
 }

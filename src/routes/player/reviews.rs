@@ -41,8 +41,8 @@ pub struct CreateReviewRequest {
 }
 
 #[openapi(tag = "Ranklab")]
-#[get("/reviews")]
-pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> Json<Vec<Review>> {
+#[get("/player/reviews")]
+pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> Json<Vec<Review>> {
   let reviews = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
@@ -54,10 +54,10 @@ pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> Json<Vec<Review>> {
 }
 
 #[openapi(tag = "Ranklab")]
-#[get("/reviews/<id>")]
+#[get("/player/reviews/<id>")]
 pub async fn get(
   id: Uuid,
-  auth: Auth<Coach>,
+  auth: Auth<Player>,
   db_conn: DbConn,
 ) -> Result<Option<Json<Review>>, Status> {
   let result = db_conn
@@ -68,15 +68,15 @@ pub async fn get(
     .await;
 
   match result {
-    Ok(review) => {
-      match review.coach_id {
-        Some(coach_id) => if coach_id == auth.0.id {
+    Ok(review) => match review.coach_id {
+      Some(coach_id) => {
+        if coach_id == auth.0.id {
           Ok(Some(Json(review)))
         } else {
           Err(Status::Forbidden)
-        },
-        _ => Err(Status::Forbidden)
+        }
       }
+      _ => Err(Status::Forbidden),
     },
     Err(diesel::result::Error::NotFound) => Ok(None),
     Err(error) => panic!("Error: {}", error),
@@ -84,7 +84,7 @@ pub async fn get(
 }
 
 #[openapi(tag = "Ranklab")]
-#[post("/reviews", data = "<review>")]
+#[post("/player/reviews", data = "<review>")]
 pub async fn create(
   review: Json<CreateReviewRequest>,
   auth: Auth<Player>,

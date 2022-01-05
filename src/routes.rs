@@ -1,7 +1,4 @@
-pub mod coaches;
-pub mod comments;
-pub mod games;
-pub mod index;
-pub mod recordings;
-pub mod reviews;
-pub mod users;
+pub mod claims;
+pub mod coach;
+pub mod player;
+pub mod user;
