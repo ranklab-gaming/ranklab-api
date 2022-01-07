@@ -45,36 +45,30 @@ pub async fn create(
         .filter(id.eq(review_id).and(coach_id.eq(Some(auth_id.clone()))))
         .first::<Review>(conn)
     })
+    .await?;
+
+  if let Err(errors) = comment.validate() {
+    return Response::ValidationErrors(errors);
+  }
+
+  let comment = db_conn
+    .run(move |conn| {
+      use crate::schema::comments::dsl::*;
+
+      diesel::insert_into(comments)
+        .values((
+          body.eq(comment.body.clone()),
+          video_timestamp.eq(comment.video_timestamp),
+          review_id.eq(review.id),
+          coach_id.eq(auth_id),
+          drawing.eq(comment.drawing.clone()),
+        ))
+        .get_result(conn)
+        .unwrap()
+    })
     .await;
 
-  match review {
-    Err(diesel::result::Error::NotFound) => Response::Status(Status::NotFound),
-    Ok(review) => {
-      if let Err(errors) = comment.validate() {
-        return Response::ValidationErrors(errors);
-      }
-
-      let comment = db_conn
-        .run(move |conn| {
-          use crate::schema::comments::dsl::*;
-
-          diesel::insert_into(comments)
-            .values((
-              body.eq(comment.body.clone()),
-              video_timestamp.eq(comment.video_timestamp),
-              review_id.eq(review.id),
-              coach_id.eq(auth_id),
-              drawing.eq(comment.drawing.clone()),
-            ))
-            .get_result(conn)
-            .unwrap()
-        })
-        .await;
-
-      Response::Success(comment)
-    }
-    Err(error) => panic!("Error: {}", error),
-  }
+  Response::Success(comment)
 }
 
 #[openapi(tag = "Ranklab")]
