@@ -44,7 +44,7 @@ impl<T: Serialize> std::ops::FromResidual<diesel::result::QueryResult<std::conve
 {
   fn from_residual(residual: diesel::result::QueryResult<std::convert::Infallible>) -> Self {
     match residual {
-      Ok(_) => panic!(),
+      Ok(_) => panic!("Unexpected Ok"),
       Err(diesel::result::Error::NotFound) => Response::Status(Status::NotFound),
       Err(err) => {
         sentry::capture_error(&err);
