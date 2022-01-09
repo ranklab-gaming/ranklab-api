@@ -1,29 +1,37 @@
 use crate::db::DbConn;
 use crate::guards::Auth;
-use crate::models::{Recording, User};
+use crate::models::{Coach, Recording, Review};
+use crate::response::Response;
 use diesel::prelude::*;
-use rocket::http::Status;
-use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use uuid::Uuid;
 
 #[openapi(tag = "Ranklab")]
-#[get("/coach/recordings/<id>")]
+#[get("/coach/recordings/<recording_id_param>")]
 pub async fn get(
-  id: Uuid,
-  _auth: Auth<User>,
+  recording_id_param: Uuid,
+  auth: Auth<Coach>,
   db_conn: DbConn,
-) -> Result<Option<Json<Recording>>, Status> {
-  let result = db_conn
+) -> Response<Recording> {
+  let review = db_conn
     .run(move |conn| {
-      use crate::schema::recordings;
-      recordings::table.find(id).first::<Recording>(conn)
+      use crate::schema::reviews::dsl::*;
+      reviews
+        .filter(
+          coach_id
+            .eq(auth.0.id)
+            .and(recording_id.eq(recording_id_param)),
+        )
+        .first::<Review>(conn)
     })
-    .await;
+    .await?;
 
-  match result {
-    Ok(recording) => Ok(Some(Json(recording))),
-    Err(diesel::result::Error::NotFound) => Ok(None),
-    Err(error) => panic!("Error: {}", error),
-  }
+  let recording = db_conn
+    .run(move |conn| {
+      use crate::schema::recordings::dsl::*;
+      recordings.filter(id.eq(review.recording_id)).first(conn)
+    })
+    .await?;
+
+  Response::Success(recording)
 }

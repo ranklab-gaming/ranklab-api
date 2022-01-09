@@ -6,7 +6,6 @@ use crate::response::Response;
 use diesel::prelude::*;
 use lazy_static::lazy_static;
 use regex::Regex;
-use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -43,70 +42,58 @@ pub async fn create(
     return Response::ValidationErrors(errors);
   }
 
-  let extensions = mime_guess::get_mime_extensions_str(&recording.mime_type);
+  let extensions = mime_guess::get_mime_extensions_str(&recording.mime_type)?;
+  let extension = extensions.first().unwrap();
+  let key = format!("{}.{}", Uuid::new_v4().to_string(), extension);
 
-  match extensions {
-    None => Response::Status(Status::UnprocessableEntity),
-    Some(extensions) => {
-      let extension = extensions.first().unwrap();
-      let key = format!("{}.{}", Uuid::new_v4().to_string(), extension);
+  let req = PutObjectRequest {
+    bucket: config.s3_bucket.to_owned(),
+    key: key.clone(),
+    acl: Some("public-read".to_string()),
+    ..Default::default()
+  };
 
-      let req = PutObjectRequest {
-        bucket: config.s3_bucket.to_owned(),
-        key: key.clone(),
-        acl: Some("public-read".to_string()),
-        ..Default::default()
-      };
+  let url = req.get_presigned_url(
+    &Region::EuWest2,
+    &AwsCredentials::new(
+      &config.aws_access_key_id,
+      &config.aws_secret_key,
+      None,
+      None,
+    ),
+    &Default::default(),
+  );
 
-      let url = req.get_presigned_url(
-        &Region::EuWest2,
-        &AwsCredentials::new(
-          &config.aws_access_key_id,
-          &config.aws_secret_key,
-          None,
-          None,
-        ),
-        &Default::default(),
-      );
-
-      let recording = db_conn
-        .run(move |conn| {
-          use crate::schema::recordings::dsl::*;
-
-          diesel::insert_into(recordings)
-            .values((
-              player_id.eq(auth.0.id.clone()),
-              upload_url.eq(url),
-              video_key.eq(key),
-              mime_type.eq(recording.mime_type.clone()),
-            ))
-            .get_result::<Recording>(conn)
-            .unwrap()
-        })
-        .await;
-
-      Response::Success(recording)
-    }
-  }
-}
-
-#[openapi(tag = "Ranklab")]
-#[get("/player/recordings/<id>")]
-pub async fn get(
-  id: Uuid,
-  _auth: Auth<Player>,
-  db_conn: DbConn,
-) -> Result<Option<Json<Recording>>, Status> {
-  let result = db_conn
+  let recording = db_conn
     .run(move |conn| {
-      use crate::schema::recordings;
-      recordings::table.find(id).first::<Recording>(conn)
+      use crate::schema::recordings::dsl::*;
+
+      diesel::insert_into(recordings)
+        .values((
+          player_id.eq(auth.0.id.clone()),
+          upload_url.eq(url),
+          video_key.eq(key),
+          mime_type.eq(recording.mime_type.clone()),
+        ))
+        .get_result::<Recording>(conn)
+        .unwrap()
     })
     .await;
 
-  match result {
-    Ok(recording) => Ok(Some(Json(recording))),
-    Err(diesel::result::Error::NotFound) => Ok(None),
-    Err(error) => panic!("Error: {}", error),
-  }
+  Response::Success(recording)
+}
+
+#[openapi(tag = "Ranklab")]
+#[get("/player/recordings/<recording_id>")]
+pub async fn get(recording_id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> Response<Recording> {
+  let recording = db_conn
+    .run(move |conn| {
+      use crate::schema::recordings::dsl::*;
+      recordings
+        .filter(player_id.eq(auth.0.id).and(id.eq(recording_id)))
+        .first(conn)
+    })
+    .await?;
+
+  Response::Success(recording)
 }

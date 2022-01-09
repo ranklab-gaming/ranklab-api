@@ -3,7 +3,6 @@ use crate::guards::Auth;
 use crate::models::{Coach, Comment, Review};
 use crate::response::Response;
 use diesel::prelude::*;
-use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -89,33 +88,27 @@ pub async fn update(
         .filter(id.eq(comment_id).and(coach_id.eq(auth_id)))
         .first::<Comment>(conn)
     })
+    .await?;
+
+  if let Err(errors) = comment.validate() {
+    return Response::ValidationErrors(errors);
+  }
+
+  let updated_comment = db_conn
+    .run(move |conn| {
+      use crate::schema::comments::dsl::*;
+
+      diesel::update(crate::schema::comments::table.find(existing_comment.id))
+        .set((
+          body.eq(comment.body.clone()),
+          drawing.eq(comment.drawing.clone()),
+        ))
+        .get_result(conn)
+        .unwrap()
+    })
     .await;
 
-  match existing_comment {
-    Err(diesel::result::Error::NotFound) => Response::Status(Status::NotFound),
-    Ok(existing_comment) => {
-      if let Err(errors) = comment.validate() {
-        return Response::ValidationErrors(errors);
-      }
-
-      let updated_comment = db_conn
-        .run(move |conn| {
-          use crate::schema::comments::dsl::*;
-
-          diesel::update(crate::schema::comments::table.find(existing_comment.id))
-            .set((
-              body.eq(comment.body.clone()),
-              drawing.eq(comment.drawing.clone()),
-            ))
-            .get_result(conn)
-            .unwrap()
-        })
-        .await;
-
-      Response::Success(updated_comment)
-    }
-    Err(error) => panic!("Error: {}", error),
-  }
+  Response::Success(updated_comment)
 }
 
 #[derive(FromForm, JsonSchema)]

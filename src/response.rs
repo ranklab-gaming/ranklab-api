@@ -53,3 +53,12 @@ impl<T: Serialize> std::ops::FromResidual<diesel::result::QueryResult<std::conve
     }
   }
 }
+
+impl<T: Serialize, R> std::ops::FromResidual<Option<R>> for Response<T> {
+  fn from_residual(residual: Option<R>) -> Self {
+    match residual {
+      Some(_) => panic!("Unexpected Some"),
+      None => Response::Status(Status::BadRequest),
+    }
+  }
+}
