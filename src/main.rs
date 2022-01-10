@@ -63,6 +63,7 @@ fn rocket() -> Rocket<Build> {
       openapi_get_routes![
         get_health,
         claims::coaches::create,
+        claims::players::create,
         coach::comments::create,
         coach::comments::list,
         coach::comments::update,
