@@ -84,13 +84,13 @@ pub async fn create(
 }
 
 #[openapi(tag = "Ranklab")]
-#[get("/player/recordings/<recording_id>")]
-pub async fn get(recording_id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> Response<Recording> {
+#[get("/player/recordings/<id>")]
+pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> Response<Recording> {
   let recording = db_conn
     .run(move |conn| {
-      use crate::schema::recordings::dsl::*;
+      use crate::schema::recordings::dsl::{id as recording_id, player_id, recordings};
       recordings
-        .filter(player_id.eq(auth.0.id).and(id.eq(recording_id)))
+        .filter(player_id.eq(auth.0.id).and(recording_id.eq(id)))
         .first(conn)
     })
     .await?;

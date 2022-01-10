@@ -71,9 +71,9 @@ pub async fn create(
 }
 
 #[openapi(tag = "Ranklab")]
-#[put("/coach/comments/<comment_id>", data = "<comment>")]
+#[put("/coach/comments/<id>", data = "<comment>")]
 pub async fn update(
-  comment_id: Uuid,
+  id: Uuid,
   comment: Json<UpdateCommentRequest>,
   auth: Auth<Coach>,
   db_conn: DbConn,
@@ -82,10 +82,10 @@ pub async fn update(
 
   let existing_comment = db_conn
     .run(move |conn| {
-      use crate::schema::comments::dsl::*;
+      use crate::schema::comments::dsl::{coach_id, comments, id as comment_id};
 
       comments
-        .filter(id.eq(comment_id).and(coach_id.eq(auth_id)))
+        .filter(comment_id.eq(id).and(coach_id.eq(auth_id)))
         .first::<Comment>(conn)
     })
     .await?;

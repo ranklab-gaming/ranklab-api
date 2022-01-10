@@ -7,21 +7,13 @@ use rocket_okapi::openapi;
 use uuid::Uuid;
 
 #[openapi(tag = "Ranklab")]
-#[get("/coach/recordings/<recording_id_param>")]
-pub async fn get(
-  recording_id_param: Uuid,
-  auth: Auth<Coach>,
-  db_conn: DbConn,
-) -> Response<Recording> {
+#[get("/coach/recordings/<id>")]
+pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> Response<Recording> {
   let review = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::*;
+      use crate::schema::reviews::dsl::{coach_id, id as recording_id, reviews};
       reviews
-        .filter(
-          coach_id
-            .eq(auth.0.id)
-            .and(recording_id.eq(recording_id_param)),
-        )
+        .filter(coach_id.eq(auth.0.id).and(recording_id.eq(id)))
         .first::<Review>(conn)
     })
     .await?;

@@ -71,6 +71,7 @@ fn rocket() -> Rocket<Build> {
         coach::reviews::list,
         player::comments::list,
         player::recordings::create,
+        player::recordings::get,
         player::reviews::create,
         player::reviews::get,
         player::reviews::list,

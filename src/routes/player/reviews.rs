@@ -46,13 +46,13 @@ pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> Response<Vec<Review>> 
 }
 
 #[openapi(tag = "Ranklab")]
-#[get("/player/reviews/<review_id>")]
-pub async fn get(review_id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> Response<Review> {
+#[get("/player/reviews/<id>")]
+pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> Response<Review> {
   let review = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::*;
+      use crate::schema::reviews::dsl::{id as review_id, player_id, reviews};
       reviews
-        .filter(player_id.eq(auth.0.id).and(id.eq(review_id)))
+        .filter(player_id.eq(auth.0.id).and(review_id.eq(id)))
         .first(conn)
     })
     .await?;
