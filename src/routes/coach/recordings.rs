@@ -11,7 +11,8 @@ use uuid::Uuid;
 pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> Response<Recording> {
   let review = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::{coach_id, id as recording_id, reviews};
+      use crate::schema::reviews::dsl::{coach_id, recording_id, reviews};
+
       reviews
         .filter(coach_id.eq(auth.0.id).and(recording_id.eq(id)))
         .first::<Review>(conn)
