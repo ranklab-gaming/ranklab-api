@@ -76,7 +76,7 @@ fn rocket() -> Rocket<Build> {
         player::reviews::create,
         player::reviews::get,
         player::reviews::list,
-        user::games::list,
+        public::games::list,
         user::users::get_me
       ],
     )
