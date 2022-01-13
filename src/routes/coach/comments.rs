@@ -1,8 +1,7 @@
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Coach, Comment, Review};
-use crate::response;
-use crate::response::{MutationResponse, QueryResponse};
+use crate::response::{MutationResponse, QueryResponse, Response};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -48,7 +47,7 @@ pub async fn create(
     .await?;
 
   if let Err(errors) = comment.validate() {
-    return response::validation_error(errors);
+    return Response::validation_error(errors);
   }
 
   let comment = db_conn
@@ -68,7 +67,7 @@ pub async fn create(
     })
     .await;
 
-  response::success(comment)
+  Response::success(comment)
 }
 
 #[openapi(tag = "Ranklab")]
@@ -92,7 +91,7 @@ pub async fn update(
     .await?;
 
   if let Err(errors) = comment.validate() {
-    return response::validation_error(errors);
+    return Response::validation_error(errors);
   }
 
   let updated_comment = db_conn
@@ -109,7 +108,7 @@ pub async fn update(
     })
     .await;
 
-  response::success(updated_comment)
+  Response::success(updated_comment)
 }
 
 #[derive(FromForm, JsonSchema)]
@@ -135,5 +134,5 @@ pub async fn list(
     })
     .await;
 
-  response::success(comments)
+  Response::success(comments)
 }

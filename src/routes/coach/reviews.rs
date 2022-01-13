@@ -1,8 +1,7 @@
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Coach, Review};
-use crate::response;
-use crate::response::QueryResponse;
+use crate::response::{QueryResponse, Response};
 use diesel::prelude::*;
 use rocket_okapi::openapi;
 use uuid::Uuid;
@@ -17,7 +16,7 @@ pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<Vec<Revie
     })
     .await;
 
-  response::success(reviews)
+  Response::success(reviews)
 }
 
 #[openapi(tag = "Ranklab")]
@@ -32,5 +31,5 @@ pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<
     })
     .await?;
 
-  response::success(review)
+  Response::success(review)
 }

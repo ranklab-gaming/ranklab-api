@@ -2,8 +2,7 @@ use crate::db::DbConn;
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
 use crate::models::Coach;
-use crate::response;
-use crate::response::MutationResponse;
+use crate::response::{MutationResponse, Response};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -28,7 +27,7 @@ pub async fn create(
   db_conn: DbConn,
 ) -> MutationResponse<Coach> {
   if let Err(errors) = coach.validate() {
-    return response::validation_error(errors);
+    return Response::validation_error(errors);
   }
 
   let coach = db_conn
@@ -48,5 +47,5 @@ pub async fn create(
     })
     .await;
 
-  response::success(coach)
+  Response::success(coach)
 }

@@ -3,8 +3,7 @@ use crate::db::DbConn;
 use crate::emails::{Email, Recipient};
 use crate::guards::Auth;
 use crate::models::{Coach, Player, Review};
-use crate::response;
-use crate::response::{MutationResponse, QueryResponse};
+use crate::response::{MutationResponse, QueryResponse, Response};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -43,7 +42,7 @@ pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<Revi
     })
     .await;
 
-  response::success(reviews)
+  Response::success(reviews)
 }
 
 #[openapi(tag = "Ranklab")]
@@ -58,7 +57,7 @@ pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse
     })
     .await?;
 
-  response::success(review)
+  Response::success(review)
 }
 
 #[openapi(tag = "Ranklab")]
@@ -70,7 +69,7 @@ pub async fn create(
   config: &State<Config>,
 ) -> MutationResponse<Review> {
   if let Err(errors) = review.validate() {
-    return response::validation_error(errors);
+    return Response::validation_error(errors);
   }
 
   let review = db_conn
@@ -122,5 +121,5 @@ pub async fn create(
 
   email.deliver();
 
-  response::success(review)
+  Response::success(review)
 }

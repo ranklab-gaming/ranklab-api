@@ -2,8 +2,7 @@ use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Player, Recording};
-use crate::response;
-use crate::response::{MutationError, MutationResponse, QueryResponse};
+use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use diesel::prelude::*;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -41,7 +40,7 @@ pub async fn create(
   recording: Json<CreateRecordingRequest>,
 ) -> MutationResponse<Recording> {
   if let Err(errors) = recording.validate() {
-    return response::validation_error(errors);
+    return Response::validation_error(errors);
   }
 
   let extensions = mime_guess::get_mime_extensions_str(&recording.mime_type)
@@ -84,7 +83,7 @@ pub async fn create(
     })
     .await;
 
-  response::success(recording)
+  Response::success(recording)
 }
 
 #[openapi(tag = "Ranklab")]
@@ -99,5 +98,5 @@ pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse
     })
     .await?;
 
-  response::success(recording)
+  Response::success(recording)
 }

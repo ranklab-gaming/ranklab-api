@@ -95,21 +95,24 @@ pub enum QueryError {
 
 pub type MutationResponse<T> = Result<Json<T>, MutationError>;
 pub type QueryResponse<T> = Result<Json<T>, QueryError>;
+pub struct Response;
 
-pub fn success<T, E>(response: T) -> Result<Json<T>, E> {
-  Ok(Json(response))
-}
+impl Response {
+  pub fn success<T, E>(response: T) -> Result<Json<T>, E> {
+    Ok(Json(response))
+  }
 
-pub fn query_error<T>(status: Status) -> Result<Json<T>, QueryError> {
-  Err(QueryError::Status(status))
-}
+  pub fn query_error<T>(status: Status) -> Result<Json<T>, QueryError> {
+    Err(QueryError::Status(status))
+  }
 
-pub fn validation_error<T>(errors: ValidationErrors) -> Result<Json<T>, MutationError> {
-  Err(MutationError::ValidationErrors(errors))
-}
+  pub fn validation_error<T>(errors: ValidationErrors) -> Result<Json<T>, MutationError> {
+    Err(MutationError::ValidationErrors(errors))
+  }
 
-pub fn mutation_error<T, E>(status: Status) -> Result<Json<T>, MutationError> {
-  Err(MutationError::Status(status))
+  pub fn mutation_error<T, E>(status: Status) -> Result<Json<T>, MutationError> {
+    Err(MutationError::Status(status))
+  }
 }
 
 impl<'r> Responder<'r, 'static> for MutationError {

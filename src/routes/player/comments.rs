@@ -1,8 +1,7 @@
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Coach, Comment, Review};
-use crate::response;
-use crate::response::QueryResponse;
+use crate::response::{QueryResponse, Response};
 use diesel::prelude::*;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -36,5 +35,5 @@ pub async fn list(
     })
     .await;
 
-  response::success(comments)
+  Response::success(comments)
 }

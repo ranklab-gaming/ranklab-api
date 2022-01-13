@@ -1,10 +1,9 @@
 use crate::games::Game;
-use crate::response;
-use crate::response::QueryResponse;
+use crate::response::{QueryResponse, Response};
 use rocket_okapi::openapi;
 
 #[openapi(tag = "Ranklab")]
 #[get("/user/games")]
 pub async fn list() -> QueryResponse<Vec<Box<dyn Game>>> {
-  response::success(crate::games::all())
+  Response::success(crate::games::all())
 }
