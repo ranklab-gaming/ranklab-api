@@ -2,7 +2,8 @@ use crate::db::DbConn;
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
 use crate::models::Player;
-use crate::response::Response;
+use crate::response;
+use crate::response::MutationResponse;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -22,9 +23,9 @@ pub async fn create(
   player: Json<CreatePlayerRequest>,
   auth: Auth<Claims>,
   db_conn: DbConn,
-) -> Response<Player> {
+) -> MutationResponse<Player> {
   if let Err(errors) = player.validate() {
-    return Response::ValidationErrors(errors);
+    return response::validation_error(errors);
   }
 
   let player = db_conn
@@ -42,5 +43,5 @@ pub async fn create(
     })
     .await;
 
-  Response::Success(player)
+  response::success(player)
 }

@@ -1,14 +1,15 @@
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Coach, Recording, Review};
-use crate::response::Response;
+use crate::response;
+use crate::response::QueryResponse;
 use diesel::prelude::*;
 use rocket_okapi::openapi;
 use uuid::Uuid;
 
 #[openapi(tag = "Ranklab")]
 #[get("/coach/recordings/<id>")]
-pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> Response<Recording> {
+pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<Recording> {
   let review = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::{coach_id, recording_id, reviews};
@@ -26,5 +27,5 @@ pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> Response<Recor
     })
     .await?;
 
-  Response::Success(recording)
+  response::success(recording)
 }

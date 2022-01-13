@@ -1,7 +1,8 @@
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Coach, Comment, Review};
-use crate::response::Response;
+use crate::response;
+use crate::response::{MutationResponse, QueryResponse};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -32,7 +33,7 @@ pub async fn create(
   comment: Json<CreateCommentRequest>,
   auth: Auth<Coach>,
   db_conn: DbConn,
-) -> Response<Comment> {
+) -> MutationResponse<Comment> {
   let review_id = comment.review_id.clone();
   let auth_id = auth.0.id.clone();
 
@@ -47,7 +48,7 @@ pub async fn create(
     .await?;
 
   if let Err(errors) = comment.validate() {
-    return Response::ValidationErrors(errors);
+    return response::validation_error(errors);
   }
 
   let comment = db_conn
@@ -67,7 +68,7 @@ pub async fn create(
     })
     .await;
 
-  Response::Success(comment)
+  response::success(comment)
 }
 
 #[openapi(tag = "Ranklab")]
@@ -77,7 +78,7 @@ pub async fn update(
   comment: Json<UpdateCommentRequest>,
   auth: Auth<Coach>,
   db_conn: DbConn,
-) -> Response<Comment> {
+) -> MutationResponse<Comment> {
   let auth_id = auth.0.id.clone();
 
   let existing_comment = db_conn
@@ -91,7 +92,7 @@ pub async fn update(
     .await?;
 
   if let Err(errors) = comment.validate() {
-    return Response::ValidationErrors(errors);
+    return response::validation_error(errors);
   }
 
   let updated_comment = db_conn
@@ -108,7 +109,7 @@ pub async fn update(
     })
     .await;
 
-  Response::Success(updated_comment)
+  response::success(updated_comment)
 }
 
 #[derive(FromForm, JsonSchema)]
@@ -122,7 +123,7 @@ pub async fn list(
   params: ListCommentsQuery,
   auth: Auth<Coach>,
   db_conn: DbConn,
-) -> Json<Vec<Comment>> {
+) -> QueryResponse<Vec<Comment>> {
   let comments = db_conn
     .run(move |conn| {
       use crate::schema::comments::dsl::*;
@@ -134,5 +135,5 @@ pub async fn list(
     })
     .await;
 
-  Json(comments)
+  response::success(comments)
 }

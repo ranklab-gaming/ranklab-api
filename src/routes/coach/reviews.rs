@@ -1,14 +1,15 @@
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Coach, Review};
-use crate::response::Response;
+use crate::response;
+use crate::response::QueryResponse;
 use diesel::prelude::*;
 use rocket_okapi::openapi;
 use uuid::Uuid;
 
 #[openapi(tag = "Ranklab")]
 #[get("/coach/reviews")]
-pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> Response<Vec<Review>> {
+pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<Vec<Review>> {
   let reviews = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
@@ -16,12 +17,12 @@ pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> Response<Vec<Review>> {
     })
     .await;
 
-  Response::Success(reviews)
+  response::success(reviews)
 }
 
 #[openapi(tag = "Ranklab")]
 #[get("/coach/reviews/<id>")]
-pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> Response<Review> {
+pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<Review> {
   let review = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews};
@@ -31,5 +32,5 @@ pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> Response<Revie
     })
     .await?;
 
-  Response::Success(review)
+  response::success(review)
 }

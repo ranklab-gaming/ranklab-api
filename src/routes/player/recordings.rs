@@ -2,10 +2,12 @@ use crate::config::Config;
 use crate::db::DbConn;
 use crate::guards::Auth;
 use crate::models::{Player, Recording};
-use crate::response::Response;
+use crate::response;
+use crate::response::{MutationError, MutationResponse, QueryResponse};
 use diesel::prelude::*;
 use lazy_static::lazy_static;
 use regex::Regex;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -37,12 +39,14 @@ pub async fn create(
   db_conn: DbConn,
   auth: Auth<Player>,
   recording: Json<CreateRecordingRequest>,
-) -> Response<Recording> {
+) -> MutationResponse<Recording> {
   if let Err(errors) = recording.validate() {
-    return Response::ValidationErrors(errors);
+    return response::validation_error(errors);
   }
 
-  let extensions = mime_guess::get_mime_extensions_str(&recording.mime_type)?;
+  let extensions = mime_guess::get_mime_extensions_str(&recording.mime_type)
+    .ok_or(MutationError::Status(Status::UnprocessableEntity))?;
+
   let extension = extensions.first().unwrap();
   let key = format!("{}.{}", Uuid::new_v4().to_string(), extension);
 
@@ -80,12 +84,12 @@ pub async fn create(
     })
     .await;
 
-  Response::Success(recording)
+  response::success(recording)
 }
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/recordings/<id>")]
-pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> Response<Recording> {
+pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Recording> {
   let recording = db_conn
     .run(move |conn| {
       use crate::schema::recordings::dsl::{id as recording_id, player_id, recordings};
@@ -95,5 +99,5 @@ pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> Response<Reco
     })
     .await?;
 
-  Response::Success(recording)
+  response::success(recording)
 }
