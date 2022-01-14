@@ -125,10 +125,7 @@ impl<'r> Responder<'r, 'static> for MutationError {
       MutationError::ValidationErrors(errors) => {
         Custom(Status::UnprocessableEntity, Json(errors)).respond_to(req)
       }
-      MutationError::InternalServerError(error) => {
-        sentry::capture_error(error.as_ref());
-        Status::InternalServerError.respond_to(req)
-      }
+      MutationError::InternalServerError(error) => panic!("{:?}", error),
     }
   }
 }
@@ -137,10 +134,7 @@ impl<'r> Responder<'r, 'static> for QueryError {
   fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
     match self {
       QueryError::Status(status) => status.respond_to(req),
-      QueryError::InternalServerError(error) => {
-        sentry::capture_error(error.as_ref());
-        Status::InternalServerError.respond_to(req)
-      }
+      QueryError::InternalServerError(error) => panic!("{:?}", error),
     }
   }
 }
