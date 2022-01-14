@@ -172,7 +172,7 @@ impl From<diesel::result::Error> for MutationError {
   fn from(error: diesel::result::Error) -> Self {
     match error {
       diesel::result::Error::NotFound => MutationError::Status(Status::NotFound),
-      error => MutationError::InternalServerError(Box::new(error)),
+      error => MutationError::InternalServerError(error.into()),
     }
   }
 }
@@ -181,7 +181,7 @@ impl From<diesel::result::Error> for QueryError {
   fn from(error: diesel::result::Error) -> Self {
     match error {
       diesel::result::Error::NotFound => QueryError::Status(Status::NotFound),
-      error => QueryError::InternalServerError(Box::new(error)),
+      error => QueryError::InternalServerError(error.into()),
     }
   }
 }
