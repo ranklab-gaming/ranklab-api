@@ -7,6 +7,7 @@ use rocket::{response, Request};
 use rocket_okapi::{
   gen::OpenApiGenerator, response::OpenApiResponderInner, Result as OpenApiResult,
 };
+use std::error::Error;
 use validator::ValidationErrors;
 
 fn add_400_error(responses: &mut Responses) {
@@ -87,10 +88,12 @@ fn add_500_error(responses: &mut Responses) {
 pub enum MutationError {
   ValidationErrors(ValidationErrors),
   Status(Status),
+  InternalServerError(Box<dyn Error + Send + Sync>),
 }
 
 pub enum QueryError {
   Status(Status),
+  InternalServerError(Box<dyn Error + Send + Sync>),
 }
 
 pub type MutationResponse<T> = Result<Json<T>, MutationError>;
@@ -122,6 +125,10 @@ impl<'r> Responder<'r, 'static> for MutationError {
       MutationError::ValidationErrors(errors) => {
         Custom(Status::UnprocessableEntity, Json(errors)).respond_to(req)
       }
+      MutationError::InternalServerError(error) => {
+        sentry::capture_error(error.as_ref());
+        Status::InternalServerError.respond_to(req)
+      }
     }
   }
 }
@@ -130,6 +137,10 @@ impl<'r> Responder<'r, 'static> for QueryError {
   fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
     match self {
       QueryError::Status(status) => status.respond_to(req),
+      QueryError::InternalServerError(error) => {
+        sentry::capture_error(error.as_ref());
+        Status::InternalServerError.respond_to(req)
+      }
     }
   }
 }
@@ -161,7 +172,7 @@ impl From<diesel::result::Error> for MutationError {
   fn from(error: diesel::result::Error) -> Self {
     match error {
       diesel::result::Error::NotFound => MutationError::Status(Status::NotFound),
-      _ => MutationError::Status(Status::InternalServerError),
+      error => MutationError::InternalServerError(Box::new(error)),
     }
   }
 }
@@ -170,7 +181,7 @@ impl From<diesel::result::Error> for QueryError {
   fn from(error: diesel::result::Error) -> Self {
     match error {
       diesel::result::Error::NotFound => QueryError::Status(Status::NotFound),
-      _ => QueryError::Status(Status::InternalServerError),
+      error => QueryError::InternalServerError(Box::new(error)),
     }
   }
 }
