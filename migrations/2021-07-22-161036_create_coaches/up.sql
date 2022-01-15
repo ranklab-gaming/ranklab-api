@@ -3,6 +3,6 @@ CREATE TABLE coaches (
     name text NOT NULL DEFAULT '',
     email text UNIQUE NOT NULL DEFAULT '',
     bio text NOT NULL DEFAULT '',
-    game_id text NOT NULL DEFAULT '',
+    games jsonb[] NOT NULL DEFAULT '{}',
     auth0_id text NOT NULL
 );

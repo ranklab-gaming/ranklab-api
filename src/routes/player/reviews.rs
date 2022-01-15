@@ -12,15 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
-use validator::{Validate, ValidationError};
-
-fn validate_game_id(game_id: &str) -> Result<(), ValidationError> {
-  if crate::games::all().iter().any(|g| g.id() == game_id) {
-    Ok(())
-  } else {
-    Err(ValidationError::new("Game ID is not valid"))
-  }
-}
+use validator::Validate;
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateReviewRequest {
@@ -28,7 +20,7 @@ pub struct CreateReviewRequest {
   #[validate(length(min = 1))]
   title: String,
   notes: String,
-  #[validate(custom = "validate_game_id")]
+  #[validate(custom = "crate::games::validate_id")]
   game_id: String,
 }
 

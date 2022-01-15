@@ -4,7 +4,7 @@ table! {
         name -> Text,
         email -> Text,
         bio -> Text,
-        game_id -> Text,
+        games -> Array<Jsonb>,
         auth0_id -> Text,
     }
 }
@@ -26,6 +26,7 @@ table! {
         auth0_id -> Text,
         name -> Text,
         email -> Text,
+        games -> Array<Jsonb>,
     }
 }
 

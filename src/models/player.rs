@@ -1,3 +1,4 @@
+use crate::models::UserGame;
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -8,4 +9,5 @@ pub struct Player {
   pub auth0_id: String,
   pub name: String,
   pub email: String,
+  pub games: Vec<UserGame>,
 }
