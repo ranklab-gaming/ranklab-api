@@ -49,6 +49,7 @@ table! {
         title -> Text,
         recording_id -> Uuid,
         game_id -> Text,
+        skill_level -> Int2,
         notes -> Text,
     }
 }

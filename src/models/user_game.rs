@@ -4,6 +4,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(AsJsonb, Debug, Deserialize, Serialize, JsonSchema, Clone)]
 pub struct UserGame {
-  game_id: String,
-  skil_level: u8,
+  pub game_id: String,
+  pub skill_level: u8,
 }
