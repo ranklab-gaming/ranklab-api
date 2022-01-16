@@ -12,7 +12,31 @@ pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<Vec<Revie
   let reviews = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
-      reviews.filter(coach_id.eq(auth.0.id)).load(conn).unwrap()
+      use diesel::dsl::sql;
+      use diesel::pg::Pg;
+      use diesel::sql_types::Bool;
+
+      let mut games_expression: Box<dyn BoxableExpression<reviews, Pg, SqlType = Bool>> =
+        Box::new(sql::<Bool>("false"));
+
+      for game in auth.0.games.into_iter() {
+        games_expression = Box::new(
+          games_expression.or(
+            game_id
+              .eq(game.game_id)
+              .and(skill_level.lt(game.skill_level as i16)),
+          ),
+        );
+      }
+
+      reviews
+        .filter(
+          coach_id
+            .eq(auth.0.id)
+            .or(coach_id.eq::<Option<Uuid>>(None).and(games_expression)),
+        )
+        .load(conn)
+        .unwrap()
     })
     .await;
 
