@@ -10,5 +10,6 @@ pub struct Review {
   pub title: String,
   pub recording_id: Uuid,
   pub game_id: String,
+  pub skill_level: i16,
   pub notes: String,
 }

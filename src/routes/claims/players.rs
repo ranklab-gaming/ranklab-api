@@ -2,6 +2,7 @@ use crate::db::DbConn;
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
 use crate::models::Player;
+use crate::models::UserGame;
 use crate::response::{MutationResponse, Response};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
@@ -14,6 +15,7 @@ use validator::Validate;
 pub struct CreatePlayerRequest {
   #[validate(length(min = 1))]
   name: String,
+  games: Vec<UserGame>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -36,6 +38,7 @@ pub async fn create(
           email.eq(auth.0.email.clone()),
           name.eq(player.name.clone()),
           auth0_id.eq(auth.0.sub.clone()),
+          games.eq(player.games.clone()),
         ))
         .get_result(conn)
         .unwrap()

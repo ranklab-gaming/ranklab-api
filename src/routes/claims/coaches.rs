@@ -2,6 +2,7 @@ use crate::db::DbConn;
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
 use crate::models::Coach;
+use crate::models::UserGame;
 use crate::response::{MutationResponse, Response};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
@@ -16,7 +17,7 @@ pub struct CreateCoachRequest {
   name: String,
   #[validate(length(min = 1))]
   bio: String,
-  game_id: String,
+  games: Vec<UserGame>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -39,7 +40,7 @@ pub async fn create(
           email.eq(auth.0.email.clone()),
           name.eq(coach.name.clone()),
           bio.eq(coach.bio.clone()),
-          game_id.eq(coach.game_id.clone()),
+          games.eq(coach.games.clone()),
           auth0_id.eq(auth.0.sub.clone()),
         ))
         .get_result(conn)

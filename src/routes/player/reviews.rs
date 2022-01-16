@@ -5,6 +5,7 @@ use crate::guards::Auth;
 use crate::models::{Coach, Player, Review};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use diesel::prelude::*;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -12,15 +13,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
-use validator::{Validate, ValidationError};
-
-fn validate_game_id(game_id: &str) -> Result<(), ValidationError> {
-  if crate::games::all().iter().any(|g| g.id() == game_id) {
-    Ok(())
-  } else {
-    Err(ValidationError::new("Game ID is not valid"))
-  }
-}
+use validator::Validate;
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateReviewRequest {
@@ -28,7 +21,7 @@ pub struct CreateReviewRequest {
   #[validate(length(min = 1))]
   title: String,
   notes: String,
-  #[validate(custom = "validate_game_id")]
+  #[validate(custom = "crate::games::validate_id")]
   game_id: String,
 }
 
@@ -72,6 +65,17 @@ pub async fn create(
     return Response::validation_error(errors);
   }
 
+  let game = auth
+    .0
+    .games
+    .clone()
+    .into_iter()
+    .find(|g| g.game_id == review.game_id);
+
+  if game.is_none() {
+    return Response::mutation_error(Status::BadRequest);
+  }
+
   let review = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
@@ -82,6 +86,7 @@ pub async fn create(
           title.eq(review.title.clone()),
           game_id.eq(review.game_id.clone()),
           player_id.eq(auth.0.id.clone()),
+          skill_level.eq(game.unwrap().skill_level as i16),
           notes.eq(review.notes.clone()),
         ))
         .get_result::<Review>(conn)

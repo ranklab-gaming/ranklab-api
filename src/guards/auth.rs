@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::db::DbConn;
-use crate::models::{Coach, Player, User};
+use crate::models::User;
+use crate::models::{Coach, Player};
 use crate::try_result;
 use diesel::prelude::*;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};

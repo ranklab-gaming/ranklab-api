@@ -113,7 +113,7 @@ impl Response {
     Err(MutationError::ValidationErrors(errors))
   }
 
-  pub fn mutation_error<T, E>(status: Status) -> Result<Json<T>, MutationError> {
+  pub fn mutation_error<T>(status: Status) -> Result<Json<T>, MutationError> {
     Err(MutationError::Status(status))
   }
 }
