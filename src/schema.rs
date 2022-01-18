@@ -51,6 +51,7 @@ table! {
         game_id -> Text,
         skill_level -> Int2,
         notes -> Text,
+        published -> Bool,
     }
 }
 

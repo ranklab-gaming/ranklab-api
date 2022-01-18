@@ -4,11 +4,21 @@ use crate::models::{Coach, Review};
 use crate::response::{QueryResponse, Response};
 use diesel::prelude::*;
 use rocket_okapi::openapi;
+use schemars::JsonSchema;
 use uuid::Uuid;
 
+#[derive(FromForm, JsonSchema)]
+pub struct ListReviewsQuery {
+  pending: Option<bool>,
+}
+
 #[openapi(tag = "Ranklab")]
-#[get("/coach/reviews")]
-pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<Vec<Review>> {
+#[get("/coach/reviews?<params..>")]
+pub async fn list(
+  auth: Auth<Coach>,
+  db_conn: DbConn,
+  params: ListReviewsQuery,
+) -> QueryResponse<Vec<Review>> {
   let reviews = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
@@ -29,14 +39,15 @@ pub async fn list(auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<Vec<Revie
         );
       }
 
-      reviews
-        .filter(
-          coach_id
-            .eq(auth.0.id)
-            .or(coach_id.eq::<Option<Uuid>>(None).and(games_expression)),
-        )
-        .load(conn)
-        .unwrap()
+      let query = if params.pending.unwrap_or(false) {
+        reviews
+          .filter(coach_id.eq::<Option<Uuid>>(None).and(games_expression))
+          .into_boxed()
+      } else {
+        reviews.filter(coach_id.eq(auth.0.id)).into_boxed()
+      };
+
+      query.load(conn).unwrap()
     })
     .await;
 

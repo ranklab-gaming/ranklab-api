@@ -6,5 +6,6 @@ CREATE TABLE reviews (
     recording_id uuid NOT NULL REFERENCES recordings(id),
     game_id text NOT NULL DEFAULT '',
     skill_level smallint NOT NULL DEFAULT 0,
-    notes text NOT NULL DEFAULT ''
+    notes text NOT NULL DEFAULT '',
+    published boolean NOT NULL DEFAULT false
 );
