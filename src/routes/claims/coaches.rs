@@ -53,6 +53,7 @@ pub async fn create(
   let mut params = stripe::CreateAccount::new();
   params.type_ = Some(stripe::AccountType::Express);
   params.business_type = Some(stripe::BusinessType::Individual);
+  params.requested_capabilities = Some(vec![stripe::RequestedCapability::CardPayments]);
 
   params.business_profile = Some(stripe::BusinessProfile {
     mcc: None,
