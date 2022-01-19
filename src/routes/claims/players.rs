@@ -1,6 +1,6 @@
-use crate::db::DbConn;
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
+use crate::guards::DbConn;
 use crate::models::Player;
 use crate::models::UserGame;
 use crate::response::{MutationResponse, Response};

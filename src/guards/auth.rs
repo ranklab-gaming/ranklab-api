@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::db::DbConn;
+use crate::guards::DbConn;
 use crate::models::User;
 use crate::models::{Coach, Player};
 use crate::try_result;

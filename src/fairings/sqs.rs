@@ -1,6 +1,6 @@
 use crate::aws;
 use crate::config::Config;
-use crate::db::DbConn;
+use crate::guards::DbConn;
 use diesel::prelude::*;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};

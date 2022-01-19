@@ -1,5 +1,5 @@
-use crate::db::DbConn;
 use crate::guards::Auth;
+use crate::guards::DbConn;
 use crate::models::{Coach, Comment, Review};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use diesel::prelude::*;

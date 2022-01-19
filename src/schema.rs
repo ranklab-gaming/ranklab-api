@@ -6,6 +6,7 @@ table! {
         bio -> Text,
         games -> Array<Jsonb>,
         auth0_id -> Text,
+        stripe_account_id -> Nullable<Text>,
     }
 }
 

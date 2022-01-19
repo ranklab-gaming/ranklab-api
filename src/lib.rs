@@ -11,7 +11,6 @@ extern crate diesel_migrations;
 
 pub mod aws;
 pub mod config;
-pub mod db;
 pub mod emails;
 pub mod fairings;
 pub mod games;

@@ -1,7 +1,7 @@
 use crate::config::Config;
-use crate::db::DbConn;
 use crate::emails::{Email, Recipient};
 use crate::guards::Auth;
+use crate::guards::DbConn;
 use crate::models::{Coach, Player, Review};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use diesel::prelude::*;

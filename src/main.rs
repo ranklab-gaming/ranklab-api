@@ -1,13 +1,15 @@
 #[macro_use]
 extern crate rocket;
 
+#[macro_use]
+extern crate diesel_migrations;
+
 use ranklab_api::config::Config;
-use ranklab_api::db::{run_migrations, DbConn};
 use ranklab_api::fairings;
+use ranklab_api::guards::DbConn;
 use ranklab_api::routes::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
-
 use rocket::http::Accept;
 use rocket::{Build, Rocket};
 use rocket_okapi::{openapi, openapi_get_routes};
@@ -25,6 +27,21 @@ fn load_envs() {
   let profile = std::env::var("ROCKET_PROFILE").unwrap_or_else(|_| "development".to_string());
   dotenv::from_filename(format!(".env.{}", profile)).ok();
   dotenv::dotenv().ok();
+}
+
+pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
+  embed_migrations!();
+
+  let db_conn = DbConn::get_one(&rocket)
+    .await
+    .expect("Failed to get db connection");
+
+  db_conn
+    .run(|c| embedded_migrations::run(c))
+    .await
+    .expect("Failed to run migrations");
+
+  rocket
 }
 
 #[openapi]

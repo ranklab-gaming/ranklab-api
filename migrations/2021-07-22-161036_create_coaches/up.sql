@@ -4,5 +4,6 @@ CREATE TABLE coaches (
     email text UNIQUE NOT NULL DEFAULT '',
     bio text NOT NULL DEFAULT '',
     games jsonb[] NOT NULL DEFAULT '{}',
-    auth0_id text NOT NULL
+    auth0_id text NOT NULL,
+    stripe_account_id text
 );

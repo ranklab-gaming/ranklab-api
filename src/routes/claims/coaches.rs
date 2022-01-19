@@ -1,6 +1,7 @@
-use crate::db::DbConn;
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
+use crate::guards::DbConn;
+use crate::guards::Stripe;
 use crate::models::Coach;
 use crate::models::UserGame;
 use crate::response::{MutationResponse, Response};
@@ -26,12 +27,13 @@ pub async fn create(
   coach: Json<CreateCoachRequest>,
   auth: Auth<Claims>,
   db_conn: DbConn,
+  stripe: Stripe,
 ) -> MutationResponse<Coach> {
   if let Err(errors) = coach.validate() {
     return Response::validation_error(errors);
   }
 
-  let coach = db_conn
+  let coach: Coach = db_conn
     .run(move |conn| {
       use crate::schema::coaches::dsl::*;
 
@@ -43,6 +45,34 @@ pub async fn create(
           games.eq(coach.games.clone()),
           auth0_id.eq(auth.0.sub.clone()),
         ))
+        .get_result(conn)
+        .unwrap()
+    })
+    .await;
+
+  let mut params = stripe::CreateAccount::new();
+  params.type_ = Some(stripe::AccountType::Express);
+  params.business_type = Some(stripe::BusinessType::Individual);
+
+  params.business_profile = Some(stripe::BusinessProfile {
+    mcc: None,
+    name: None,
+    support_address: None,
+    support_email: None,
+    support_phone: None,
+    support_url: None,
+    url: None,
+    product_description: Some("Ranklab Coach".to_owned()),
+  });
+
+  let account = stripe::Account::create(&stripe.0, params).await.unwrap();
+
+  let coach: Coach = db_conn
+    .run(move |conn| {
+      use crate::schema::coaches::dsl::*;
+
+      diesel::update(crate::schema::coaches::table.find(coach.id))
+        .set(stripe_account_id.eq(Some(account.id.to_string())))
         .get_result(conn)
         .unwrap()
     })
