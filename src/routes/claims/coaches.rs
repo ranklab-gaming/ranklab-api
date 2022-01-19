@@ -66,6 +66,22 @@ pub async fn create(
     product_description: Some("Ranklab Coach".to_owned()),
   });
 
+  params.settings = Some(stripe::AccountSettingsParams {
+    branding: None,
+    card_payments: None,
+    payments: None,
+    payouts: Some(stripe::PayoutSettingsParams {
+      debit_negative_balances: None,
+      statement_descriptor: None,
+      schedule: Some(stripe::TransferScheduleParams {
+        delay_days: Some(stripe::DelayDays::Days(7)),
+        interval: None,
+        monthly_anchor: None,
+        weekly_anchor: None,
+      }),
+    }),
+  });
+
   let account = stripe::Account::create(&stripe.0, params).await.unwrap();
 
   let coach: Coach = db_conn
