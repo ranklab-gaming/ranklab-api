@@ -1,4 +1,4 @@
-FROM ghcr.io/ranklab-gaming/ranklab-devcontainer:v1.2.15
+FROM ghcr.io/ranklab-gaming/ranklab-devcontainer:v1.3.0
 
 ENV CARGO_HOME /home/vscode/.cargo
 ENV RUSTUP_HOME /home/vscode/.rustup
