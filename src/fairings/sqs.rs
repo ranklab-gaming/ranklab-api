@@ -1,35 +1,21 @@
 use crate::aws;
 use crate::config::Config;
-use crate::guards::DbConn;
-use diesel::prelude::*;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
 use rusoto_core::HttpClient;
 use rusoto_core::Region;
+mod s3_bucket;
+use crate::guards::DbConn;
 use rusoto_sqs::{DeleteMessageRequest, ReceiveMessageRequest, Sqs, SqsClient};
-use serde::Deserialize;
+use s3_bucket::S3BucketHandler;
 
 pub struct SqsFairing;
 
-#[derive(Deserialize)]
-struct RecordS3Object {
-  key: String,
-}
-
-#[derive(Deserialize)]
-struct RecordS3 {
-  object: RecordS3Object,
-}
-
-#[derive(Deserialize)]
-struct Record {
-  s3: RecordS3,
-}
-
-#[derive(Deserialize)]
-struct SqsMessageBody {
-  #[serde(rename = "Records")]
-  records: Vec<Record>,
+#[async_trait]
+pub trait QueueHandler: Send + Sync {
+  fn new(db_conn: DbConn) -> Self;
+  fn url(config: &Config) -> String;
+  async fn handle(&self, message: &rusoto_sqs::Message) -> ();
 }
 
 impl SqsFairing {
@@ -43,11 +29,18 @@ impl SqsFairing {
       .expect("Failed to get db connection");
 
     let config = rocket.state::<Config>().unwrap();
-    let queue_url = config.s3_bucket_queue.clone();
+
+    self.poll::<S3BucketHandler>(config, db_conn);
+  }
+
+  fn poll<T: QueueHandler>(&self, config: &Config, db_conn: DbConn) {
+    let queue_url = T::url(&config);
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
 
     tokio::spawn(async move {
+      let handler = T::new(db_conn);
+
       let client = SqsClient::new_with(
         HttpClient::new().unwrap(),
         aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
@@ -66,25 +59,7 @@ impl SqsFairing {
         match response.messages {
           Some(messages) => {
             for message in messages {
-              use crate::schema::recordings;
-              use crate::schema::recordings::dsl::*;
-
-              let body = message.body.unwrap();
-              let message_body: SqsMessageBody = serde_json::from_str(&body).unwrap();
-
-              for record in message_body.records {
-                db_conn
-                  .run(move |conn| {
-                    let existing_recording =
-                      recordings::table.filter(recordings::video_key.eq(&record.s3.object.key));
-
-                    diesel::update(existing_recording)
-                      .set(uploaded.eq(true))
-                      .execute(conn)
-                      .unwrap();
-                  })
-                  .await;
-              }
+              handler.handle(&message).await;
 
               let delete_request = DeleteMessageRequest {
                 queue_url: queue_url.clone(),
