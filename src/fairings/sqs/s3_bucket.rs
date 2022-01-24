@@ -27,16 +27,17 @@ struct SqsMessageBody {
 
 pub struct S3BucketHandler {
   db_conn: DbConn,
+  config: Config,
 }
 
 #[async_trait]
 impl QueueHandler for S3BucketHandler {
-  fn new(db_conn: DbConn) -> Self {
-    Self { db_conn }
+  fn new(db_conn: DbConn, config: Config) -> Self {
+    Self { db_conn, config }
   }
 
-  fn url(config: &Config) -> String {
-    config.s3_bucket_queue.clone()
+  fn url(&self) -> String {
+    self.config.s3_bucket_queue.clone()
   }
 
   async fn handle(&self, message: &rusoto_sqs::Message) {
