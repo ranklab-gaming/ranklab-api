@@ -10,4 +10,5 @@ pub struct Config {
   pub sentry_dsn: Option<String>,
   pub stripe_secret: String,
   pub stripe_webhooks_queue: String,
+  pub stripe_webhooks_secret: String,
 }

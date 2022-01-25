@@ -39,13 +39,13 @@ impl QueueHandler for StripeHandler {
     let webhook = stripe::Webhook::construct_event(
       message_body.body.as_str(),
       message_body.headers.stripe_signature.as_str(),
-      self.config.stripe_secret.as_str(),
+      self.config.stripe_webhooks_secret.as_str(),
     );
 
     if let Ok(webhook) = webhook {
       if webhook.event_type == stripe::EventType::AccountUpdated {
         if let stripe::EventObject::Account(account) = webhook.data.object {
-          if account.charges_enabled.unwrap_or(false) && account.payouts_enabled.unwrap_or(false) {
+          if account.payouts_enabled.unwrap_or(false) {
             self
               .db_conn
               .run(move |conn| {
