@@ -57,20 +57,17 @@ impl SqsFairing {
 
         let response = client.receive_message(receive_request).await.unwrap();
 
-        match response.messages {
-          Some(messages) => {
-            for message in messages {
-              handler.handle(&message).await;
+        if let Some(messages) = response.messages {
+          for message in messages {
+            handler.handle(&message).await;
 
-              let delete_request = DeleteMessageRequest {
-                queue_url: handler.url(),
-                receipt_handle: message.receipt_handle.clone().unwrap(),
-              };
+            let delete_request = DeleteMessageRequest {
+              queue_url: handler.url(),
+              receipt_handle: message.receipt_handle.clone().unwrap(),
+            };
 
-              client.delete_message(delete_request).await.unwrap();
-            }
+            client.delete_message(delete_request).await.unwrap();
           }
-          None => {}
         }
       }
     });
