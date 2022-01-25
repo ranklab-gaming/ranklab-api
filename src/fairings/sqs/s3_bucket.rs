@@ -41,7 +41,6 @@ impl QueueHandler for S3BucketHandler {
   }
 
   async fn handle(&self, message: &rusoto_sqs::Message) {
-    use crate::schema::recordings;
     use crate::schema::recordings::dsl::*;
 
     let body = message.body.clone().unwrap();
@@ -51,8 +50,7 @@ impl QueueHandler for S3BucketHandler {
       self
         .db_conn
         .run(move |conn| {
-          let existing_recording =
-            recordings::table.filter(recordings::video_key.eq(&record.s3.object.key));
+          let existing_recording = recordings.filter(video_key.eq(&record.s3.object.key));
 
           diesel::update(existing_recording)
             .set(uploaded.eq(true))
