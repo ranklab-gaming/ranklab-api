@@ -52,8 +52,41 @@ pub async fn create(
 
   let mut params = stripe::CreateAccount::new();
   params.type_ = Some(stripe::AccountType::Express);
-  params.business_type = Some(stripe::BusinessType::Individual);
-  params.requested_capabilities = Some(vec![stripe::RequestedCapability::Transfers]);
+  params.business_type = Some(stripe::AccountBusinessType::Individual);
+  params.capabilities = Some(
+    stripe::CreateAccountCapabilities {
+      transfers: Some(
+        stripe::CreateAccountCapabilitiesTransfers {
+          requested: Some(true.into()),
+        }
+        .into(),
+      ),
+      acss_debit_payments: None,
+      afterpay_clearpay_payments: None,
+      au_becs_debit_payments: None,
+      bacs_debit_payments: None,
+      bancontact_payments: None,
+      boleto_payments: None,
+      card_issuing: None,
+      card_payments: None,
+      cartes_bancaires_payments: None,
+      eps_payments: None,
+      fpx_payments: None,
+      giropay_payments: None,
+      grabpay_payments: None,
+      ideal_payments: None,
+      jcb_payments: None,
+      klarna_payments: None,
+      legacy_payments: None,
+      oxxo_payments: None,
+      p24_payments: None,
+      sepa_debit_payments: None,
+      sofort_payments: None,
+      tax_reporting_us_1099_k: None,
+      tax_reporting_us_1099_misc: None,
+    }
+    .into(),
+  );
 
   params.business_profile = Some(stripe::BusinessProfile {
     mcc: None,
@@ -63,24 +96,34 @@ pub async fn create(
     support_phone: None,
     support_url: None,
     url: None,
-    product_description: Some("Ranklab Coach".to_owned()),
+    product_description: Some("Ranklab Coach".to_owned().into()),
   });
 
-  params.settings = Some(stripe::AccountSettingsParams {
-    branding: None,
-    card_payments: None,
-    payments: None,
-    payouts: Some(stripe::PayoutSettingsParams {
-      debit_negative_balances: None,
-      statement_descriptor: None,
-      schedule: Some(stripe::TransferScheduleParams {
-        delay_days: Some(stripe::DelayDays::Days(7)),
-        interval: None,
-        monthly_anchor: None,
-        weekly_anchor: None,
-      }),
-    }),
-  });
+  params.settings = Some(
+    stripe::AccountSettingsParams {
+      branding: None,
+      card_payments: None,
+      payments: None,
+      card_issuing: None,
+      payouts: Some(
+        stripe::PayoutSettingsParams {
+          debit_negative_balances: None,
+          statement_descriptor: None,
+          schedule: Some(
+            stripe::TransferScheduleParams {
+              delay_days: Some(stripe::DelayDays::Days(7)),
+              interval: None,
+              monthly_anchor: None,
+              weekly_anchor: None,
+            }
+            .into(),
+          ),
+        }
+        .into(),
+      ),
+    }
+    .into(),
+  );
 
   let account = stripe::Account::create(&stripe.0, params).await.unwrap();
 

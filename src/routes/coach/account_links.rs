@@ -5,25 +5,11 @@ use crate::response::{MutationResponse, Response};
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 #[derive(Serialize, JsonSchema)]
 pub struct AccountLink {
   url: String,
-}
-
-#[derive(Deserialize)]
-struct StripeAccountLink {
-  url: String,
-}
-
-#[derive(Serialize)]
-struct CreateAccountLink {
-  account: String,
-  refresh_url: String,
-  return_url: String,
-  #[serde(rename = "type")]
-  type_: String,
 }
 
 #[derive(FromForm, JsonSchema)]
@@ -39,17 +25,19 @@ pub async fn create(
   stripe: Stripe,
   params: CreateAccountLinkMutation,
 ) -> MutationResponse<AccountLink> {
-  let account_link = stripe
-    .0
-    .post_form::<StripeAccountLink, CreateAccountLink>(
-      "/account_links",
-      CreateAccountLink {
-        account: auth.0.stripe_account_id.unwrap(),
-        refresh_url: params.refresh_url,
-        return_url: params.return_url,
-        type_: "account_onboarding".to_owned(),
-      },
-    )
+  let mut account_link_params = stripe::CreateAccountLink::new(
+    auth
+      .0
+      .stripe_account_id
+      .unwrap()
+      .parse::<stripe::AccountId>()
+      .unwrap(),
+    stripe::AccountLinkType::AccountOnboarding,
+  );
+  account_link_params.refresh_url = Some(params.refresh_url.as_str());
+  account_link_params.return_url = Some(params.return_url.as_str());
+
+  let account_link = stripe::AccountLink::create(&stripe.0, account_link_params)
     .await
     .unwrap();
 

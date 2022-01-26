@@ -45,11 +45,13 @@ impl QueueHandler for StripeHandler {
     if let Ok(webhook) = webhook {
       if webhook.event_type == stripe::EventType::AccountUpdated {
         if let stripe::EventObject::Account(account) = webhook.data.object {
-          if account.payouts_enabled.unwrap_or(false) {
+          if *account.payouts_enabled.unwrap_or(false.into()) {
+            let account_id = account.id.clone();
+
             self
               .db_conn
               .run(move |conn| {
-                let existing_coach = coaches.filter(stripe_account_id.eq(account.id.to_string()));
+                let existing_coach = coaches.filter(stripe_account_id.eq(account_id.to_string()));
 
                 diesel::update(existing_coach)
                   .set(can_review.eq(true))

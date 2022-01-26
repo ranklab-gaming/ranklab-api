@@ -48,6 +48,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-stripe"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a53afdfec906233daa44cfea92d6d82eb295c7d81192a1fde611c758be26953"
+dependencies = [
+ "chrono",
+ "hmac",
+ "hyper",
+ "hyper-tls",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "serde_qs",
+ "sha2",
+ "smol_str",
+ "subtle",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1391,6 +1412,7 @@ dependencies = [
 name = "ranklab-api"
 version = "0.1.0"
 dependencies = [
+ "async-stripe",
  "diesel",
  "diesel_as_jsonb",
  "diesel_migrations",
@@ -1414,7 +1436,6 @@ dependencies = [
  "sentry",
  "serde",
  "serde_json",
- "stripe-rust",
  "thiserror",
  "uuid",
  "validator",
@@ -2228,26 +2249,6 @@ name = "stdweb-internal-runtime"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "213701ba3370744dcd1a12960caa4843b3d68b4d1c0a5d575e0d65b2ee9d16c0"
-
-[[package]]
-name = "stripe-rust"
-version = "0.13.0-dev"
-source = "git+https://github.com/wyyerd/stripe-rs.git?rev=383b37f024d2dbab0c5dfc93c69c771e671081ce#383b37f024d2dbab0c5dfc93c69c771e671081ce"
-dependencies = [
- "chrono",
- "futures-util",
- "hmac",
- "http",
- "hyper",
- "hyper-tls",
- "serde",
- "serde_derive",
- "serde_json",
- "serde_qs",
- "sha2",
- "smol_str",
- "tokio",
-]
 
 [[package]]
 name = "strsim"
