@@ -52,7 +52,7 @@ pub async fn create(
 
   let mut params = stripe::CreateAccount::new();
   params.type_ = Some(stripe::AccountType::Express);
-  params.business_type = Some(stripe::AccountBusinessType::Individual);
+  params.country = Some("GB".into());
   params.capabilities = Some(
     stripe::CreateAccountCapabilities {
       transfers: Some(
@@ -84,6 +84,16 @@ pub async fn create(
       sofort_payments: None,
       tax_reporting_us_1099_k: None,
       tax_reporting_us_1099_misc: None,
+    }
+    .into(),
+  );
+
+  params.tos_acceptance = Some(
+    stripe::AcceptTos {
+      date: None,
+      ip: None,
+      user_agent: None,
+      service_agreement: Some("recipient".to_owned().into()),
     }
     .into(),
   );
