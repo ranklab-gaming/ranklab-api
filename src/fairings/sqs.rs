@@ -50,26 +50,16 @@ impl SqsFairing {
         Region::EuWest2,
       );
 
-      loop {
-        let result = AssertUnwindSafe(Self::poll(&handler, &client))
-          .catch_unwind()
-          .await;
-
-        if let Err(error) = result {
-          if let Some(error) = error.downcast_ref::<&str>() {
-            sentry::capture_message(error, sentry::Level::Error);
-          } else {
-            sentry::capture_message(&format!("{:?}", error), sentry::Level::Error);
-          }
-        }
-      }
+      let _ = AssertUnwindSafe(Self::poll(&handler, &client))
+        .catch_unwind()
+        .await;
     });
   }
 
   async fn poll<T: QueueHandler>(handler: &T, client: &SqsClient) {
     let receive_request = ReceiveMessageRequest {
       queue_url: handler.url(),
-      wait_time_seconds: Some(20),
+      wait_time_seconds: Some(2),
       ..Default::default()
     };
 
