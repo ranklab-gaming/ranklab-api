@@ -50,9 +50,11 @@ impl SqsFairing {
         Region::EuWest2,
       );
 
-      let _ = AssertUnwindSafe(Self::poll(&handler, &client))
-        .catch_unwind()
-        .await;
+      loop {
+        let _ = AssertUnwindSafe(Self::poll(&handler, &client))
+          .catch_unwind()
+          .await;
+      }
     });
   }
 
