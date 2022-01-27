@@ -59,7 +59,7 @@ impl SqsFairing {
   async fn poll<T: QueueHandler>(handler: &T, client: &SqsClient) {
     let receive_request = ReceiveMessageRequest {
       queue_url: handler.url(),
-      wait_time_seconds: Some(2),
+      wait_time_seconds: Some(20),
       ..Default::default()
     };
 
