@@ -31,43 +31,73 @@ impl QueueHandler for StripeHandler {
     self.config.stripe_webhooks_queue.clone()
   }
 
-  async fn handle(&self, message: &rusoto_sqs::Message) -> anyhow::Result<()> {
+  async fn handle(
+    &self,
+    message: &rusoto_sqs::Message,
+    profile: &rocket::figment::Profile,
+  ) -> anyhow::Result<()> {
     use crate::schema::coaches::dsl::*;
 
     let body = message
       .body
       .clone()
       .ok_or(anyhow::anyhow!("No body in message"))?;
+
     let message_body: SqsMessageBody = serde_json::from_str(&body)?;
+
     let webhook = stripe::Webhook::construct_event(
       message_body.body.as_str(),
       message_body.headers.stripe_signature.as_str(),
       self.config.stripe_webhooks_secret.as_str(),
     );
 
-    if let Ok(webhook) = webhook {
-      if webhook.event_type == stripe::EventType::AccountUpdated {
-        if let stripe::EventObject::Account(account) = webhook.data.object {
-          if *account.payouts_enabled.unwrap_or(false.into()) {
-            let account_id = account.id.clone();
+    let webhook = match webhook {
+      Err(_) => return Ok(()),
+      Ok(webhook) => webhook,
+    };
 
-            self
-              .db_conn
-              .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-                let existing_coach = coaches.filter(stripe_account_id.eq(account_id.to_string()));
+    if webhook.event_type != stripe::EventType::AccountUpdated {
+      return Ok(());
+    };
 
-                diesel::update(existing_coach)
-                  .set(can_review.eq(true))
-                  .execute(conn)?;
+    let account = match webhook.data.object {
+      stripe::EventObject::Account(account) => account,
+      _ => return Ok(()),
+    };
 
-                Ok(())
-              })
-              .await?;
-          }
-        }
+    let payouts_enabled = match account.payouts_enabled {
+      Some(payouts_enabled) => *payouts_enabled,
+      None => false,
+    };
+
+    if !payouts_enabled {
+      return Ok(());
+    }
+
+    let account_id = account.id.clone();
+
+    let result = self
+      .db_conn
+      .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+        let existing_coach = coaches.filter(stripe_account_id.eq(account_id.to_string()));
+
+        diesel::update(existing_coach)
+          .set(can_review.eq(true))
+          .execute(conn)?;
+
+        Ok(())
+      })
+      .await;
+
+    if let Err(diesel::result::Error::NotFound) = result {
+      if profile == rocket::Config::RELEASE_PROFILE {
+        return Err(diesel::result::Error::NotFound.into());
+      } else {
+        return Ok(());
       }
     }
 
+    result?;
     Ok(())
   }
 }

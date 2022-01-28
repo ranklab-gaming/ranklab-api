@@ -40,7 +40,11 @@ impl QueueHandler for S3BucketHandler {
     self.config.s3_bucket_queue.clone()
   }
 
-  async fn handle(&self, message: &rusoto_sqs::Message) -> anyhow::Result<()> {
+  async fn handle(
+    &self,
+    message: &rusoto_sqs::Message,
+    _profile: &rocket::figment::Profile,
+  ) -> anyhow::Result<()> {
     use crate::schema::recordings::dsl::*;
 
     let body = message

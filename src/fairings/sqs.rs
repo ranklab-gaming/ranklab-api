@@ -18,7 +18,12 @@ pub struct SqsFairing;
 pub trait QueueHandler: Send + Sync {
   fn new(db_conn: DbConn, config: Config) -> Self;
   fn url(&self) -> String;
-  async fn handle(&self, message: &rusoto_sqs::Message) -> anyhow::Result<()>;
+
+  async fn handle(
+    &self,
+    message: &rusoto_sqs::Message,
+    profile: &rocket::figment::Profile,
+  ) -> anyhow::Result<()>;
 }
 
 impl SqsFairing {
@@ -37,6 +42,7 @@ impl SqsFairing {
       .expect("Failed to get db connection");
 
     let config = rocket.state::<Config>().unwrap().clone();
+    let profile = rocket.config().profile.clone();
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
     let fairing = self.clone();
@@ -51,7 +57,7 @@ impl SqsFairing {
       );
 
       loop {
-        match fairing.poll(&handler, &client).await {
+        match fairing.poll(&handler, &client, &profile).await {
           Ok(_) => (),
           Err(e) => {
             error!("Error polling SQS: {}", e);
@@ -62,7 +68,12 @@ impl SqsFairing {
     });
   }
 
-  async fn poll<T: QueueHandler>(&self, handler: &T, client: &SqsClient) -> anyhow::Result<()> {
+  async fn poll<T: QueueHandler>(
+    &self,
+    handler: &T,
+    client: &SqsClient,
+    profile: &rocket::figment::Profile,
+  ) -> anyhow::Result<()> {
     let receive_request = ReceiveMessageRequest {
       queue_url: handler.url(),
       wait_time_seconds: Some(20),
@@ -73,7 +84,7 @@ impl SqsFairing {
 
     if let Some(messages) = response.messages {
       for message in messages {
-        handler.handle(&message).await?;
+        handler.handle(&message, profile).await?;
 
         let delete_request = DeleteMessageRequest {
           queue_url: handler.url(),
