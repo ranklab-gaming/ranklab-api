@@ -31,11 +31,14 @@ impl QueueHandler for StripeHandler {
     self.config.stripe_webhooks_queue.clone()
   }
 
-  async fn handle(&self, message: &rusoto_sqs::Message) {
+  async fn handle(&self, message: &rusoto_sqs::Message) -> anyhow::Result<()> {
     use crate::schema::coaches::dsl::*;
 
-    let body = message.body.clone().unwrap();
-    let message_body: SqsMessageBody = serde_json::from_str(&body).unwrap();
+    let body = message
+      .body
+      .clone()
+      .ok_or(anyhow::anyhow!("No body in message"))?;
+    let message_body: SqsMessageBody = serde_json::from_str(&body)?;
     let webhook = stripe::Webhook::construct_event(
       message_body.body.as_str(),
       message_body.headers.stripe_signature.as_str(),
@@ -50,18 +53,21 @@ impl QueueHandler for StripeHandler {
 
             self
               .db_conn
-              .run(move |conn| {
+              .run::<_, diesel::result::QueryResult<_>>(move |conn| {
                 let existing_coach = coaches.filter(stripe_account_id.eq(account_id.to_string()));
 
                 diesel::update(existing_coach)
                   .set(can_review.eq(true))
-                  .execute(conn)
-                  .unwrap();
+                  .execute(conn)?;
+
+                Ok(())
               })
-              .await;
+              .await?;
           }
         }
       }
     }
+
+    Ok(())
   }
 }

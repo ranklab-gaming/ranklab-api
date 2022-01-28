@@ -8,18 +8,17 @@ mod s3_bucket;
 mod stripe;
 use self::stripe::StripeHandler;
 use crate::guards::DbConn;
-use rocket::futures::FutureExt;
 use rusoto_sqs::{DeleteMessageRequest, ReceiveMessageRequest, Sqs, SqsClient};
 use s3_bucket::S3BucketHandler;
-use std::panic::AssertUnwindSafe;
 
+#[derive(Clone)]
 pub struct SqsFairing;
 
 #[async_trait]
 pub trait QueueHandler: Send + Sync {
   fn new(db_conn: DbConn, config: Config) -> Self;
   fn url(&self) -> String;
-  async fn handle(&self, message: &rusoto_sqs::Message) -> ();
+  async fn handle(&self, message: &rusoto_sqs::Message) -> anyhow::Result<()>;
 }
 
 impl SqsFairing {
@@ -27,12 +26,12 @@ impl SqsFairing {
     Self
   }
 
-  async fn init(rocket: &Rocket<Orbit>) {
-    Self::start::<S3BucketHandler>(rocket).await;
-    Self::start::<StripeHandler>(rocket).await;
+  async fn init(&self, rocket: &Rocket<Orbit>) {
+    self.start::<S3BucketHandler>(rocket).await;
+    self.start::<StripeHandler>(rocket).await;
   }
 
-  async fn start<T: QueueHandler>(rocket: &Rocket<Orbit>) {
+  async fn start<T: QueueHandler>(&self, rocket: &Rocket<Orbit>) {
     let db_conn = DbConn::get_one(&rocket)
       .await
       .expect("Failed to get db connection");
@@ -40,6 +39,7 @@ impl SqsFairing {
     let config = rocket.state::<Config>().unwrap().clone();
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
+    let fairing = self.clone();
 
     tokio::spawn(async move {
       let handler = T::new(db_conn, config);
@@ -51,34 +51,43 @@ impl SqsFairing {
       );
 
       loop {
-        let _ = AssertUnwindSafe(Self::poll(&handler, &client))
-          .catch_unwind()
-          .await;
+        match fairing.poll(&handler, &client).await {
+          Ok(_) => (),
+          Err(e) => {
+            error!("Error polling SQS: {}", e);
+            sentry::capture_error(e.root_cause());
+          }
+        }
       }
     });
   }
 
-  async fn poll<T: QueueHandler>(handler: &T, client: &SqsClient) {
+  async fn poll<T: QueueHandler>(&self, handler: &T, client: &SqsClient) -> anyhow::Result<()> {
     let receive_request = ReceiveMessageRequest {
       queue_url: handler.url(),
       wait_time_seconds: Some(20),
       ..Default::default()
     };
 
-    let response = client.receive_message(receive_request).await.unwrap();
+    let response = client.receive_message(receive_request).await?;
 
     if let Some(messages) = response.messages {
       for message in messages {
-        handler.handle(&message).await;
+        handler.handle(&message).await?;
 
         let delete_request = DeleteMessageRequest {
           queue_url: handler.url(),
-          receipt_handle: message.receipt_handle.clone().unwrap(),
+          receipt_handle: message
+            .receipt_handle
+            .clone()
+            .ok_or(anyhow::anyhow!("Receipt handle missing from message"))?,
         };
 
-        client.delete_message(delete_request).await.unwrap();
+        client.delete_message(delete_request).await?;
       }
-    }
+    };
+
+    Ok(())
   }
 }
 
@@ -92,6 +101,6 @@ impl Fairing for SqsFairing {
   }
 
   async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
-    Self::init(rocket).await;
+    self.init(rocket).await;
   }
 }

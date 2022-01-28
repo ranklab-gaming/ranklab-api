@@ -40,24 +40,30 @@ impl QueueHandler for S3BucketHandler {
     self.config.s3_bucket_queue.clone()
   }
 
-  async fn handle(&self, message: &rusoto_sqs::Message) {
+  async fn handle(&self, message: &rusoto_sqs::Message) -> anyhow::Result<()> {
     use crate::schema::recordings::dsl::*;
 
-    let body = message.body.clone().unwrap();
-    let message_body: SqsMessageBody = serde_json::from_str(&body).unwrap();
+    let body = message
+      .body
+      .clone()
+      .ok_or(anyhow::anyhow!("No body in message"))?;
+    let message_body: SqsMessageBody = serde_json::from_str(&body)?;
 
     for record in message_body.records {
       self
         .db_conn
-        .run(move |conn| {
+        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
           let existing_recording = recordings.filter(video_key.eq(&record.s3.object.key));
 
           diesel::update(existing_recording)
             .set(uploaded.eq(true))
-            .execute(conn)
-            .unwrap();
+            .execute(conn)?;
+
+          Ok(())
         })
-        .await;
+        .await?;
     }
+
+    Ok(())
   }
 }
