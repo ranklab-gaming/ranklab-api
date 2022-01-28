@@ -49,12 +49,7 @@ impl QueueHandler for StripeHandler {
       message_body.body.as_str(),
       message_body.headers.stripe_signature.as_str(),
       self.config.stripe_webhooks_secret.as_str(),
-    );
-
-    let webhook = match webhook {
-      Err(_) => return Ok(()),
-      Ok(webhook) => webhook,
-    };
+    )?;
 
     if webhook.event_type != stripe::EventType::AccountUpdated {
       return Ok(());
