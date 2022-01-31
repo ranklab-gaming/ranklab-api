@@ -9,8 +9,16 @@ use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+#[derive(Deserialize)]
+struct CountrySpec {
+  supported_transfer_countries: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct CountrySpecParams {}
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateCoachRequest {
@@ -151,4 +159,22 @@ pub async fn create(
     .await;
 
   Response::success(coach)
+}
+
+#[openapi(tag = "Ranklab")]
+#[post("/claims/coaches/available_countries")]
+pub async fn available_countries(
+  _auth: Auth<Claims>,
+  stripe: Stripe,
+) -> MutationResponse<Vec<String>> {
+  let country_spec = &stripe
+    .0
+    .get_query::<CountrySpec, CountrySpecParams>(
+      &format!("/country_specs/{}", "US"),
+      CountrySpecParams {},
+    )
+    .await
+    .unwrap();
+
+  Response::success(country_spec.supported_transfer_countries.clone())
 }

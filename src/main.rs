@@ -81,6 +81,7 @@ fn rocket() -> Rocket<Build> {
         get_health,
         claims::coaches::create,
         claims::players::create,
+        claims::coaches::available_countries,
         coach::comments::create,
         coach::comments::list,
         coach::comments::update,
