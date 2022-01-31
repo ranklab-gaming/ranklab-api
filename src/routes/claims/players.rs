@@ -1,6 +1,7 @@
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
 use crate::guards::DbConn;
+use crate::guards::Stripe;
 use crate::models::Player;
 use crate::models::UserGame;
 use crate::response::{MutationResponse, Response};
@@ -24,12 +25,13 @@ pub async fn create(
   player: Json<CreatePlayerRequest>,
   auth: Auth<Claims>,
   db_conn: DbConn,
+  stripe: Stripe,
 ) -> MutationResponse<Player> {
   if let Err(errors) = player.validate() {
     return Response::validation_error(errors);
   }
 
-  let player = db_conn
+  let player: Player = db_conn
     .run(move |conn| {
       use crate::schema::players::dsl::*;
 
@@ -39,7 +41,24 @@ pub async fn create(
           name.eq(player.name.clone()),
           auth0_id.eq(auth.0.sub.clone()),
           games.eq(player.games.clone()),
+          stripe_customer_id.eq::<Option<String>>(None),
         ))
+        .get_result(conn)
+        .unwrap()
+    })
+    .await;
+
+  let mut params = stripe::CreateCustomer::new();
+  params.email = Some(&player.email);
+
+  let customer = stripe::Customer::create(&stripe.0, params).await.unwrap();
+
+  let player: Player = db_conn
+    .run(move |conn| {
+      use crate::schema::players::dsl::*;
+
+      diesel::update(crate::schema::players::table.find(player.id))
+        .set(stripe_customer_id.eq(Some(customer.id.to_string())))
         .get_result(conn)
         .unwrap()
     })

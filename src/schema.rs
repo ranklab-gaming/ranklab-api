@@ -8,6 +8,7 @@ table! {
         auth0_id -> Text,
         stripe_account_id -> Nullable<Text>,
         can_review -> Bool,
+        country -> Text,
     }
 }
 
@@ -29,6 +30,7 @@ table! {
         name -> Text,
         email -> Text,
         games -> Array<Jsonb>,
+        stripe_customer_id -> Nullable<Text>,
     }
 }
 

@@ -10,4 +10,6 @@ pub struct Player {
   pub name: String,
   pub email: String,
   pub games: Vec<UserGame>,
+  #[serde(skip_serializing)]
+  pub stripe_customer_id: Option<String>
 }

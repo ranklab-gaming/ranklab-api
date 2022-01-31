@@ -3,5 +3,6 @@ CREATE TABLE players (
     auth0_id text NOT NULL,
     name text NOT NULL DEFAULT '',
     email text UNIQUE NOT NULL DEFAULT '',
-    games jsonb[] NOT NULL DEFAULT '{}'
+    games jsonb[] NOT NULL DEFAULT '{}',
+    stripe_customer_id text
 );

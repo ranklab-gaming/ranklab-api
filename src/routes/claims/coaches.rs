@@ -19,6 +19,7 @@ pub struct CreateCoachRequest {
   #[validate(length(min = 1))]
   bio: String,
   games: Vec<UserGame>,
+  country: String,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -44,6 +45,7 @@ pub async fn create(
           bio.eq(coach.bio.clone()),
           games.eq(coach.games.clone()),
           auth0_id.eq(auth.0.sub.clone()),
+          country.eq(coach.country.clone()),
         ))
         .get_result(conn)
         .unwrap()
@@ -52,7 +54,7 @@ pub async fn create(
 
   let mut params = stripe::CreateAccount::new();
   params.type_ = Some(stripe::AccountType::Express);
-  params.country = Some("GB".into());
+  params.country = Some(&coach.country);
   params.capabilities = Some(
     stripe::CreateAccountCapabilities {
       transfers: Some(

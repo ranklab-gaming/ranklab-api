@@ -15,4 +15,5 @@ pub struct Coach {
   #[serde(skip_serializing)]
   pub stripe_account_id: Option<String>,
   pub can_review: bool,
+  pub country: String,
 }
