@@ -13,16 +13,16 @@
   "remoteUser": "vscode",
   "extensions": [
     "esbenp.prettier-vscode",
-    "rust-lang.rust",
+    "matklad.rust-analyzer",
     "vadimcn.vscode-lldb",
-    "github.vscode-pull-request-github"
+    "github.vscode-pull-request-github",
+    "ms-vscode.live-server"
   ],
   "settings": {
-    "editor.codeActionsOnSave": [
-      "source.addMissingImports"
-    ],
     "editor.codeLens": false,
-    "editor.defaultFormatter": "rust-lang.rust",
+    "[rust]": {
+      "editor.defaultFormatter": "matklad.rust-analyzer"
+    },
     "editor.detectIndentation": false,
     "editor.formatOnSave": true,
     "editor.inlineSuggest.enabled": true,
@@ -51,7 +51,6 @@
       "markdown": false
     },
     "prettier.requireConfig": true,
-    "rust.all_features": true,
     "search.followSymlinks": false,
     "security.workspace.trust.untrustedFiles": "open",
     "typescript.updateImportsOnFileMove.enabled": "always",
