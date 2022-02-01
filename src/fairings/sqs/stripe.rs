@@ -60,14 +60,15 @@ impl QueueHandler for StripeHandler {
       _ => return Ok(()),
     };
 
+    let details_submitted = match account.details_submitted {
+      Some(details_submitted) => *details_submitted,
+      None => false,
+    };
+
     let payouts_enabled = match account.payouts_enabled {
       Some(payouts_enabled) => *payouts_enabled,
       None => false,
     };
-
-    if !payouts_enabled {
-      return Ok(());
-    }
 
     let account_id = account.id.clone();
 
@@ -77,7 +78,10 @@ impl QueueHandler for StripeHandler {
         let existing_coach = coaches.filter(stripe_account_id.eq(account_id.to_string()));
 
         diesel::update(existing_coach)
-          .set(can_review.eq(true))
+          .set((
+            can_review.eq(payouts_enabled),
+            submitted_stripe_details.eq(details_submitted),
+          ))
           .execute(conn)?;
 
         Ok(())
