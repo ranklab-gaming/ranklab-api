@@ -98,12 +98,17 @@ pub async fn create(
     .into(),
   );
 
+  let service_agreement = match coach.country.as_str() {
+    "US" => "full",
+    _ => "recipient",
+  };
+
   params.tos_acceptance = Some(
     stripe::AcceptTos {
       date: None,
       ip: None,
       user_agent: None,
-      service_agreement: Some("recipient".to_owned().into()),
+      service_agreement: Some(service_agreement.to_owned().into()),
     }
     .into(),
   );
