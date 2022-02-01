@@ -1,25 +1,43 @@
 use crate::models::{Game, SkillLevel};
 
-pub struct Overwatch;
+pub struct Overwatch {
+  skill_levels: Vec<SkillLevel>,
+  name: String,
+  id: String,
+}
+
+impl Overwatch {
+  pub fn new() -> Self {
+    Self {
+      skill_levels: SkillLevel::new_vec(vec![
+        "Bronze",
+        "Silver",
+        "Gold",
+        "Platinum",
+        "Diamond",
+        "Masters",
+        "Grandmaster",
+      ]),
+      name: "Overwatch".to_string(),
+      id: "overwatch".to_string(),
+    }
+  }
+}
 
 impl Game for Overwatch {
-  fn skill_levels(&self) -> Vec<SkillLevel> {
-    SkillLevel::new_vec(vec![
-      "Bronze",
-      "Silver",
-      "Gold",
-      "Platinum",
-      "Diamond",
-      "Masters",
-      "Grandmaster",
-    ])
+  fn skill_levels(&self) -> &Vec<SkillLevel> {
+    &self.skill_levels
   }
 
-  fn name(&self) -> String {
-    "Overwatch".to_string()
+  fn min_coach_skill_level(&self) -> &SkillLevel {
+    &self.skill_levels[4]
   }
 
-  fn id(&self) -> String {
-    "overwatch".to_string()
+  fn name(&self) -> &str {
+    &self.name
+  }
+
+  fn id(&self) -> &str {
+    &self.id
   }
 }

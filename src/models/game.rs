@@ -6,9 +6,10 @@ use serde::ser::{Serialize, SerializeStruct};
 use serde::Serialize as DeriveSerialize;
 
 pub trait Game: Send + Sync + 'static {
-  fn skill_levels(&self) -> Vec<SkillLevel>;
-  fn name(&self) -> String;
-  fn id(&self) -> String;
+  fn skill_levels(&self) -> &Vec<SkillLevel>;
+  fn name(&self) -> &str;
+  fn id(&self) -> &str;
+  fn min_coach_skill_level(&self) -> &SkillLevel;
 }
 
 impl Serialize for dyn Game {
@@ -20,6 +21,7 @@ impl Serialize for dyn Game {
     state.serialize_field("name", &self.name())?;
     state.serialize_field("id", &self.id())?;
     state.serialize_field("skill_levels", &self.skill_levels())?;
+    state.serialize_field("min_coach_skill_level", &self.min_coach_skill_level())?;
     state.end()
   }
 }
@@ -29,6 +31,7 @@ pub struct GameSchema {
   name: String,
   id: String,
   skill_levels: Vec<SkillLevel>,
+  min_coach_skill_level: SkillLevel,
 }
 
 impl JsonSchema for dyn Game {
@@ -47,6 +50,7 @@ impl JsonSchema for dyn Game {
     obj.required.insert("skill_levels".to_owned());
     obj.required.insert("name".to_owned());
     obj.required.insert("id".to_owned());
+    obj.required.insert("min_coach_skill_level".to_owned());
 
     obj.properties.insert(
       "skill_levels".to_owned(),
@@ -60,6 +64,11 @@ impl JsonSchema for dyn Game {
     obj
       .properties
       .insert("id".to_owned(), <String>::json_schema(gen));
+
+    obj.properties.insert(
+      "min_coach_skill_level".to_owned(),
+      <SkillLevel>::json_schema(gen),
+    );
 
     schema.into()
   }

@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use validator::ValidationError;
 
 lazy_static! {
-  static ref GAMES: Vec<Box<dyn Game>> = vec![Box::new(overwatch::Overwatch)];
+  static ref GAMES: Vec<Box<dyn Game>> = vec![Box::new(overwatch::Overwatch::new())];
 }
 
 pub fn all() -> &'static Vec<Box<dyn Game>> {
