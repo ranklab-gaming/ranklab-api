@@ -19,7 +19,7 @@ pub struct CreateAccountLinkMutation {
 }
 
 #[openapi(tag = "Ranklab")]
-#[post("/coach/account-links?<params..>")]
+#[post("/coach/stripe-account-links?<params..>")]
 pub async fn create(
   auth: Auth<Coach>,
   stripe: Stripe,
