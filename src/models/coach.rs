@@ -10,8 +10,10 @@ pub struct Coach {
   pub email: String,
   pub bio: String,
   pub games: Vec<UserGame>,
+  #[schemars(skip)]
   #[serde(skip_serializing)]
   pub auth0_id: String,
+  #[schemars(skip)]
   #[serde(skip_serializing)]
   pub stripe_account_id: Option<String>,
   pub can_review: bool,
