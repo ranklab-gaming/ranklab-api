@@ -33,7 +33,7 @@ pub async fn create(
     .parse::<stripe::AccountId>()
     .unwrap();
 
-  let login_link = stripe::LoginLink::create(&stripe.0, &account_id, body.return_url.as_str())
+  let login_link = stripe::LoginLink::create(&stripe.0 .0, &account_id, body.return_url.as_str())
     .await
     .unwrap();
 

@@ -152,7 +152,7 @@ pub async fn create(
     .into(),
   );
 
-  let account = stripe::Account::create(&stripe.0, params).await.unwrap();
+  let account = stripe::Account::create(&stripe.0 .0, params).await.unwrap();
 
   let coach: CoachView = db_conn
     .run(move |conn| {
@@ -177,6 +177,7 @@ pub async fn available_countries(
 ) -> MutationResponse<Vec<String>> {
   let country_spec = &stripe
     .0
+     .0
     .get_query::<CountrySpec, CountrySpecParams>(
       &format!("/country_specs/{}", "US"),
       CountrySpecParams {},

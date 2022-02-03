@@ -1,30 +1,15 @@
 use crate::aws;
 use crate::config::Config;
+use crate::guards::DbConn;
+use crate::queue_handlers::{QueueHandler, S3BucketHandler, StripeHandler};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
 use rusoto_core::HttpClient;
 use rusoto_core::Region;
-mod s3_bucket;
-mod stripe;
-use self::stripe::StripeHandler;
-use crate::guards::DbConn;
 use rusoto_sqs::{DeleteMessageRequest, ReceiveMessageRequest, Sqs, SqsClient};
-use s3_bucket::S3BucketHandler;
 
 #[derive(Clone)]
 pub struct SqsFairing;
-
-#[async_trait]
-pub trait QueueHandler: Send + Sync {
-  fn new(db_conn: DbConn, config: Config) -> Self;
-  fn url(&self) -> String;
-
-  async fn handle(
-    &self,
-    message: &rusoto_sqs::Message,
-    profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<()>;
-}
 
 impl SqsFairing {
   pub fn fairing() -> impl Fairing {

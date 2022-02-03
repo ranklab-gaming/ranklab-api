@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::fairings::sqs::QueueHandler;
+use crate::queue_handlers::QueueHandler;
 use crate::guards::DbConn;
 use diesel::prelude::*;
 use serde::Deserialize;

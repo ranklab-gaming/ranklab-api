@@ -1,3 +1,4 @@
+use crate::clients::StripeClient;
 use crate::config::Config;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
@@ -6,7 +7,7 @@ use rocket_okapi::{
   request::{OpenApiFromRequest, RequestHeaderInput},
 };
 
-pub struct Stripe(pub stripe::Client);
+pub struct Stripe(pub crate::clients::StripeClient);
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Stripe {
@@ -14,8 +15,7 @@ impl<'r> FromRequest<'r> for Stripe {
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
     let config = req.guard::<&State<Config>>().await;
-    let stripe_secret = config.as_ref().unwrap().stripe_secret.clone();
-    Outcome::Success(Stripe(stripe::Client::new(stripe_secret)))
+    Outcome::Success(Stripe(StripeClient::new(config.as_ref().unwrap())))
   }
 }
 

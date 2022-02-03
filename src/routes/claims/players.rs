@@ -52,7 +52,9 @@ pub async fn create(
   let mut params = stripe::CreateCustomer::new();
   params.email = Some(&player.email);
 
-  let customer = stripe::Customer::create(&stripe.0, params).await.unwrap();
+  let customer = stripe::Customer::create(&stripe.0 .0, params)
+    .await
+    .unwrap();
 
   let player: PlayerView = db_conn
     .run(move |conn| {

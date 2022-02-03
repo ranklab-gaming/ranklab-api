@@ -42,7 +42,7 @@ pub async fn create(
     stripe::CreateCheckoutSessionPaymentMethodTypes::Card,
   ]));
 
-  let checkout_session = stripe::CheckoutSession::create(&stripe.0, params)
+  let checkout_session = stripe::CheckoutSession::create(&stripe.0 .0, params)
     .await
     .unwrap();
 
