@@ -7,8 +7,8 @@ table! {
         games -> Array<Jsonb>,
         auth0_id -> Text,
         stripe_account_id -> Nullable<Text>,
-        submitted_stripe_details -> Bool,
-        can_review -> Bool,
+        stripe_details_submitted -> Bool,
+        stripe_payouts_enabled -> Bool,
         country -> Text,
     }
 }

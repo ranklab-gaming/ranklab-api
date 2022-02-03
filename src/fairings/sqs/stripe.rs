@@ -79,8 +79,8 @@ impl QueueHandler for StripeHandler {
 
         diesel::update(existing_coach)
           .set((
-            can_review.eq(payouts_enabled),
-            submitted_stripe_details.eq(details_submitted),
+            stripe_payouts_enabled.eq(payouts_enabled),
+            stripe_details_submitted.eq(details_submitted),
           ))
           .execute(conn)?;
 
