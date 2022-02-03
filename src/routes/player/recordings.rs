@@ -3,6 +3,7 @@ use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::models::{Player, Recording};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
+use crate::views::RecordingView;
 use diesel::prelude::*;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -38,7 +39,7 @@ pub async fn create(
   db_conn: DbConn,
   auth: Auth<Player>,
   recording: Json<CreateRecordingRequest>,
-) -> MutationResponse<Recording> {
+) -> MutationResponse<RecordingView> {
   if let Err(errors) = recording.validate() {
     return Response::validation_error(errors);
   }
@@ -67,7 +68,7 @@ pub async fn create(
     &Default::default(),
   );
 
-  let recording = db_conn
+  let recording: RecordingView = db_conn
     .run(move |conn| {
       use crate::schema::recordings::dsl::*;
 
@@ -81,22 +82,24 @@ pub async fn create(
         .get_result::<Recording>(conn)
         .unwrap()
     })
-    .await;
+    .await
+    .into();
 
   Response::success(recording)
 }
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/recordings/<id>")]
-pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Recording> {
-  let recording = db_conn
+pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<RecordingView> {
+  let recording: RecordingView = db_conn
     .run(move |conn| {
       use crate::schema::recordings::dsl::{id as recording_id, player_id, recordings};
       recordings
         .filter(player_id.eq(auth.0.id).and(recording_id.eq(id)))
-        .first(conn)
+        .first::<Recording>(conn)
     })
-    .await?;
+    .await?
+    .into();
 
   Response::success(recording)
 }

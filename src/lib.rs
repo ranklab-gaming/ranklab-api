@@ -6,6 +6,7 @@ extern crate diesel;
 
 pub mod aws;
 pub mod config;
+pub mod data_types;
 pub mod emails;
 pub mod fairings;
 pub mod games;
@@ -14,3 +15,4 @@ pub mod models;
 pub mod response;
 pub mod routes;
 pub mod schema;
+pub mod views;

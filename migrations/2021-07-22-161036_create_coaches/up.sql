@@ -6,7 +6,7 @@ CREATE TABLE coaches (
     games jsonb[] NOT NULL DEFAULT '{}',
     auth0_id text NOT NULL,
     stripe_account_id text,
-    submitted_stripe_details boolean NOT NULL DEFAULT false,
-    can_review boolean NOT NULL DEFAULT false,
+    stripe_details_submitted boolean NOT NULL DEFAULT false,
+    stripe_payouts_enabled boolean NOT NULL DEFAULT false,
     country text NOT NULL DEFAULT ''
 );

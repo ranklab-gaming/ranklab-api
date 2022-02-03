@@ -1,10 +1,11 @@
+use crate::data_types::UserGame;
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::guards::Stripe;
 use crate::models::Player;
-use crate::models::UserGame;
 use crate::response::{MutationResponse, Response};
+use crate::views::PlayerView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -26,7 +27,7 @@ pub async fn create(
   auth: Auth<Claims>,
   db_conn: DbConn,
   stripe: Stripe,
-) -> MutationResponse<Player> {
+) -> MutationResponse<PlayerView> {
   if let Err(errors) = player.validate() {
     return Response::validation_error(errors);
   }
@@ -53,16 +54,17 @@ pub async fn create(
 
   let customer = stripe::Customer::create(&stripe.0, params).await.unwrap();
 
-  let player: Player = db_conn
+  let player: PlayerView = db_conn
     .run(move |conn| {
       use crate::schema::players::dsl::*;
 
       diesel::update(crate::schema::players::table.find(player.id))
         .set(stripe_customer_id.eq(Some(customer.id.to_string())))
-        .get_result(conn)
+        .get_result::<Player>(conn)
         .unwrap()
     })
-    .await;
+    .await
+    .into();
 
   Response::success(player)
 }

@@ -1,8 +1,6 @@
-use schemars::JsonSchema;
-use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Queryable, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct Review {
   pub id: Uuid,
   pub player_id: Uuid,

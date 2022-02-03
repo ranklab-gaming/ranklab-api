@@ -32,6 +32,7 @@ table! {
         email -> Text,
         games -> Array<Jsonb>,
         stripe_customer_id -> Nullable<Text>,
+        stripe_payment_method_id -> Nullable<Text>,
     }
 }
 

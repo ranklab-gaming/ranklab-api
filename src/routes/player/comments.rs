@@ -2,6 +2,7 @@ use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::models::{Coach, Comment, Review};
 use crate::response::{QueryResponse, Response};
+use crate::views::CommentView;
 use diesel::prelude::*;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -18,7 +19,7 @@ pub async fn list(
   params: ListCommentsQuery,
   auth: Auth<Coach>,
   db_conn: DbConn,
-) -> QueryResponse<Vec<Comment>> {
+) -> QueryResponse<Vec<CommentView>> {
   let review = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
@@ -28,12 +29,18 @@ pub async fn list(
     })
     .await?;
 
-  let comments = db_conn
+  let comments: Vec<CommentView> = db_conn
     .run(move |conn| {
       use crate::schema::comments::dsl::*;
-      comments.filter(review_id.eq(review.id)).load(conn).unwrap()
+      comments
+        .filter(review_id.eq(review.id))
+        .load::<Comment>(conn)
+        .unwrap()
     })
-    .await;
+    .await
+    .into_iter()
+    .map(Into::into)
+    .collect();
 
   Response::success(comments)
 }

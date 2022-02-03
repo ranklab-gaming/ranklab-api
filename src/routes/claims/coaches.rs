@@ -1,10 +1,11 @@
+use crate::data_types::UserGame;
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::guards::Stripe;
 use crate::models::Coach;
-use crate::models::UserGame;
 use crate::response::{MutationResponse, Response};
+use crate::views::CoachView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -37,7 +38,7 @@ pub async fn create(
   auth: Auth<Claims>,
   db_conn: DbConn,
   stripe: Stripe,
-) -> MutationResponse<Coach> {
+) -> MutationResponse<CoachView> {
   if let Err(errors) = coach.validate() {
     return Response::validation_error(errors);
   }
@@ -63,6 +64,7 @@ pub async fn create(
   let mut params = stripe::CreateAccount::new();
   params.type_ = Some(stripe::AccountType::Express);
   params.country = Some(&coach.country);
+
   params.capabilities = Some(
     stripe::CreateAccountCapabilities {
       transfers: Some(
@@ -152,16 +154,17 @@ pub async fn create(
 
   let account = stripe::Account::create(&stripe.0, params).await.unwrap();
 
-  let coach: Coach = db_conn
+  let coach: CoachView = db_conn
     .run(move |conn| {
       use crate::schema::coaches::dsl::*;
 
       diesel::update(crate::schema::coaches::table.find(coach.id))
         .set(stripe_account_id.eq(Some(account.id.to_string())))
-        .get_result(conn)
+        .get_result::<Coach>(conn)
         .unwrap()
     })
-    .await;
+    .await
+    .into();
 
   Response::success(coach)
 }

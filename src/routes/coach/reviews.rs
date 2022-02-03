@@ -2,6 +2,7 @@ use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::models::{Coach, Review};
 use crate::response::{QueryResponse, Response};
+use crate::views::ReviewView;
 use diesel::prelude::*;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -18,8 +19,8 @@ pub async fn list(
   auth: Auth<Coach>,
   db_conn: DbConn,
   params: ListReviewsQuery,
-) -> QueryResponse<Vec<Review>> {
-  let reviews = db_conn
+) -> QueryResponse<Vec<ReviewView>> {
+  let reviews: Vec<ReviewView> = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
       use diesel::dsl::sql;
@@ -47,24 +48,28 @@ pub async fn list(
         reviews.filter(coach_id.eq(auth.0.id)).into_boxed()
       };
 
-      query.load(conn).unwrap()
+      query.load::<Review>(conn).unwrap()
     })
-    .await;
+    .await
+    .into_iter()
+    .map(Into::into)
+    .collect();
 
   Response::success(reviews)
 }
 
 #[openapi(tag = "Ranklab")]
 #[get("/coach/reviews/<id>")]
-pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<Review> {
-  let review = db_conn
+pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<ReviewView> {
+  let review: ReviewView = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews};
       reviews
         .filter(coach_id.eq(auth.0.id).and(review_id.eq(id)))
-        .first(conn)
+        .first::<Review>(conn)
     })
-    .await?;
+    .await?
+    .into();
 
   Response::success(review)
 }

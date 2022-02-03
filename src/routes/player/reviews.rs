@@ -4,6 +4,7 @@ use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::models::{Coach, Player, Review};
 use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::views::ReviewView;
 use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::Json;
@@ -27,28 +28,35 @@ pub struct CreateReviewRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/reviews")]
-pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<Review>> {
-  let reviews = db_conn
+pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<ReviewView>> {
+  let reviews: Vec<ReviewView> = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
-      reviews.filter(player_id.eq(auth.0.id)).load(conn).unwrap()
+      reviews
+        .filter(player_id.eq(auth.0.id))
+        .load::<Review>(conn)
+        .unwrap()
     })
-    .await;
+    .await
+    .into_iter()
+    .map(Into::into)
+    .collect();
 
   Response::success(reviews)
 }
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/reviews/<id>")]
-pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Review> {
+pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<ReviewView> {
   let review = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::{id as review_id, player_id, reviews};
       reviews
         .filter(player_id.eq(auth.0.id).and(review_id.eq(id)))
-        .first(conn)
+        .first::<Review>(conn)
     })
-    .await?;
+    .await?
+    .into();
 
   Response::success(review)
 }
@@ -60,7 +68,7 @@ pub async fn create(
   auth: Auth<Player>,
   db_conn: DbConn,
   config: &State<Config>,
-) -> MutationResponse<Review> {
+) -> MutationResponse<ReviewView> {
   if let Err(errors) = review.validate() {
     return Response::validation_error(errors);
   }
@@ -76,7 +84,7 @@ pub async fn create(
     return Response::mutation_error(Status::BadRequest);
   }
 
-  let review = db_conn
+  let review: ReviewView = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
 
@@ -92,7 +100,8 @@ pub async fn create(
         .get_result::<Review>(conn)
         .unwrap()
     })
-    .await;
+    .await
+    .into();
 
   let coaches = db_conn
     .run(move |conn| {

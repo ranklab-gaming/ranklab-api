@@ -1,4 +1,5 @@
-use crate::models::{Game, SkillLevel};
+use crate::data_types::SkillLevel;
+use crate::models::Game;
 
 pub struct Overwatch {
   skill_levels: Vec<SkillLevel>,

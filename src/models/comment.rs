@@ -1,8 +1,6 @@
-use schemars::JsonSchema;
-use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Queryable, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct Comment {
   pub id: Uuid,
   pub review_id: Uuid,

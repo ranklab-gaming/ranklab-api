@@ -2,6 +2,7 @@ use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::models::{Coach, Comment, Review};
 use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::views::CommentView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -32,7 +33,7 @@ pub async fn create(
   comment: Json<CreateCommentRequest>,
   auth: Auth<Coach>,
   db_conn: DbConn,
-) -> MutationResponse<Comment> {
+) -> MutationResponse<CommentView> {
   let review_id = comment.review_id.clone();
   let auth_id = auth.0.id.clone();
 
@@ -50,7 +51,7 @@ pub async fn create(
     return Response::validation_error(errors);
   }
 
-  let comment = db_conn
+  let comment: CommentView = db_conn
     .run(move |conn| {
       use crate::schema::comments::dsl::*;
 
@@ -62,10 +63,11 @@ pub async fn create(
           coach_id.eq(auth_id),
           drawing.eq(comment.drawing.clone()),
         ))
-        .get_result(conn)
+        .get_result::<Comment>(conn)
         .unwrap()
     })
-    .await;
+    .await
+    .into();
 
   Response::success(comment)
 }
@@ -77,7 +79,7 @@ pub async fn update(
   comment: Json<UpdateCommentRequest>,
   auth: Auth<Coach>,
   db_conn: DbConn,
-) -> MutationResponse<Comment> {
+) -> MutationResponse<CommentView> {
   let auth_id = auth.0.id.clone();
 
   let existing_comment = db_conn
@@ -94,7 +96,7 @@ pub async fn update(
     return Response::validation_error(errors);
   }
 
-  let updated_comment = db_conn
+  let updated_comment: CommentView = db_conn
     .run(move |conn| {
       use crate::schema::comments::dsl::*;
 
@@ -103,10 +105,11 @@ pub async fn update(
           body.eq(comment.body.clone()),
           drawing.eq(comment.drawing.clone()),
         ))
-        .get_result(conn)
+        .get_result::<Comment>(conn)
         .unwrap()
     })
-    .await;
+    .await
+    .into();
 
   Response::success(updated_comment)
 }
@@ -122,17 +125,20 @@ pub async fn list(
   params: ListCommentsQuery,
   auth: Auth<Coach>,
   db_conn: DbConn,
-) -> QueryResponse<Vec<Comment>> {
-  let comments = db_conn
+) -> QueryResponse<Vec<CommentView>> {
+  let comments: Vec<CommentView> = db_conn
     .run(move |conn| {
       use crate::schema::comments::dsl::*;
 
       comments
         .filter(review_id.eq(params.review_id).and(coach_id.eq(auth.0.id)))
-        .load(conn)
+        .load::<Comment>(conn)
         .unwrap()
     })
-    .await;
+    .await
+    .into_iter()
+    .map(Into::into)
+    .collect();
 
   Response::success(comments)
 }
