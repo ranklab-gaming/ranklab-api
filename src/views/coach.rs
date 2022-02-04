@@ -13,6 +13,7 @@ pub struct CoachView {
   pub games: Vec<UserGame>,
   pub country: String,
   pub can_review: bool,
+  pub stripe_details_submitted: bool,
 }
 
 impl From<Coach> for CoachView {
@@ -25,6 +26,7 @@ impl From<Coach> for CoachView {
       games: coach.games,
       country: coach.country,
       can_review: coach.stripe_payouts_enabled,
+      stripe_details_submitted: coach.stripe_details_submitted,
     }
   }
 }

@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::queue_handlers::QueueHandler;
+use crate::fairings::sqs::{QueueHandler, QueueHandlerOutcome};
 use crate::guards::DbConn;
 use diesel::prelude::*;
 use serde::Deserialize;
@@ -44,7 +44,7 @@ impl QueueHandler for S3BucketHandler {
     &self,
     message: &rusoto_sqs::Message,
     _profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<QueueHandlerOutcome> {
     use crate::schema::recordings::dsl::*;
 
     let body = message
@@ -63,11 +63,11 @@ impl QueueHandler for S3BucketHandler {
             .set(uploaded.eq(true))
             .execute(conn)?;
 
-          Ok(())
+          Ok(QueueHandlerOutcome::Success)
         })
         .await?;
     }
 
-    Ok(())
+    Ok(QueueHandlerOutcome::Success)
   }
 }

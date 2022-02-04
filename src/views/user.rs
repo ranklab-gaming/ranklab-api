@@ -6,7 +6,9 @@ use serde::Serialize;
 #[derive(Serialize, JsonSchema)]
 #[serde(rename = "User", tag = "type")]
 pub enum UserView {
+  #[serde(rename = "Coach")]
   CoachView(CoachView),
+  #[serde(rename = "Player")]
   PlayerView(PlayerView),
 }
 

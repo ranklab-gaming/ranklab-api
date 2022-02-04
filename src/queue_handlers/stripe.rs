@@ -1,7 +1,7 @@
 use crate::clients::StripeClient;
 use crate::config::Config;
+use crate::fairings::sqs::{QueueHandler, QueueHandlerOutcome};
 use crate::guards::DbConn;
-use crate::queue_handlers::QueueHandler;
 use diesel::prelude::*;
 use serde::Deserialize;
 use stripe::Expandable;
@@ -37,7 +37,7 @@ impl QueueHandler for StripeHandler {
     &self,
     message: &rusoto_sqs::Message,
     profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<QueueHandlerOutcome> {
     let body = message
       .body
       .clone()
@@ -51,15 +51,29 @@ impl QueueHandler for StripeHandler {
       self.config.stripe_webhooks_secret.as_str(),
     )?;
 
+    let livemode = match serde_json::from_str::<serde_json::Value>(message_body.body.as_str()) {
+      Ok(event) => match event["livemode"].as_bool() {
+        Some(livemode) => livemode,
+        None => return Err(anyhow::anyhow!("Livemode is not present").into()),
+      },
+      Err(_) => return Err(anyhow::anyhow!("Could not parse message body").into()),
+    };
+
+    if profile == rocket::Config::RELEASE_PROFILE && !livemode {
+      return Err(anyhow::anyhow!("Received webhook in test mode").into());
+    }
+
     match webhook.event_type {
-      stripe::EventType::AccountUpdated => self.handle_account_updated(&webhook, profile).await,
+      stripe::EventType::AccountUpdated => self.handle_account_updated(&webhook, profile).await?,
       stripe::EventType::CheckoutSessionCompleted => {
         self
           .handle_checkout_session_completed(&webhook, profile)
-          .await
+          .await?
       }
-      _ => Ok(()),
+      _ => (),
     }
+
+    Ok(QueueHandlerOutcome::Success)
   }
 }
 

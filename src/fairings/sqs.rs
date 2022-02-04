@@ -1,12 +1,29 @@
 use crate::aws;
 use crate::config::Config;
 use crate::guards::DbConn;
-use crate::queue_handlers::{QueueHandler, S3BucketHandler, StripeHandler};
+use crate::queue_handlers::{S3BucketHandler, StripeHandler};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
 use rusoto_core::HttpClient;
 use rusoto_core::Region;
 use rusoto_sqs::{DeleteMessageRequest, ReceiveMessageRequest, Sqs, SqsClient};
+
+pub enum QueueHandlerOutcome {
+  IgnoreEvent,
+  Success,
+}
+
+#[async_trait]
+pub trait QueueHandler: Send + Sync {
+  fn new(db_conn: DbConn, config: Config) -> Self;
+  fn url(&self) -> String;
+
+  async fn handle(
+    &self,
+    message: &rusoto_sqs::Message,
+    profile: &rocket::figment::Profile,
+  ) -> anyhow::Result<QueueHandlerOutcome>;
+}
 
 #[derive(Clone)]
 pub struct SqsFairing;
@@ -69,7 +86,10 @@ impl SqsFairing {
 
     if let Some(messages) = response.messages {
       for message in messages {
-        handler.handle(&message, profile).await?;
+        match handler.handle(&message, profile).await? {
+          QueueHandlerOutcome::IgnoreEvent => return Ok(()),
+          QueueHandlerOutcome::Success => (),
+        };
 
         let delete_request = DeleteMessageRequest {
           queue_url: handler.url(),
