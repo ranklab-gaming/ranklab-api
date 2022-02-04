@@ -30,7 +30,7 @@ impl QueueHandler for StripeHandler {
   }
 
   fn url(&self) -> String {
-    self.config.stripe_webhooks_queue.clone()
+    self.config.stripe_connect_webhooks_queue.clone()
   }
 
   async fn handle(
@@ -48,7 +48,7 @@ impl QueueHandler for StripeHandler {
     let webhook = stripe::Webhook::construct_event(
       message_body.body.as_str(),
       message_body.headers.stripe_signature.as_str(),
-      self.config.stripe_webhooks_secret.as_str(),
+      self.config.stripe_connect_webhooks_secret.as_str(),
     )?;
 
     let livemode = match serde_json::from_str::<serde_json::Value>(message_body.body.as_str()) {
