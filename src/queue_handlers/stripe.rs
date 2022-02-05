@@ -19,7 +19,7 @@ struct SqsMessageBody {
 }
 
 #[async_trait]
-trait StripeEventHandler {
+pub trait StripeEventHandler {
   fn new(db_conn: DbConn, config: Config) -> Self;
 
   async fn handle_event(
@@ -29,8 +29,14 @@ trait StripeEventHandler {
   ) -> anyhow::Result<()>;
 }
 
-struct Direct;
-struct Connect;
+pub struct Direct {
+  db_conn: DbConn,
+  config: Config,
+}
+
+pub struct Connect {
+  db_conn: DbConn,
+}
 
 impl Direct {
   async fn handle_checkout_session_completed(
@@ -174,8 +180,8 @@ impl StripeEventHandler for Direct {
 
 #[async_trait]
 impl StripeEventHandler for Connect {
-  fn new(db_conn: DbConn, config: Config) -> Self {
-    Self { db_conn, config }
+  fn new(db_conn: DbConn, _config: Config) -> Self {
+    Self { db_conn }
   }
 
   async fn handle_event(
@@ -193,7 +199,6 @@ impl StripeEventHandler for Connect {
 }
 
 pub struct StripeHandler<T: StripeEventHandler> {
-  db_conn: DbConn,
   config: Config,
   handler: T,
 }
@@ -202,9 +207,8 @@ pub struct StripeHandler<T: StripeEventHandler> {
 impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
   fn new(db_conn: DbConn, config: Config) -> Self {
     Self {
-      db_conn,
-      config,
-      handler: T::new(),
+      config: config.clone(),
+      handler: T::new(db_conn, config),
     }
   }
 
@@ -242,7 +246,7 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
       return Err(anyhow::anyhow!("Received webhook in test mode").into());
     }
 
-    match self.handler.handle_event(webhook).await {
+    match self.handler.handle_event(webhook, profile).await {
       Ok(_) => Ok(QueueHandlerOutcome::Success),
       Err(e) => Err(e),
     }
