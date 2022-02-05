@@ -21,6 +21,8 @@ struct SqsMessageBody {
 #[async_trait]
 pub trait StripeEventHandler {
   fn new(db_conn: DbConn, config: Config) -> Self;
+  fn url(&self) -> String;
+  fn secret(&self) -> String;
 
   async fn handle_event(
     &self,
@@ -36,6 +38,7 @@ pub struct Direct {
 
 pub struct Connect {
   db_conn: DbConn,
+  config: Config,
 }
 
 impl Direct {
@@ -160,6 +163,14 @@ impl StripeEventHandler for Direct {
     Self { db_conn, config }
   }
 
+  fn url(&self) -> String {
+    self.config.stripe_direct_webhooks_queue.clone()
+  }
+
+  fn secret(&self) -> String {
+    self.config.stripe_direct_webhooks_secret.clone()
+  }
+
   async fn handle_event(
     &self,
     webhook: stripe::WebhookEvent,
@@ -180,8 +191,16 @@ impl StripeEventHandler for Direct {
 
 #[async_trait]
 impl StripeEventHandler for Connect {
-  fn new(db_conn: DbConn, _config: Config) -> Self {
-    Self { db_conn }
+  fn new(db_conn: DbConn, config: Config) -> Self {
+    Self { db_conn, config }
+  }
+
+  fn url(&self) -> String {
+    self.config.stripe_connect_webhooks_queue.clone()
+  }
+
+  fn secret(&self) -> String {
+    self.config.stripe_connect_webhooks_secret.clone()
   }
 
   async fn handle_event(
@@ -199,7 +218,6 @@ impl StripeEventHandler for Connect {
 }
 
 pub struct StripeHandler<T: StripeEventHandler> {
-  config: Config,
   handler: T,
 }
 
@@ -207,13 +225,12 @@ pub struct StripeHandler<T: StripeEventHandler> {
 impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
   fn new(db_conn: DbConn, config: Config) -> Self {
     Self {
-      config: config.clone(),
       handler: T::new(db_conn, config),
     }
   }
 
   fn url(&self) -> String {
-    self.config.stripe_connect_webhooks_queue.clone()
+    self.handler.url()
   }
 
   async fn handle(
@@ -231,7 +248,7 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
     let webhook = stripe::Webhook::construct_event(
       message_body.body.as_str(),
       message_body.headers.stripe_signature.as_str(),
-      self.config.stripe_connect_webhooks_secret.as_str(),
+      self.handler.secret().as_str(),
     )?;
 
     let livemode = match serde_json::from_str::<serde_json::Value>(message_body.body.as_str()) {
