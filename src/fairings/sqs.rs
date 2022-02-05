@@ -1,6 +1,7 @@
 use crate::aws;
 use crate::config::Config;
 use crate::guards::DbConn;
+use crate::queue_handlers::stripe::{Connect, Direct};
 use crate::queue_handlers::{S3BucketHandler, StripeHandler};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
@@ -35,14 +36,14 @@ impl SqsFairing {
 
   async fn init(&self, rocket: &Rocket<Orbit>) {
     self.start::<S3BucketHandler>(rocket).await;
-    self.start::<StripeHandler>(rocket).await;
+    self.start::<StripeHandler<Connect>>(rocket).await;
+    self.start::<StripeHandler<Direct>>(rocket).await;
   }
 
   async fn start<T: QueueHandler>(&self, rocket: &Rocket<Orbit>) {
     let db_conn = DbConn::get_one(&rocket)
       .await
       .expect("Failed to get db connection");
-
     let config = rocket.state::<Config>().unwrap().clone();
     let profile = rocket.config().profile.clone();
     let aws_access_key_id = config.aws_access_key_id.clone();
