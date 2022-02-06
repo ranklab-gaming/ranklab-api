@@ -5,7 +5,6 @@ use rocket_okapi::{
 use rocket_sync_db_pools::database;
 
 #[database("default")]
-#[asdsadas = "saddsadsa"]
 pub struct DbConn(pub diesel::PgConnection);
 
 impl<'a> OpenApiFromRequest<'a> for DbConn {
