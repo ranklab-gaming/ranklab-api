@@ -13,7 +13,6 @@ pub struct PlayerView {
   pub email: String,
   pub games: Vec<UserGame>,
   pub can_create_reviews: bool,
-  pub stripe_payment_method_submitted: bool,
 }
 
 impl From<Player> for PlayerView {
@@ -24,8 +23,7 @@ impl From<Player> for PlayerView {
       name: player.name,
       email: player.email,
       games: player.games,
-      can_create_reviews: player.stripe_payment_method_id.is_some(),
-      stripe_payment_method_submitted: player.stripe_payment_method_id.is_some(),
+      can_create_reviews: player.can_create_reviews,
     }
   }
 }
