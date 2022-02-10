@@ -5,7 +5,6 @@ use crate::models::{Coach, Player, Review};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::views::ReviewView;
 use diesel::prelude::*;
-use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -66,7 +65,7 @@ pub async fn list(
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct UpdateReviewRequest {
   published: Option<bool>,
-  coach_id: Option<Uuid>,
+  taken: Option<bool>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -189,24 +188,22 @@ pub async fn update(
     }
   }
 
-  if let Some(coach_id) = review.coach_id {
-    if auth.0.id != coach_id {
-      return Response::mutation_error(Status::Forbidden);
+  if let Some(true) = review.taken {
+    if existing_review.coach_id.is_none() {
+      let updated_review: ReviewView = db_conn
+        .run(move |conn| {
+          use crate::schema::reviews::dsl::*;
+
+          diesel::update(crate::schema::reviews::table.find(existing_review.id))
+            .set(coach_id.eq(auth_id))
+            .get_result::<Review>(conn)
+            .unwrap()
+        })
+        .await
+        .into();
+
+      return Response::success(updated_review);
     }
-
-    let updated_review: ReviewView = db_conn
-      .run(move |conn| {
-        use crate::schema::reviews::dsl::*;
-
-        diesel::update(crate::schema::reviews::table.find(existing_review.id))
-          .set(coach_id.eq(auth_id))
-          .get_result::<Review>(conn)
-          .unwrap()
-      })
-      .await
-      .into();
-
-    return Response::success(updated_review);
   }
 
   Response::success(existing_review.into())
