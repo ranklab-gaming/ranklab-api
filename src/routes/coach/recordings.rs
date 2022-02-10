@@ -15,7 +15,12 @@ pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<
       use crate::schema::reviews::dsl::{coach_id, recording_id, reviews};
 
       reviews
-        .filter(coach_id.eq(auth.0.id).and(recording_id.eq(id)))
+        .filter(
+          coach_id
+            .eq(auth.0.id)
+            .or(coach_id.is_null())
+            .and(recording_id.eq(id)),
+        )
         .first::<Review>(conn)
     })
     .await?;
