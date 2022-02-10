@@ -125,7 +125,7 @@ pub async fn update(
   }
 
   if let Some(published) = review.published {
-    if !existing_review.published && published {
+    if existing_review.coach_id.is_some() && !existing_review.published && published {
       let customer_id = player
         .stripe_customer_id
         .unwrap()
