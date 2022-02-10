@@ -46,7 +46,7 @@ pub async fn list(
 
       let query = if params.pending.unwrap_or(false) {
         reviews
-          .filter(coach_id.eq::<Option<Uuid>>(None).and(games_expression))
+          .filter(coach_id.is_null().and(games_expression))
           .into_boxed()
       } else {
         reviews.filter(coach_id.eq(auth.0.id)).into_boxed()
@@ -75,7 +75,12 @@ pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<
     .run(move |conn| {
       use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews};
       reviews
-        .filter(coach_id.eq(auth.0.id).and(review_id.eq(id)))
+        .filter(
+          coach_id
+            .eq(auth.0.id)
+            .or(coach_id.is_null())
+            .and(review_id.eq(id)),
+        )
         .first::<Review>(conn)
     })
     .await?
@@ -103,7 +108,7 @@ pub async fn update(
         .filter(
           review_id
             .eq(id)
-            .and(coach_id.eq::<Option<Uuid>>(None).or(coach_id.eq(auth_id))),
+            .and(coach_id.is_null().or(coach_id.eq(auth_id))),
         )
         .first::<Review>(conn)
     })
@@ -170,7 +175,9 @@ pub async fn update(
           transfer_group: None,
           use_stripe_sdk: None,
         },
-      );
+      )
+      .await
+      .unwrap();
 
       let updated_review: ReviewView = db_conn
         .run(move |conn| {
