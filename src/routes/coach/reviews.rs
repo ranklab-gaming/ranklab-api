@@ -153,10 +153,10 @@ pub async fn update(
             }
             .into(),
           ),
+          error_on_requires_action: Some(true),
           automatic_payment_methods: None,
           capture_method: None,
           confirmation_method: None,
-          error_on_requires_action: None,
           expand: &[],
           mandate: None,
           mandate_data: None,
