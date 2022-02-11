@@ -8,6 +8,5 @@ pub struct Player {
   pub name: String,
   pub email: String,
   pub games: Vec<UserGame>,
-  pub stripe_customer_id: Option<String>,
-  pub can_create_reviews: bool,
+  pub stripe_customer_id: Option<String>
 }

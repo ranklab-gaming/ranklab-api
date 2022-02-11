@@ -4,6 +4,5 @@ CREATE TABLE players (
     name text NOT NULL DEFAULT '',
     email text UNIQUE NOT NULL DEFAULT '',
     games jsonb[] NOT NULL DEFAULT '{}',
-    stripe_customer_id text,
-    can_create_reviews boolean NOT NULL DEFAULT false
+    stripe_customer_id text
 );

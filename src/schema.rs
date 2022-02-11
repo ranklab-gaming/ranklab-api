@@ -32,7 +32,6 @@ table! {
         email -> Text,
         games -> Array<Jsonb>,
         stripe_customer_id -> Nullable<Text>,
-        can_create_reviews -> Bool,
     }
 }
 

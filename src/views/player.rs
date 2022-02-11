@@ -12,7 +12,6 @@ pub struct PlayerView {
   pub name: String,
   pub email: String,
   pub games: Vec<UserGame>,
-  pub can_create_reviews: bool,
 }
 
 impl From<Player> for PlayerView {
@@ -23,7 +22,6 @@ impl From<Player> for PlayerView {
       name: player.name,
       email: player.email,
       games: player.games,
-      can_create_reviews: player.can_create_reviews,
     }
   }
 }
