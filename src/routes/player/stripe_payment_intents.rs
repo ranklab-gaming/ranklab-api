@@ -22,8 +22,6 @@ pub struct PaymentIntent {
 #[derive(Deserialize, JsonSchema)]
 pub struct CreatePaymentIntentMutation {
   recording_id: Uuid,
-  return_url: String,
-  setup_future_usage: bool,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -68,16 +66,11 @@ pub async fn create(
 
   let mut params = stripe::CreatePaymentIntent::new(10_00, stripe::Currency::USD);
 
-  params.application_fee_amount = Some(2_00);
   params.customer = Some(customer_id);
   params.description = Some("Recording payment");
-  params.return_url = Some(&body.return_url);
   params.payment_method_types = Some(vec!["card".to_string()].into());
   params.capture_method = Some(stripe::PaymentIntentCaptureMethod::Manual);
-
-  if body.setup_future_usage {
-    params.setup_future_usage = Some(stripe::PaymentIntentSetupFutureUsage::OnSession);
-  }
+  params.setup_future_usage = Some(stripe::PaymentIntentSetupFutureUsage::OnSession);
 
   let payment_intent = stripe::PaymentIntent::create(&stripe.0 .0, params)
     .await
