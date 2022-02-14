@@ -8,4 +8,5 @@ pub struct Recording {
   pub upload_url: String,
   pub uploaded: bool,
   pub mime_type: String,
+  pub stripe_payment_intent_id: Option<String>,
 }

@@ -43,6 +43,7 @@ table! {
         upload_url -> Text,
         uploaded -> Bool,
         mime_type -> Text,
+        stripe_payment_intent_id -> Nullable<Text>,
     }
 }
 

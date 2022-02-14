@@ -4,5 +4,6 @@ CREATE TABLE recordings (
     video_key text NOT NULL DEFAULT '',
     upload_url text NOT NULL DEFAULT '',
     uploaded boolean NOT NULL DEFAULT false,
-    mime_type text NOT NULL DEFAULT ''
+    mime_type text NOT NULL DEFAULT '',
+    stripe_payment_intent_id text
 );
