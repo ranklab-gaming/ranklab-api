@@ -132,22 +132,7 @@ pub async fn create(
       card_payments: None,
       payments: None,
       card_issuing: None,
-      payouts: Some(
-        stripe::PayoutSettingsParams {
-          debit_negative_balances: None,
-          statement_descriptor: None,
-          schedule: Some(
-            stripe::TransferScheduleParams {
-              delay_days: Some(stripe::DelayDays::Days(7)),
-              interval: None,
-              monthly_anchor: None,
-              weekly_anchor: None,
-            }
-            .into(),
-          ),
-        }
-        .into(),
-      ),
+      payouts: None
     }
     .into(),
   );

@@ -69,7 +69,6 @@ pub async fn create(
   params.customer = Some(customer_id);
   params.description = Some("Recording payment");
   params.payment_method_types = Some(vec!["card".to_string()].into());
-  params.capture_method = Some(stripe::PaymentIntentCaptureMethod::Manual);
   params.setup_future_usage = Some(stripe::PaymentIntentSetupFutureUsage::OnSession);
 
   let payment_intent = stripe::PaymentIntent::create(&stripe.0 .0, params)
