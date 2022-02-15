@@ -75,6 +75,19 @@ pub async fn create(
     .await
     .unwrap();
 
+  let payment_intent_id = payment_intent.id.clone();
+
+  db_conn
+    .run(move |conn| {
+      use crate::schema::recordings::dsl::*;
+
+      diesel::update(crate::schema::recordings::table.find(recording.id))
+        .set(stripe_payment_intent_id.eq(payment_intent_id.to_string()))
+        .get_result::<Recording>(conn)
+        .unwrap()
+    })
+    .await;
+
   Response::success(PaymentIntent {
     client_secret: *payment_intent.client_secret.unwrap(),
   })
