@@ -8,4 +8,4 @@ CREATE TABLE reviews (
     skill_level smallint NOT NULL DEFAULT 0,
     notes text NOT NULL DEFAULT '',
     published boolean NOT NULL DEFAULT false
-);
+)

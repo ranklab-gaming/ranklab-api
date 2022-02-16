@@ -58,6 +58,7 @@ table! {
         skill_level -> Int2,
         notes -> Text,
         published -> Bool,
+        stripe_payment_intent_id -> Text,
     }
 }
 
