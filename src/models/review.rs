@@ -10,6 +10,5 @@ pub struct Review {
   pub game_id: String,
   pub skill_level: i16,
   pub notes: String,
-  pub published: bool,
-  pub stripe_payment_intent_id: String,
+  pub published: bool
 }
