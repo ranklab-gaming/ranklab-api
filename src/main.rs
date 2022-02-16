@@ -94,10 +94,10 @@ fn rocket() -> Rocket<Build> {
         player::comments::list,
         player::recordings::create,
         player::recordings::get,
-        player::reviews::create,
         player::reviews::get,
         player::reviews::list,
         player::stripe_payment_intents::create,
+        player::stripe_payment_intents::update,
         player::stripe_billing_portal_sessions::create,
         public::games::list,
         user::users::get_me
