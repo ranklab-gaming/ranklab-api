@@ -6,5 +6,6 @@ pub enum ReviewState {
   AwaitingReview,
   Draft,
   Published,
+  Accepted,
   Refunded,
 }

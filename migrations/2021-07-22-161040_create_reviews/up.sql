@@ -1,4 +1,4 @@
-CREATE TYPE review_state AS ENUM ('awaiting_payment', 'awaiting_review', 'draft', 'published', 'refunded');
+CREATE TYPE review_state AS ENUM ('awaiting_payment', 'awaiting_review', 'draft', 'published', 'accepted', 'refunded');
 
 CREATE TABLE reviews (
     coach_id uuid REFERENCES coaches(id),
