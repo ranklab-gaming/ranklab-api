@@ -38,9 +38,11 @@ impl Email {
   ) -> Self {
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
+    let mut http_config = HttpConfig::new();
+    http_config.pool_idle_timeout(0);
 
     let client = SesV2Client::new_with(
-      HttpClient::new().unwrap(),
+      HttpClient::new_with_config(http_config).unwrap(),
       aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
       Region::EuWest2,
     );

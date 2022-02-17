@@ -5,7 +5,7 @@ use crate::queue_handlers::stripe::{Connect, Direct};
 use crate::queue_handlers::{S3BucketHandler, StripeHandler};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
-use rusoto_core::HttpClient;
+use rusoto_core::{HttpClient, HttpConfig};
 use rusoto_core::Region;
 use rusoto_sqs::{DeleteMessageRequest, ReceiveMessageRequest, Sqs, SqsClient};
 
@@ -52,9 +52,11 @@ impl SqsFairing {
 
     tokio::spawn(async move {
       let handler = T::new(db_conn, config);
+      let mut http_config = HttpConfig::new();
+      http_config.pool_idle_timeout(0);
 
       let client = SqsClient::new_with(
-        HttpClient::new().unwrap(),
+        HttpClient::new_with_config(http_config).unwrap(),
         aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
         Region::EuWest2,
       );
