@@ -183,7 +183,7 @@ pub async fn update(
         .run(move |conn| {
           use crate::schema::reviews::dsl::published;
 
-          diesel::update(crate::schema::reviews::table.find(id))
+          diesel::update(&existing_review)
             .set(published.eq(true))
             .get_result::<Review>(conn)
             .unwrap()
@@ -201,7 +201,7 @@ pub async fn update(
         .run(move |conn| {
           use crate::schema::reviews::dsl::*;
 
-          diesel::update(crate::schema::reviews::table.find(existing_review.id))
+          diesel::update(&existing_review)
             .set(coach_id.eq(auth_id))
             .get_result::<Review>(conn)
             .unwrap()

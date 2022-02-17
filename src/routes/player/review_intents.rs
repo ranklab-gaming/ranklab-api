@@ -1,34 +1,28 @@
-use std::collections::HashMap;
-
 use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::guards::Stripe;
 use crate::models::Player;
-use crate::models::Recording;
+use crate::models::ReviewIntent;
 use crate::response::MutationError;
 use crate::response::{MutationResponse, Response};
+use crate::views::ReviewIntentView;
 use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Serialize, JsonSchema)]
-pub struct PaymentIntent {
-  client_secret: String,
-}
-
 #[derive(Deserialize, JsonSchema)]
-pub struct CreatePaymentIntentMutation {
+pub struct CreateReviewIntentMutation {
   recording_id: Uuid,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
-pub struct UpdatePaymentIntentMutation {
+pub struct UpdateReviewIntentMutation {
   #[validate(length(min = 1))]
   title: String,
   notes: String,
@@ -37,26 +31,27 @@ pub struct UpdatePaymentIntentMutation {
 }
 
 #[openapi(tag = "Ranklab")]
-#[post("/player/stripe-payment-intents", data = "<body>")]
+#[post("/player/review-intents", data = "<body>")]
 pub async fn create(
   db_conn: DbConn,
   auth: Auth<Player>,
   stripe: Stripe,
-  body: Json<CreatePaymentIntentMutation>,
-) -> MutationResponse<PaymentIntent> {
-  let recording_id = body.recording_id.clone();
+  body: Json<CreateReviewIntentMutation>,
+) -> MutationResponse<ReviewIntentView> {
+  let body_recording_id = body.recording_id.clone();
 
-  let recording = db_conn
+  let review_intent = db_conn
     .run(move |conn| {
-      use crate::schema::recordings::dsl::*;
-      recordings
-        .filter(id.eq(recording_id))
-        .first::<Recording>(conn)
+      use crate::schema::review_intents::dsl::*;
+      review_intents
+        .filter(recording_id.eq(Some(body_recording_id)))
+        .first::<ReviewIntent>(conn)
     })
-    .await?;
+    .await;
 
-  if let Some(payment_intent_id) = recording.stripe_payment_intent_id {
-    let payment_intent_id = payment_intent_id
+  if let Ok(review_intent) = review_intent {
+    let payment_intent_id = review_intent
+      .stripe_payment_intent_id
       .parse::<stripe::PaymentIntentId>()
       .unwrap();
 
@@ -64,10 +59,24 @@ pub async fn create(
       .await
       .map_err(|_| MutationError::Status(Status::InternalServerError))?;
 
-    return Response::success(PaymentIntent {
-      client_secret: *payment_intent.client_secret.unwrap(),
-    });
+    return Response::success(ReviewIntentView::from(review_intent, payment_intent));
   }
+
+  let auth_player_id = auth.0.id.clone();
+
+  let review_intent = db_conn
+    .run(move |conn| {
+      use crate::schema::review_intents::dsl::*;
+
+      diesel::insert_into(review_intents)
+        .values((
+          recording_id.eq(Some(body_recording_id)),
+          player_id.eq(auth_player_id),
+        ))
+        .get_result::<ReviewIntent>(conn)
+        .unwrap()
+    })
+    .await;
 
   let customer_id = auth
     .0
@@ -90,20 +99,18 @@ pub async fn create(
 
   let payment_intent_id = payment_intent.id.clone();
 
-  db_conn
+  let review_intent = db_conn
     .run(move |conn| {
-      use crate::schema::recordings::dsl::*;
+      use crate::schema::review_intents::dsl::*;
 
-      diesel::update(crate::schema::recordings::table.find(recording.id))
+      diesel::update(&review_intent)
         .set(stripe_payment_intent_id.eq(payment_intent_id.to_string()))
-        .get_result::<Recording>(conn)
+        .get_result::<ReviewIntent>(conn)
         .unwrap()
     })
     .await;
 
-  Response::success(PaymentIntent {
-    client_secret: *payment_intent.client_secret.unwrap(),
-  })
+  Response::success(ReviewIntentView::from(review_intent, payment_intent))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -113,8 +120,8 @@ pub async fn update(
   auth: Auth<Player>,
   stripe: Stripe,
   recording_id: Uuid,
-  body: Json<UpdatePaymentIntentMutation>,
-) -> MutationResponse<PaymentIntent> {
+  body: Json<UpdateReviewIntentMutation>,
+) -> MutationResponse<ReviewIntentView> {
   if let Err(errors) = body.validate() {
     return Response::validation_error(errors);
   }
@@ -130,38 +137,33 @@ pub async fn update(
     return Response::mutation_error(Status::BadRequest);
   }
 
-  let recording = db_conn
+  let review_intent = db_conn
     .run(move |conn| {
-      use crate::schema::recordings::dsl::*;
-      recordings
-        .filter(id.eq(recording_id).and(player_id.eq(auth.0.id)))
-        .first::<Recording>(conn)
+      use crate::schema::review_intents::dsl::{
+        game_id, notes, recording_id as recording_id_column, title,
+      };
+
+      diesel::update(
+        crate::schema::review_intents::table.filter(recording_id_column.eq(Some(recording_id))),
+      )
+      .set((
+        title.eq(body.title.clone()),
+        notes.eq(body.notes.clone()),
+        game_id.eq(body.game_id.clone()),
+      ))
+      .get_result::<ReviewIntent>(conn)
+      .unwrap()
     })
-    .await?;
+    .await;
 
-  if recording.stripe_payment_intent_id.is_none() {
-    return Response::mutation_error(Status::BadRequest);
-  }
-
-  let payment_intent_id = recording
+  let payment_intent_id = review_intent
     .stripe_payment_intent_id
-    .unwrap()
     .parse::<stripe::PaymentIntentId>()
     .unwrap();
 
-  let mut params = stripe::UpdatePaymentIntent::new();
-
-  params.metadata = Some(HashMap::from([
-    ("title".to_string(), body.title.clone()),
-    ("notes".to_string(), body.notes.clone()),
-    ("game_id".to_string(), body.game_id.clone()),
-  ]));
-
-  let payment_intent = stripe::PaymentIntent::update(&stripe.0 .0, &payment_intent_id, params)
+  let payment_intent = stripe::PaymentIntent::retrieve(&stripe.0 .0, &payment_intent_id, &[])
     .await
-    .map_err(|_| MutationError::Status(Status::BadRequest))?;
+    .map_err(|_| MutationError::Status(Status::InternalServerError))?;
 
-  Response::success(PaymentIntent {
-    client_secret: *payment_intent.client_secret.unwrap(),
-  })
+  Response::success(ReviewIntentView::from(review_intent, payment_intent))
 }

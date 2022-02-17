@@ -132,7 +132,7 @@ pub async fn create(
       card_payments: None,
       payments: None,
       card_issuing: None,
-      payouts: None
+      payouts: None,
     }
     .into(),
   );
@@ -143,7 +143,7 @@ pub async fn create(
     .run(move |conn| {
       use crate::schema::coaches::dsl::*;
 
-      diesel::update(crate::schema::coaches::table.find(coach.id))
+      diesel::update(&coach)
         .set(stripe_account_id.eq(Some(account.id.to_string())))
         .get_result::<Coach>(conn)
         .unwrap()

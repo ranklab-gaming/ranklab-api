@@ -1,36 +1,36 @@
 table! {
     coaches (id) {
+        auth0_id -> Text,
+        bio -> Text,
+        country -> Text,
+        email -> Text,
+        games -> Array<Jsonb>,
         id -> Uuid,
         name -> Text,
-        email -> Text,
-        bio -> Text,
-        games -> Array<Jsonb>,
-        auth0_id -> Text,
         stripe_account_id -> Nullable<Text>,
         stripe_details_submitted -> Bool,
         stripe_payouts_enabled -> Bool,
-        country -> Text,
     }
 }
 
 table! {
     comments (id) {
+        body -> Text,
+        coach_id -> Uuid,
+        drawing -> Text,
         id -> Uuid,
         review_id -> Uuid,
-        coach_id -> Uuid,
-        body -> Text,
         video_timestamp -> Int4,
-        drawing -> Text,
     }
 }
 
 table! {
     players (id) {
-        id -> Uuid,
         auth0_id -> Text,
-        name -> Text,
         email -> Text,
         games -> Array<Jsonb>,
+        id -> Uuid,
+        name -> Text,
         stripe_customer_id -> Nullable<Text>,
     }
 }
@@ -38,32 +38,47 @@ table! {
 table! {
     recordings (id) {
         id -> Uuid,
+        mime_type -> Text,
         player_id -> Uuid,
-        video_key -> Text,
         upload_url -> Text,
         uploaded -> Bool,
-        mime_type -> Text,
-        stripe_payment_intent_id -> Nullable<Text>,
+        video_key -> Text,
+    }
+}
+
+table! {
+    review_intents (id) {
+        game_id -> Text,
+        id -> Uuid,
+        notes -> Text,
+        player_id -> Uuid,
+        recording_id -> Nullable<Uuid>,
+        review_id -> Nullable<Uuid>,
+        stripe_payment_intent_id -> Text,
+        title -> Text,
     }
 }
 
 table! {
     reviews (id) {
-        id -> Uuid,
-        player_id -> Uuid,
         coach_id -> Nullable<Uuid>,
-        title -> Text,
-        recording_id -> Uuid,
         game_id -> Text,
-        skill_level -> Int2,
+        id -> Uuid,
         notes -> Text,
+        player_id -> Uuid,
         published -> Bool,
+        recording_id -> Uuid,
+        skill_level -> Int2,
+        title -> Text,
     }
 }
 
 joinable!(comments -> coaches (coach_id));
 joinable!(comments -> reviews (review_id));
 joinable!(recordings -> players (player_id));
+joinable!(review_intents -> players (player_id));
+joinable!(review_intents -> recordings (recording_id));
+joinable!(review_intents -> reviews (review_id));
 joinable!(reviews -> coaches (coach_id));
 joinable!(reviews -> players (player_id));
 joinable!(reviews -> recordings (recording_id));
@@ -73,5 +88,6 @@ allow_tables_to_appear_in_same_query!(
     comments,
     players,
     recordings,
+    review_intents,
     reviews,
 );

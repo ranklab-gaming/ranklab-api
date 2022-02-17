@@ -2,7 +2,7 @@ use crate::aws;
 use crate::config::Config;
 use rocket::tokio;
 use rusoto_core::Region;
-use rusoto_core::{HttpClient, HttpConfig};
+use rusoto_core::{HttpClient};
 use rusoto_sesv2::{
   BulkEmailContent, BulkEmailEntry, Destination, ReplacementEmailContent, ReplacementTemplate,
   SendBulkEmailRequest, SesV2, SesV2Client, Template,
@@ -38,11 +38,12 @@ impl Email {
   ) -> Self {
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
-    let mut http_config = HttpConfig::new();
-    http_config.pool_idle_timeout(0);
+    let mut builder = hyper::Client::builder();
+
+    builder.pool_max_idle_per_host(0);
 
     let client = SesV2Client::new_with(
-      HttpClient::new_with_config(http_config).unwrap(),
+      HttpClient::from_builder(builder, hyper_tls::HttpsConnector::new()),
       aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
       Region::EuWest2,
     );

@@ -60,7 +60,7 @@ pub async fn create(
     .run(move |conn| {
       use crate::schema::players::dsl::*;
 
-      diesel::update(crate::schema::players::table.find(player.id))
+      diesel::update(&player)
         .set(stripe_customer_id.eq(Some(customer.id.to_string())))
         .get_result::<Player>(conn)
         .unwrap()

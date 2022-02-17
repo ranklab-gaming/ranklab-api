@@ -96,8 +96,8 @@ fn rocket() -> Rocket<Build> {
         player::recordings::get,
         player::reviews::get,
         player::reviews::list,
-        player::stripe_payment_intents::create,
-        player::stripe_payment_intents::update,
+        player::review_intents::create,
+        player::review_intents::update,
         player::stripe_billing_portal_sessions::create,
         public::games::list,
         user::users::get_me

@@ -100,7 +100,7 @@ pub async fn update(
     .run(move |conn| {
       use crate::schema::comments::dsl::*;
 
-      diesel::update(crate::schema::comments::table.find(existing_comment.id))
+      diesel::update(&existing_comment)
         .set((
           body.eq(comment.body.clone()),
           drawing.eq(comment.drawing.clone()),

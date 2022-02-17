@@ -1,14 +1,15 @@
+use crate::schema::reviews;
 use uuid::Uuid;
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable)]
 pub struct Review {
-  pub id: Uuid,
-  pub player_id: Uuid,
   pub coach_id: Option<Uuid>,
-  pub title: String,
-  pub recording_id: Uuid,
   pub game_id: String,
-  pub skill_level: i16,
+  pub id: Uuid,
   pub notes: String,
-  pub published: bool
+  pub player_id: Uuid,
+  pub published: bool,
+  pub recording_id: Uuid,
+  pub skill_level: i16,
+  pub title: String,
 }
