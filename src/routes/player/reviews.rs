@@ -1,6 +1,8 @@
+use crate::data_types::ReviewState;
 use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::guards::Stripe;
+use crate::models::Coach;
 use crate::models::Player;
 use crate::models::Review;
 use crate::response::QueryResponse;
@@ -121,4 +123,70 @@ pub async fn create(
     .into();
 
   Response::success(review)
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct UpdateReviewRequest {
+  accepted: bool,
+}
+
+#[openapi(tag = "Ranklab")]
+#[put("/coach/reviews/<id>", data = "<review>")]
+pub async fn update(
+  id: Uuid,
+  review: Json<UpdateReviewRequest>,
+  auth: Auth<Player>,
+  db_conn: DbConn,
+  stripe: Stripe,
+) -> MutationResponse<ReviewView> {
+  let auth_id = auth.0.id.clone();
+
+  let existing_review = db_conn
+    .run(move |conn| {
+      use crate::schema::reviews::dsl::{id as review_id, player_id, reviews, state};
+
+      reviews
+        .filter(
+          review_id
+            .eq(id)
+            .and(state.eq(ReviewState::Published).or(player_id.eq(auth_id))),
+        )
+        .first::<Review>(conn)
+    })
+    .await?;
+
+  if !review.accepted {
+    return Response::success(existing_review.into());
+  }
+
+  let review_coach_id = existing_review.coach_id.unwrap().clone();
+
+  let coach = db_conn
+    .run(move |conn| {
+      use crate::schema::coaches::dsl::{coaches, id as coach_id};
+
+      coaches
+        .filter(coach_id.eq(review_coach_id))
+        .first::<Coach>(conn)
+        .unwrap()
+    })
+    .await;
+
+  let stripe_payment_intent_id = existing_review
+    .stripe_payment_intent_id
+    .parse::<stripe::PaymentIntentId>()
+    .unwrap();
+
+  let payment_intent =
+    stripe::PaymentIntent::retrieve(&stripe.0 .0, &stripe_payment_intent_id, &[])
+      .await
+      .unwrap();
+
+  let mut transfer_params =
+    stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id.unwrap());
+  transfer_params.amount = Some((payment_intent.amount as f64 * 0.8) as i64);
+
+  stripe::Transfer::create(&stripe.0 .0, transfer_params);
+
+  Response::success(existing_review.into())
 }

@@ -14,7 +14,7 @@ pub struct ReviewView {
   pub game_id: String,
   pub skill_level: i16,
   pub notes: String,
-  pub published: bool,
+  pub state: ReviewState,
 }
 
 impl From<Review> for ReviewView {
@@ -28,7 +28,7 @@ impl From<Review> for ReviewView {
       game_id: review.game_id,
       skill_level: review.skill_level,
       notes: review.notes,
-      published: review.state == ReviewState::Published,
+      state: review.state,
     }
   }
 }
