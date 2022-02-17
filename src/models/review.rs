@@ -1,3 +1,4 @@
+use crate::data_types::ReviewState;
 use crate::schema::reviews;
 use uuid::Uuid;
 
@@ -8,8 +9,9 @@ pub struct Review {
   pub id: Uuid,
   pub notes: String,
   pub player_id: Uuid,
-  pub published: bool,
   pub recording_id: Uuid,
   pub skill_level: i16,
   pub title: String,
+  pub state: ReviewState,
+  pub stripe_payment_intent_id: String,
 }

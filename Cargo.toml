@@ -34,7 +34,7 @@ async-stripe = { git = "https://github.com/arlyon/async-stripe", features = ["ru
 anyhow = "1.0.53"
 hyper = "0.14.17"
 hyper-tls = "0.5.0"
-
+diesel-derive-enum = { version = "1.1.2", features = ["postgres"] }
 [dependencies.rocket_sync_db_pools]
 version = "0.1.0-rc.1"
 features = ["diesel_postgres_pool"]

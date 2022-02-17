@@ -1,3 +1,4 @@
+use crate::data_types::ReviewState;
 use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::guards::Stripe;
@@ -46,7 +47,7 @@ pub async fn list(
 
       let query = if params.pending.unwrap_or(false) {
         reviews
-          .filter(coach_id.is_null().and(games_expression))
+          .filter(state.eq(ReviewState::AwaitingReview).and(games_expression))
           .into_boxed()
       } else {
         reviews.filter(coach_id.eq(auth.0.id)).into_boxed()
@@ -73,12 +74,12 @@ pub struct UpdateReviewRequest {
 pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<ReviewView> {
   let review: ReviewView = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews};
+      use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews, state};
       reviews
         .filter(
           coach_id
             .eq(auth.0.id)
-            .or(coach_id.is_null())
+            .or(state.eq(ReviewState::AwaitingReview))
             .and(review_id.eq(id)),
         )
         .first::<Review>(conn)
@@ -102,13 +103,15 @@ pub async fn update(
 
   let existing_review = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews};
+      use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews, state};
 
       reviews
         .filter(
-          review_id
-            .eq(id)
-            .and(coach_id.is_null().or(coach_id.eq(auth_id))),
+          review_id.eq(id).and(
+            state
+              .eq(ReviewState::AwaitingReview)
+              .or(coach_id.eq(auth_id)),
+          ),
         )
         .first::<Review>(conn)
     })
@@ -129,7 +132,7 @@ pub async fn update(
   }
 
   if let Some(published) = review.published {
-    if existing_review.coach_id.is_some() && !existing_review.published && published {
+    if existing_review.state == ReviewState::Draft && published {
       let customer_id = player
         .stripe_customer_id
         .unwrap()
@@ -181,10 +184,10 @@ pub async fn update(
 
       let updated_review: ReviewView = db_conn
         .run(move |conn| {
-          use crate::schema::reviews::dsl::published;
+          use crate::schema::reviews::dsl::state;
 
           diesel::update(&existing_review)
-            .set(published.eq(true))
+            .set(state.eq(ReviewState::Published))
             .get_result::<Review>(conn)
             .unwrap()
         })
@@ -196,13 +199,13 @@ pub async fn update(
   }
 
   if let Some(true) = review.taken {
-    if existing_review.coach_id.is_none() {
+    if existing_review.state == ReviewState::AwaitingReview {
       let updated_review: ReviewView = db_conn
         .run(move |conn| {
           use crate::schema::reviews::dsl::*;
 
           diesel::update(&existing_review)
-            .set(coach_id.eq(auth_id))
+            .set((coach_id.eq(auth_id), state.eq(ReviewState::Draft)))
             .get_result::<Review>(conn)
             .unwrap()
         })

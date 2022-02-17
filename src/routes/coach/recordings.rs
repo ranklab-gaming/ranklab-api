@@ -1,3 +1,4 @@
+use crate::data_types::ReviewState;
 use crate::guards::Auth;
 use crate::guards::DbConn;
 use crate::models::{Coach, Recording, Review};
@@ -12,13 +13,13 @@ use uuid::Uuid;
 pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<RecordingView> {
   let review = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::{coach_id, recording_id, reviews};
+      use crate::schema::reviews::dsl::{coach_id, recording_id, reviews, state};
 
       reviews
         .filter(
           coach_id
             .eq(auth.0.id)
-            .or(coach_id.is_null())
+            .or(state.eq(ReviewState::AwaitingReview))
             .and(recording_id.eq(id)),
         )
         .first::<Review>(conn)

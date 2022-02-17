@@ -1,0 +1,21 @@
+--- a/src/schema.rs
++++ b/src/schema.rs
+@@ -47,6 +47,9 @@ table! {
+ }
+
+ table! {
++    use diesel::sql_types::*;
++    use crate::data_types::review_state::ReviewStateMapping;
++
+     reviews (id) {
+         coach_id -> Nullable<Uuid>,
+         game_id -> Text,
+@@ -57,7 +60,7 @@ table! {
+         recording_id -> Uuid,
+         skill_level -> Int2,
+         title -> Text,
+-        state -> Review_state,
++        state -> ReviewStateMapping,
+         stripe_payment_intent_id -> Text,
+     }
+ }

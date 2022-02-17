@@ -1,4 +1,4 @@
-use crate::models::Review;
+use crate::{data_types::ReviewState, models::Review};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -28,7 +28,7 @@ impl From<Review> for ReviewView {
       game_id: review.game_id,
       skill_level: review.skill_level,
       notes: review.notes,
-      published: review.published,
+      published: review.state == ReviewState::Published,
     }
   }
 }

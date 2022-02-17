@@ -47,9 +47,6 @@ table! {
 }
 
 table! {
-    use diesel::sql_types::*;
-    use crate::data_types::review_state::ReviewStateMapping;
-
     reviews (id) {
         coach_id -> Nullable<Uuid>,
         game_id -> Text,
@@ -59,7 +56,7 @@ table! {
         recording_id -> Uuid,
         skill_level -> Int2,
         title -> Text,
-        state -> ReviewStateMapping,
+        state -> Review_state,
         stripe_payment_intent_id -> Text,
     }
 }
