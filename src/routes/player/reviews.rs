@@ -110,7 +110,7 @@ pub async fn create(
     .parse::<stripe::CustomerId>()
     .unwrap();
 
-  let mut params = stripe::CreatePaymentIntent::new(10_00, stripe::Currency::DKK);
+  let mut params = stripe::CreatePaymentIntent::new(10_00, stripe::Currency::USD);
 
   params.customer = Some(customer_id);
   params.description = Some("Recording payment");
