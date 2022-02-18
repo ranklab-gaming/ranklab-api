@@ -110,12 +110,11 @@ pub async fn create(
     .parse::<stripe::CustomerId>()
     .unwrap();
 
-  let mut params = stripe::CreatePaymentIntent::new(10_00, stripe::Currency::USD);
+  let mut params = stripe::CreatePaymentIntent::new(10_00, stripe::Currency::DKK);
 
   params.customer = Some(customer_id);
   params.description = Some("Recording payment");
-  params.automatic_payment_methods =
-    Some(stripe::CreatePaymentIntentAutomaticPaymentMethods { enabled: true }.into());
+  params.payment_method_types = Some(vec!["card".to_string()].into());
   params.setup_future_usage = Some(stripe::PaymentIntentSetupFutureUsage::OnSession);
 
   let payment_intent = stripe::PaymentIntent::create(&stripe.0 .0, params)
