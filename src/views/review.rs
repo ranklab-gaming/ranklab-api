@@ -15,10 +15,11 @@ pub struct ReviewView {
   pub skill_level: i16,
   pub notes: String,
   pub state: ReviewState,
+  pub stripe_client_secret: Option<String>,
 }
 
-impl From<Review> for ReviewView {
-  fn from(review: Review) -> Self {
+impl ReviewView {
+  pub fn from(review: Review, payment_intent: Option<stripe::PaymentIntent>) -> Self {
     ReviewView {
       id: review.id,
       player_id: review.player_id,
@@ -29,6 +30,10 @@ impl From<Review> for ReviewView {
       skill_level: review.skill_level,
       notes: review.notes,
       state: review.state,
+      stripe_client_secret: match payment_intent {
+        Some(payment_intent) => Some(*payment_intent.client_secret.unwrap()),
+        None => None,
+      },
     }
   }
 }

@@ -29,7 +29,7 @@ pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<Revi
     })
     .await
     .into_iter()
-    .map(Into::into)
+    .map(|review| ReviewView::from(review, None))
     .collect();
 
   Response::success(reviews)
@@ -37,7 +37,12 @@ pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<Revi
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/reviews/<id>")]
-pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<ReviewView> {
+pub async fn get(
+  id: Uuid,
+  auth: Auth<Player>,
+  db_conn: DbConn,
+  stripe: Stripe,
+) -> QueryResponse<ReviewView> {
   let review = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::{id as review_id, player_id, reviews};
@@ -45,10 +50,19 @@ pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse
         .filter(player_id.eq(auth.0.id).and(review_id.eq(id)))
         .first::<Review>(conn)
     })
-    .await?
-    .into();
+    .await?;
 
-  Response::success(review)
+  let stripe_payment_intent_id = review
+    .stripe_payment_intent_id
+    .parse::<stripe::PaymentIntentId>()
+    .unwrap();
+
+  let payment_intent =
+    stripe::PaymentIntent::retrieve(&stripe.0 .0, &stripe_payment_intent_id, &[])
+      .await
+      .unwrap();
+
+  Response::success(ReviewView::from(review, Some(payment_intent)))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -119,10 +133,9 @@ pub async fn create(
         .get_result::<Review>(conn)
         .unwrap()
     })
-    .await
-    .into();
+    .await;
 
-  Response::success(review)
+  Response::success(ReviewView::from(review, None))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -156,7 +169,7 @@ pub async fn update(
     .await?;
 
   if !review.accepted {
-    return Response::success(existing_review.into());
+    return Response::success(ReviewView::from(existing_review, None));
   }
 
   let review_coach_id = existing_review.coach_id.unwrap().clone();
@@ -185,8 +198,9 @@ pub async fn update(
   let mut transfer_params =
     stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id.unwrap());
   transfer_params.amount = Some((payment_intent.amount as f64 * 0.8) as i64);
+  transfer_params.source_transaction = Some(payment_intent.charges.data[0].id.clone());
 
   stripe::Transfer::create(&stripe.0 .0, transfer_params);
 
-  Response::success(existing_review.into())
+  Response::success(ReviewView::from(existing_review, None))
 }

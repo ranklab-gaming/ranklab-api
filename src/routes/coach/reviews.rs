@@ -57,7 +57,7 @@ pub async fn list(
     })
     .await
     .into_iter()
-    .map(Into::into)
+    .map(|review| ReviewView::from(review, None))
     .collect();
 
   Response::success(reviews)
@@ -72,7 +72,7 @@ pub struct UpdateReviewRequest {
 #[openapi(tag = "Ranklab")]
 #[get("/coach/reviews/<id>")]
 pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<ReviewView> {
-  let review: ReviewView = db_conn
+  let review = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews, state};
       reviews
@@ -84,10 +84,9 @@ pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<
         )
         .first::<Review>(conn)
     })
-    .await?
-    .into();
+    .await?;
 
-  Response::success(review)
+  Response::success(ReviewView::from(review, None))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -182,7 +181,7 @@ pub async fn update(
       .await
       .unwrap();
 
-      let updated_review: ReviewView = db_conn
+      let updated_review = db_conn
         .run(move |conn| {
           use crate::schema::reviews::dsl::state;
 
@@ -191,16 +190,15 @@ pub async fn update(
             .get_result::<Review>(conn)
             .unwrap()
         })
-        .await
-        .into();
+        .await;
 
-      return Response::success(updated_review);
+      return Response::success(ReviewView::from(updated_review, None));
     }
   }
 
   if let Some(true) = review.taken {
     if existing_review.state == ReviewState::AwaitingReview {
-      let updated_review: ReviewView = db_conn
+      let updated_review = db_conn
         .run(move |conn| {
           use crate::schema::reviews::dsl::*;
 
@@ -209,12 +207,11 @@ pub async fn update(
             .get_result::<Review>(conn)
             .unwrap()
         })
-        .await
-        .into();
+        .await;
 
-      return Response::success(updated_review);
+      return Response::success(ReviewView::from(updated_review, None));
     }
   }
 
-  Response::success(existing_review.into())
+  Response::success(ReviewView::from(existing_review, None))
 }
