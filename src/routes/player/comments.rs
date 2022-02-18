@@ -1,6 +1,6 @@
 use crate::guards::Auth;
 use crate::guards::DbConn;
-use crate::models::{Coach, Comment, Review};
+use crate::models::{Comment, Player, Review};
 use crate::response::{QueryResponse, Response};
 use crate::views::CommentView;
 use diesel::prelude::*;
@@ -17,7 +17,7 @@ pub struct ListCommentsQuery {
 #[get("/player/comments?<params..>")]
 pub async fn list(
   params: ListCommentsQuery,
-  auth: Auth<Coach>,
+  auth: Auth<Player>,
   db_conn: DbConn,
 ) -> QueryResponse<Vec<CommentView>> {
   let review = db_conn
