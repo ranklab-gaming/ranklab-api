@@ -131,7 +131,7 @@ pub struct UpdateReviewRequest {
 }
 
 #[openapi(tag = "Ranklab")]
-#[put("/coach/reviews/<id>", data = "<review>")]
+#[put("/player/reviews/<id>", data = "<review>")]
 pub async fn update(
   id: Uuid,
   review: Json<UpdateReviewRequest>,
