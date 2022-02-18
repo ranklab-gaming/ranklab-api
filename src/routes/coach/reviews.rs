@@ -1,8 +1,7 @@
 use crate::data_types::ReviewState;
 use crate::guards::Auth;
 use crate::guards::DbConn;
-use crate::guards::Stripe;
-use crate::models::{Coach, Player, Review};
+use crate::models::{Coach, Review};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::views::ReviewView;
 use diesel::prelude::*;
@@ -64,6 +63,7 @@ pub async fn list(
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
+#[schemars(rename = "CoachUpdateReviewRequest")]
 pub struct UpdateReviewRequest {
   published: Option<bool>,
   taken: Option<bool>,
@@ -96,7 +96,6 @@ pub async fn update(
   review: Json<UpdateReviewRequest>,
   auth: Auth<Coach>,
   db_conn: DbConn,
-  stripe: Stripe,
 ) -> MutationResponse<ReviewView> {
   let auth_id = auth.0.id.clone();
 
@@ -116,71 +115,12 @@ pub async fn update(
     })
     .await?;
 
-  let player_id = existing_review.player_id.clone();
-
-  let player = db_conn
-    .run(move |conn| {
-      use crate::schema::players::dsl::*;
-
-      players.filter(id.eq(player_id)).first::<Player>(conn)
-    })
-    .await?;
-
   if let Err(errors) = review.validate() {
     return Response::validation_error(errors);
   }
 
-  if let Some(published) = review.published {
-    if existing_review.state == ReviewState::Draft && published {
-      let customer_id = player
-        .stripe_customer_id
-        .unwrap()
-        .parse::<stripe::CustomerId>()
-        .unwrap();
-
-      stripe::PaymentIntent::create(
-        &stripe.0 .0,
-        stripe::CreatePaymentIntent {
-          amount: 1000,
-          currency: stripe::Currency::USD,
-          description: Some("Review payment"),
-          confirm: Some(true),
-          customer: Some(customer_id),
-          off_session: Some(stripe::PaymentIntentOffSession::Exists(true)),
-          application_fee_amount: Some(123),
-          transfer_data: Some(
-            stripe::CreatePaymentIntentTransferData {
-              destination: auth.0.stripe_account_id.unwrap(),
-              amount: None,
-            }
-            .into(),
-          ),
-          error_on_requires_action: Some(true),
-          automatic_payment_methods: None,
-          capture_method: None,
-          confirmation_method: None,
-          expand: &[],
-          mandate: None,
-          mandate_data: None,
-          metadata: None,
-          on_behalf_of: None,
-          payment_method: None,
-          payment_method_data: None,
-          payment_method_options: None,
-          payment_method_types: None,
-          receipt_email: None,
-          return_url: None,
-          setup_future_usage: None,
-          shipping: None,
-          statement_descriptor: None,
-          statement_descriptor_suffix: None,
-          transfer_group: None,
-          use_stripe_sdk: None,
-        },
-      )
-      .await
-      .unwrap();
-
+  if let Some(true) = review.published {
+    if existing_review.state == ReviewState::Draft {
       let updated_review = db_conn
         .run(move |conn| {
           use crate::schema::reviews::dsl::state;

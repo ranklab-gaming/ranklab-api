@@ -139,6 +139,7 @@ pub async fn create(
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[schemars(rename = "PlayerUpdateReviewRequest")]
 pub struct UpdateReviewRequest {
   accepted: bool,
 }
@@ -172,7 +173,18 @@ pub async fn update(
     return Response::success(ReviewView::from(existing_review, None));
   }
 
-  let review_coach_id = existing_review.coach_id.unwrap().clone();
+  let updated_review = db_conn
+    .run(move |conn| {
+      use crate::schema::reviews::dsl::state;
+
+      diesel::update(&existing_review)
+        .set(state.eq(ReviewState::Accepted))
+        .get_result::<Review>(conn)
+        .unwrap()
+    })
+    .await;
+
+  let review_coach_id = updated_review.coach_id.unwrap().clone();
 
   let coach = db_conn
     .run(move |conn| {
@@ -185,7 +197,7 @@ pub async fn update(
     })
     .await;
 
-  let stripe_payment_intent_id = existing_review
+  let stripe_payment_intent_id = updated_review
     .stripe_payment_intent_id
     .parse::<stripe::PaymentIntentId>()
     .unwrap();
@@ -200,7 +212,9 @@ pub async fn update(
   transfer_params.amount = Some((payment_intent.amount as f64 * 0.8) as i64);
   transfer_params.source_transaction = Some(payment_intent.charges.data[0].id.clone());
 
-  stripe::Transfer::create(&stripe.0 .0, transfer_params);
+  stripe::Transfer::create(&stripe.0 .0, transfer_params)
+    .await
+    .unwrap();
 
-  Response::success(ReviewView::from(existing_review, None))
+  Response::success(ReviewView::from(updated_review, None))
 }
