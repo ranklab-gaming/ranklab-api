@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use crate::data_types::UserGame;
 use crate::guards::auth::Claims;
 use crate::guards::Auth;
@@ -27,6 +29,7 @@ pub async fn create(
   auth: Auth<Claims>,
   db_conn: DbConn,
   stripe: Stripe,
+  ip_address: SocketAddr,
 ) -> MutationResponse<PlayerView> {
   if let Err(errors) = player.validate() {
     return Response::validation_error(errors);
@@ -51,6 +54,12 @@ pub async fn create(
 
   let mut params = stripe::CreateCustomer::new();
   params.email = Some(&player.email);
+  params.tax = Some(
+    stripe::CreateCustomerTax {
+      ip_address: Some(ip_address.to_string().into()),
+    }
+    .into(),
+  );
 
   let customer = stripe::Customer::create(&stripe.0 .0, params)
     .await

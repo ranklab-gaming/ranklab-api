@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use crate::data_types::ReviewState;
 use crate::guards::Auth;
 use crate::guards::DbConn;
@@ -82,6 +84,7 @@ pub async fn create(
   auth: Auth<Player>,
   stripe: Stripe,
   body: Json<CreateReviewMutation>,
+  ip_address: SocketAddr,
 ) -> MutationResponse<ReviewView> {
   let body_recording_id = body.recording_id.clone();
   let auth_player_id = auth.0.id.clone();
@@ -108,6 +111,18 @@ pub async fn create(
     .stripe_customer_id
     .unwrap()
     .parse::<stripe::CustomerId>()
+    .unwrap();
+
+  let mut customer_update_params = stripe::UpdateCustomer::new();
+  customer_update_params.tax = Some(
+    stripe::UpdateCustomerTax {
+      ip_address: Some(ip_address.to_string().into()),
+    }
+    .into(),
+  );
+
+  stripe::Customer::update(&stripe.0 .0, &customer_id, customer_update_params)
+    .await
     .unwrap();
 
   let mut params = stripe::CreatePaymentIntent::new(10_00, stripe::Currency::USD);
