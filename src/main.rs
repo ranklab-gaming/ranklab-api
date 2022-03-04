@@ -62,7 +62,7 @@ fn rocket() -> Rocket<Build> {
     figment = figment.merge(("databases.default.url", database_url));
   }
 
-  let sentry_dsn: String = figment.extract_inner("sentry_dsn").unwrap();
+  let sentry_dsn: Option<String> = figment.extract_inner("sentry_dsn").ok();
 
   rocket::custom(figment)
     .attach(fairings::Sentry::fairing(sentry_dsn))

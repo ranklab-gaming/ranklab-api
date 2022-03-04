@@ -1,5 +1,3 @@
-use std::net::SocketAddr;
-
 use crate::data_types::ReviewState;
 use crate::guards::Auth;
 use crate::guards::DbConn;

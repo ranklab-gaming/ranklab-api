@@ -5,12 +5,12 @@ use rocket::{Build, Rocket};
 use sentry::ClientInitGuard;
 
 pub struct SentryFairing {
-  dsn: String,
+  dsn: Option<String>,
   guard: Mutex<Option<ClientInitGuard>>,
 }
 
 impl SentryFairing {
-  pub fn fairing(dsn: String) -> impl Fairing {
+  pub fn fairing(dsn: Option<String>) -> impl Fairing {
     Self {
       dsn: dsn,
       guard: Mutex::new(None),
@@ -18,8 +18,8 @@ impl SentryFairing {
   }
 
   fn init(&self) {
-    match &self.dsn.len() {
-      0 => {}
+    match &self.dsn {
+      None => {}
       _length => {
         let guard = sentry::init(self.dsn.clone());
         *self.guard.lock().unwrap() = Some(guard);

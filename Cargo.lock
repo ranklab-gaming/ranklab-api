@@ -56,7 +56,7 @@ dependencies = [
 [[package]]
 name = "async-stripe"
 version = "0.13.0"
-source = "git+https://github.com/arlyon/async-stripe#0a65a3c91e2b06be30db72f6cdcb94d2a9b67019"
+source = "git+https://github.com/ranklab-gaming/async-stripe#0a65a3c91e2b06be30db72f6cdcb94d2a9b67019"
 dependencies = [
  "chrono",
  "hex",
