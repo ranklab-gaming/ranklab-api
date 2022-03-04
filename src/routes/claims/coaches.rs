@@ -96,6 +96,7 @@ pub async fn create(
       sofort_payments: None,
       tax_reporting_us_1099_k: None,
       tax_reporting_us_1099_misc: None,
+      konbini_payments: None,
     }
     .into(),
   );

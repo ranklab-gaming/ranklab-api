@@ -31,7 +31,7 @@ impl ReviewView {
       notes: review.notes,
       state: review.state,
       stripe_client_secret: match payment_intent {
-        Some(payment_intent) => Some(*payment_intent.client_secret.unwrap()),
+        Some(payment_intent) => Some(payment_intent.client_secret.unwrap()),
         None => None,
       },
     }

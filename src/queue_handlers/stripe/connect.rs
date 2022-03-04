@@ -21,12 +21,12 @@ impl Connect {
     };
 
     let details_submitted = match &account.details_submitted {
-      Some(details_submitted) => **details_submitted,
+      Some(details_submitted) => *details_submitted,
       None => false,
     };
 
     let payouts_enabled = match &account.payouts_enabled {
-      Some(payouts_enabled) => **payouts_enabled,
+      Some(payouts_enabled) => *payouts_enabled,
       None => false,
     };
 

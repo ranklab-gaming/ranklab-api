@@ -82,8 +82,8 @@ impl Direct {
     }
 
     let payment_intent_id = match charge.payment_intent.clone() {
-      Some(box Expandable::Id(payment_intent_id)) => payment_intent_id,
-      Some(box Expandable::Object(payment_intent)) => payment_intent.id,
+      Some(Expandable::Id(payment_intent_id)) => payment_intent_id,
+      Some(Expandable::Object(payment_intent)) => payment_intent.id,
       None => return Err(anyhow::anyhow!("No payment intent found")),
     };
 

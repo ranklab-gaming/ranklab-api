@@ -84,7 +84,6 @@ pub async fn create(
   auth: Auth<Player>,
   stripe: Stripe,
   body: Json<CreateReviewMutation>,
-  ip_address: SocketAddr,
 ) -> MutationResponse<ReviewView> {
   let body_recording_id = body.recording_id.clone();
   let auth_player_id = auth.0.id.clone();
