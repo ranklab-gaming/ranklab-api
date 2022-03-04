@@ -113,18 +113,6 @@ pub async fn create(
     .parse::<stripe::CustomerId>()
     .unwrap();
 
-  let mut customer_update_params = stripe::UpdateCustomer::new();
-  customer_update_params.tax = Some(
-    stripe::UpdateCustomerTax {
-      ip_address: Some(ip_address.to_string().into()),
-    }
-    .into(),
-  );
-
-  stripe::Customer::update(&stripe.0 .0, &customer_id, customer_update_params)
-    .await
-    .unwrap();
-
   let mut params = stripe::CreatePaymentIntent::new(10_00, stripe::Currency::USD);
 
   params.customer = Some(customer_id);
