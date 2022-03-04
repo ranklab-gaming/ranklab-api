@@ -1,11 +1,1 @@
 [default]
-auth0_issuer_base_url = "https://ranklab-development.eu.auth0.com/"
-sentry_dsn = ""
-
-[test]
-auth0_issuer_base_url = "http://ranklab-test:3000/oidc/"
-sentry_dsn = "https://c7b459471051450abcfb5b4e25fa2b2c@o1059892.ingest.sentry.io/6048906"
-
-[release]
-auth0_issuer_base_url = "https://auth.ranklab.gg/"
-sentry_dsn = "https://c7b459471051450abcfb5b4e25fa2b2c@o1059892.ingest.sentry.io/6048906"
