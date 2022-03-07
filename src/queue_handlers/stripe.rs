@@ -66,15 +66,7 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
       self.handler.secret().as_str(),
     )?;
 
-    let livemode = match serde_json::from_str::<serde_json::Value>(message_body.body.as_str()) {
-      Ok(event) => match event["livemode"].as_bool() {
-        Some(livemode) => livemode,
-        None => return Err(anyhow::anyhow!("Livemode is not present").into()),
-      },
-      Err(_) => return Err(anyhow::anyhow!("Could not parse message body").into()),
-    };
-
-    if profile == rocket::Config::RELEASE_PROFILE && !livemode {
+    if profile == rocket::Config::RELEASE_PROFILE && !webhook.data.livemode {
       return Err(anyhow::anyhow!("Received webhook in test mode").into());
     }
 
