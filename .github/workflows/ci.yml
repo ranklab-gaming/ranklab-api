@@ -68,7 +68,7 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v1
       - name: Log in to the Github Container registry
-        uses: docker/login-action@5fcefb941de79536616e9422226e33fd39f1706f
+        uses: docker/login-action@f6d32ad0236599ffe0bb261e71184c3e4e1d47cd
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
