@@ -25,7 +25,7 @@ validator = { version = "0.14.0", features = ["derive"] }
 rocket_okapi = { git = "https://github.com/GREsau/okapi", features = ["uuid"] }
 schemars = "0.8.8"
 okapi = { git = "https://github.com/GREsau/okapi", features = ["derive_json_schema"] }
-sentry = "0.24.1"
+sentry = "0.25.0"
 dotenv = "0.15.0"
 mime_guess = "2.0.4"
 lazy_static = "1.4.0"
