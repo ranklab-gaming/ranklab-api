@@ -6,6 +6,9 @@ extern crate rocket;
 #[macro_use]
 extern crate diesel;
 
+#[macro_use]
+extern crate stripe as async_stripe;
+
 pub mod aws;
 pub mod clients;
 pub mod config;

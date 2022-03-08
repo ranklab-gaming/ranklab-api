@@ -1,12 +1,17 @@
 use serde::{Deserialize, Serialize};
-
-use crate::stripe::ids::OrderId;
+use stripe::params as stripe_params;
+use stripe::List;
+use stripe::ParseIdError;
+use stripe::PaymentIntent;
+use stripe::PaymentIntentPaymentMethodOptions;
+use stripe::Price;
+use stripe::TransferData;
 use stripe::{Address, TaxRate};
 use stripe::{Application, Expandable, Metadata, Object, Timestamp};
 use stripe::{BillingDetails, Currency, Customer, Discount, TaxIdType};
 use stripe::{Client, Response};
 
-use super::order_line_item::OrderLineItem;
+def_id!(OrderId, "order_");
 
 /// The `Expand` struct is used to serialize `expand` arguments in retrieve and list apis.
 #[doc(hidden)]
@@ -121,12 +126,36 @@ pub struct OrderShippingDetails {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct OrderTotalDetailsBreakdownDiscount {
+  pub amount: i64,
+
+  pub discount: Discount,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct OrderTax {
+  pub amount: i64,
+
+  pub rate: TaxRate,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct OrderTotalDetailsBreakdown {
   /// The aggregated line item discounts.
   pub discounts: Vec<OrderTotalDetailsBreakdownDiscount>,
 
   /// The aggregated line item tax amounts by rate.
-  pub taxes: Vec<OrderTotalDetailsTax>,
+  pub taxes: Vec<OrderTax>,
+}
+
+impl Object for OrderTotalDetailsBreakdown {
+  type Id = ();
+  fn id(_: Self::Id) -> String {
+    "".to_string()
+  }
+  fn object(&self) -> &'static str {
+    "order_total_details_breakdown"
+  }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -158,7 +187,7 @@ pub struct OrderTotalDetails {
   pub amount_tax: i64,
 
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub breakdown: Option<OrderTotalDetailsBreakdown>,
+  pub breakdown: Option<Expandable<OrderTotalDetailsBreakdown>>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -219,6 +248,191 @@ pub struct OrderTaxDetails {
   pub value: Option<String>,
 }
 
+/// An enum representing the possible values of an `CreateInvoicePaymentSettings`'s `payment_method_types` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum OrderPaymentSettingsPaymentMethodType {
+  Card,
+  Ideal,
+  SepaDebit,
+  Eps,
+  WechatPay,
+  Oxxo,
+  Bancontact,
+  Alipay,
+  P24,
+  BacsDebit,
+  Giropay,
+  Sofort,
+  AuBecsDebit,
+  Fpx,
+  Klarna,
+  Paypal,
+  AcssDebit,
+  Grabpay,
+  AfterpayClearpay,
+}
+
+impl OrderPaymentSettingsPaymentMethodType {
+  pub fn as_str(self) -> &'static str {
+    match self {
+      OrderPaymentSettingsPaymentMethodType::Card => "card",
+      OrderPaymentSettingsPaymentMethodType::Ideal => "ideal",
+      OrderPaymentSettingsPaymentMethodType::SepaDebit => "sepa_debit",
+      OrderPaymentSettingsPaymentMethodType::Eps => "eps",
+      OrderPaymentSettingsPaymentMethodType::WechatPay => "wechat_pay",
+      OrderPaymentSettingsPaymentMethodType::Oxxo => "oxxo",
+      OrderPaymentSettingsPaymentMethodType::Bancontact => "bancontact",
+      OrderPaymentSettingsPaymentMethodType::Alipay => "alipay",
+      OrderPaymentSettingsPaymentMethodType::P24 => "p24",
+      OrderPaymentSettingsPaymentMethodType::BacsDebit => "bacs_debit",
+      OrderPaymentSettingsPaymentMethodType::Giropay => "giropay",
+      OrderPaymentSettingsPaymentMethodType::Sofort => "sofort",
+      OrderPaymentSettingsPaymentMethodType::AuBecsDebit => "au_becs_debit",
+      OrderPaymentSettingsPaymentMethodType::Fpx => "fpx",
+      OrderPaymentSettingsPaymentMethodType::Klarna => "klarna",
+      OrderPaymentSettingsPaymentMethodType::Paypal => "paypal",
+      OrderPaymentSettingsPaymentMethodType::AcssDebit => "acss_debit",
+      OrderPaymentSettingsPaymentMethodType::Grabpay => "grabpay",
+      OrderPaymentSettingsPaymentMethodType::AfterpayClearpay => "afterpay_clearpay",
+    }
+  }
+}
+
+impl AsRef<str> for OrderPaymentSettingsPaymentMethodType {
+  fn as_ref(&self) -> &str {
+    self.as_str()
+  }
+}
+
+impl std::fmt::Display for OrderPaymentSettingsPaymentMethodType {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    self.as_str().fmt(f)
+  }
+}
+impl std::default::Default for OrderPaymentSettingsPaymentMethodType {
+  fn default() -> Self {
+    Self::Card
+  }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct OrderPaymentSettings {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub application_fee_amount: Option<i64>,
+
+  /// Payment-method-specific configuration to provide to the invoice’s PaymentIntent.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub payment_method_options: Option<PaymentIntentPaymentMethodOptions>,
+
+  /// The list of payment method types (e.g.
+  ///
+  /// card) to provide to the invoice’s PaymentIntent.
+  /// If not set, Stripe attempts to automatically determine the types to use by looking at the invoice’s default payment method, the subscription’s default payment method, the customer’s default payment method, and your [invoice template settings](https://dashboard.stripe.com/settings/billing/invoice).
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub payment_method_types: Option<Vec<OrderPaymentSettingsPaymentMethodType>>,
+
+  /// The URL to redirect the customer to after they authenticate their payment.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub return_url: Option<String>,
+
+  pub statement_descriptor: Option<String>,
+
+  pub statement_descriptor_suffix: Option<String>,
+
+  pub transfer_data: Option<TransferData>,
+}
+
+/// An enum representing the possible values of an `PaymentIntent`'s `status` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum OrderPaymentStatus {
+  NotRequired,
+  RequiresPaymentMethod,
+  RequiresConfirmation,
+  RequiresAction,
+  Processing,
+  Complete,
+  RequiresCapture,
+  Canceled,
+}
+
+impl OrderPaymentStatus {
+  pub fn as_str(self) -> &'static str {
+    match self {
+      OrderPaymentStatus::NotRequired => "not_required",
+      OrderPaymentStatus::RequiresPaymentMethod => "requires_payment_method",
+      OrderPaymentStatus::RequiresConfirmation => "requires_confirmation",
+      OrderPaymentStatus::RequiresAction => "requires_action",
+      OrderPaymentStatus::Processing => "processing",
+      OrderPaymentStatus::Complete => "complete",
+      OrderPaymentStatus::RequiresCapture => "requires_capture",
+      OrderPaymentStatus::Canceled => "canceled",
+    }
+  }
+}
+
+impl AsRef<str> for OrderPaymentStatus {
+  fn as_ref(&self) -> &str {
+    self.as_str()
+  }
+}
+
+impl std::fmt::Display for OrderPaymentStatus {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    self.as_str().fmt(f)
+  }
+}
+impl std::default::Default for OrderPaymentStatus {
+  fn default() -> Self {
+    Self::NotRequired
+  }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct OrderPayment {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub payment_intent: Option<Expandable<PaymentIntent>>,
+
+  pub settings: OrderPaymentSettings,
+
+  pub status: Option<OrderPaymentStatus>,
+}
+
+/// The resource representing a Stripe "OrderItem".
+///
+/// For more details see <https://stripe.com/docs/api/order_items/object>
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct OrderLineItem {
+  pub amount_discount: i64,
+
+  pub amount_subtotal: i64,
+
+  pub amount_tax: i64,
+
+  pub amount_total: i64,
+
+  pub currency: Currency,
+
+  pub description: Option<String>,
+
+  pub discounts: Vec<Expandable<Discount>>,
+
+  pub price: Price,
+
+  pub quantity: i64,
+
+  pub taxes: Vec<Expandable<OrderTax>>,
+}
+
+impl Object for OrderLineItem {
+  type Id = ();
+  fn id(&self) -> Self::Id {}
+  fn object(&self) -> &'static str {
+    "item"
+  }
+}
+
 /// The resource representing a Stripe "Order".
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Order {
@@ -233,8 +447,7 @@ pub struct Order {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub application: Option<Expandable<Application>>,
 
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub automatic_tax: Option<OrderAutomaticTax>,
+  pub automatic_tax: OrderAutomaticTax,
 
   #[serde(skip_serializing_if = "Option::is_none")]
   pub billing_details: Option<BillingDetails>,
@@ -259,8 +472,7 @@ pub struct Order {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub description: Option<String>,
 
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub discounts: Option<Vec<Expandable<Discount>>>,
+  pub discounts: Vec<Expandable<Discount>>,
 
   #[serde(skip_serializing_if = "Option::is_none")]
   pub ip_address: Option<String>,
@@ -271,13 +483,15 @@ pub struct Order {
   /// List of items constituting the order.
   ///
   /// An order can have up to 25 items.
-  pub line_items: Vec<Expandable<OrderLineItem>>,
+  pub line_items: List<Expandable<OrderLineItem>>,
 
   /// Set of [key-value pairs](https://stripe.com/docs/api/metadata) that you can attach to an object.
   ///
   /// This can be useful for storing additional information about the object in a structured format.
   #[serde(default)]
   pub metadata: Metadata,
+
+  pub payment: OrderPayment,
 
   /// Current order status.
   ///
