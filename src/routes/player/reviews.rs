@@ -1,19 +1,21 @@
+use crate::config::Config;
 use crate::data_types::ReviewState;
-use crate::guards::Auth;
-use crate::guards::DbConn;
-use crate::guards::Stripe;
-use crate::models::Coach;
-use crate::models::Player;
-use crate::models::Review;
-use crate::response::QueryResponse;
-use crate::response::{MutationResponse, Response};
+use crate::guards::{Auth, DbConn, Stripe};
+use crate::models::{Coach, Player, Review};
+use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::stripe::order::{
+  CreateOrder, CreateOrderLineItem, CreateOrderLineItemPriceData, CreateOrderPayment, Order,
+  OrderId, OrderPaymentSettings, OrderPaymentSettingsPaymentMethodType, SubmitOrder,
+};
 use crate::views::ReviewView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
+use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
+use stripe::Expandable;
 use uuid::Uuid;
 
 #[openapi(tag = "Ranklab")]
@@ -52,17 +54,18 @@ pub async fn get(
     })
     .await?;
 
-  let stripe_payment_intent_id = review
-    .stripe_payment_intent_id
-    .parse::<stripe::PaymentIntentId>()
+  let stripe_order_id = review.stripe_order_id.parse::<OrderId>().unwrap();
+
+  let order = Order::retrieve(&stripe.0 .0, &stripe_order_id, &["payment.payment_intent"])
+    .await
     .unwrap();
 
-  let payment_intent =
-    stripe::PaymentIntent::retrieve(&stripe.0 .0, &stripe_payment_intent_id, &[])
-      .await
-      .unwrap();
+  let payment_intent = match order.payment.payment_intent.clone() {
+    Some(Expandable::Object(payment_intent)) => payment_intent,
+    _ => panic!("No payment intent found"),
+  };
 
-  Response::success(ReviewView::from(review, Some(payment_intent)))
+  Response::success(ReviewView::from(review, Some(*payment_intent)))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -82,6 +85,7 @@ pub async fn create(
   auth: Auth<Player>,
   stripe: Stripe,
   body: Json<CreateReviewMutation>,
+  config: &State<Config>,
 ) -> MutationResponse<ReviewView> {
   let body_recording_id = body.recording_id.clone();
   let auth_player_id = auth.0.id.clone();
@@ -110,25 +114,62 @@ pub async fn create(
     .parse::<stripe::CustomerId>()
     .unwrap();
 
-  let mut params = stripe::CreatePaymentIntent::new(10_00, stripe::Currency::USD);
+  let product_id = config
+    .stripe_product_id
+    .parse::<stripe::ProductId>()
+    .unwrap();
+
+  let mut price_data = CreateOrderLineItemPriceData::new(stripe::Currency::USD, product_id.clone());
+  price_data.unit_amount = Some(10_00);
+
+  let mut line_item = CreateOrderLineItem::new();
+  line_item.product = Some(product_id);
+  line_item.quantity = Some(1);
+  line_item.price_data = Some(price_data);
+
+  let line_items = vec![line_item];
+
+  let mut payment_settings = OrderPaymentSettings::new();
+  payment_settings.payment_method_types = Some(vec![OrderPaymentSettingsPaymentMethodType::Card]);
+
+  let mut params = CreateOrder::new(stripe::Currency::USD, line_items);
 
   params.customer = Some(customer_id);
-  params.description = Some("Recording payment");
-  params.payment_method_types = Some(vec!["card".to_string()].into());
-  params.setup_future_usage = Some(stripe::PaymentIntentSetupFutureUsage::OnSession);
+  params.description = Some("Recording payment".to_string());
+  params.payment = Some(CreateOrderPayment {
+    settings: payment_settings,
+  });
 
-  let payment_intent = stripe::PaymentIntent::create(&stripe.0 .0, params)
+  let submit_params = SubmitOrder {
+    expected_total: 10_00,
+    expand: &["payment.payment_intent"],
+  };
+
+  let order = Order::create(&stripe.0 .0, params).await.unwrap();
+  let order = Order::submit(&stripe.0 .0, &order.id, submit_params)
     .await
     .unwrap();
 
-  let payment_intent_id = payment_intent.id.clone();
+  let payment_intent_id = match order.payment.payment_intent.clone() {
+    Some(Expandable::Id(payment_intent_id)) => payment_intent_id,
+    Some(Expandable::Object(payment_intent)) => payment_intent.id,
+    None => panic!("No payment intent found"),
+  };
+
+  let mut payment_intent_params = stripe::UpdatePaymentIntent::new();
+  payment_intent_params.setup_future_usage =
+    Some(stripe::PaymentIntentSetupFutureUsageFilter::OnSession);
+
+  stripe::PaymentIntent::update(&stripe.0 .0, &payment_intent_id, payment_intent_params);
+
+  let order_id = order.id.clone();
 
   let review = db_conn
     .run(move |conn| {
       use crate::schema::reviews::dsl::*;
 
       diesel::update(&review)
-        .set(stripe_payment_intent_id.eq(payment_intent_id.to_string()))
+        .set(stripe_order_id.eq(order_id.to_string()))
         .get_result::<Review>(conn)
         .unwrap()
     })
@@ -196,20 +237,15 @@ pub async fn update(
     })
     .await;
 
-  let stripe_payment_intent_id = updated_review
-    .stripe_payment_intent_id
-    .parse::<stripe::PaymentIntentId>()
-    .unwrap();
+  let stripe_order_id = updated_review.stripe_order_id.parse::<OrderId>().unwrap();
 
-  let payment_intent =
-    stripe::PaymentIntent::retrieve(&stripe.0 .0, &stripe_payment_intent_id, &[])
-      .await
-      .unwrap();
+  let order = Order::retrieve(&stripe.0 .0, &stripe_order_id, &[])
+    .await
+    .unwrap();
 
   let mut transfer_params =
     stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id.unwrap());
-  transfer_params.amount = Some((payment_intent.amount as f64 * 0.8) as i64);
-  transfer_params.source_transaction = Some(payment_intent.charges.data[0].id.clone());
+  transfer_params.amount = Some((order.amount_total as f64 * 0.8) as i64);
 
   stripe::Transfer::create(&stripe.0 .0, transfer_params)
     .await

@@ -1,24 +1,11 @@
 use serde::{Deserialize, Serialize};
-use stripe::params as stripe_params;
-use stripe::CouponId;
-use stripe::CreatePriceRecurringInterval;
-use stripe::CustomerId;
-use stripe::DiscountId;
-use stripe::List;
-use stripe::ParseIdError;
-use stripe::PaymentIntent;
-use stripe::PaymentIntentPaymentMethodOptions;
-use stripe::Price;
-use stripe::PriceId;
-use stripe::PriceTaxBehavior;
-use stripe::ProductId;
-use stripe::PromotionCodeId;
-use stripe::TaxRateId;
-use stripe::TransferData;
-use stripe::{Address, TaxRate};
-use stripe::{Application, Expandable, Metadata, Object, Timestamp};
-use stripe::{BillingDetails, Currency, Customer, Discount, TaxIdType};
-use stripe::{Client, Response};
+use stripe::{
+  params as stripe_params, Address, Application, BillingDetails, Client, CouponId,
+  CreatePriceRecurringInterval, Currency, Customer, CustomerId, Discount, DiscountId, Expandable,
+  List, Metadata, Object, ParseIdError, PaymentIntent, PaymentIntentPaymentMethodOptions, Price,
+  PriceId, PriceTaxBehavior, ProductId, PromotionCodeId, Response, TaxIdType, TaxRate, TaxRateId,
+  Timestamp, TransferData,
+};
 
 def_id!(OrderId, "order_");
 
@@ -342,6 +329,20 @@ pub struct OrderPaymentSettings {
   pub transfer_data: Option<TransferData>,
 }
 
+impl OrderPaymentSettings {
+  pub fn new() -> Self {
+    Self {
+      application_fee_amount: Default::default(),
+      payment_method_options: Default::default(),
+      payment_method_types: Default::default(),
+      return_url: Default::default(),
+      statement_descriptor: Default::default(),
+      statement_descriptor_suffix: Default::default(),
+      transfer_data: Default::default(),
+    }
+  }
+}
+
 /// An enum representing the possible values of an `PaymentIntent`'s `status` field.
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -563,8 +564,7 @@ pub struct CreateOrderLineItemPriceDataRecurring {
 pub struct CreateOrderLineItemPriceData {
   pub currency: Currency,
 
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub product: Option<ProductId>,
+  pub product: ProductId,
 
   #[serde(skip_serializing_if = "Option::is_none")]
   pub unit_amount_decimal: Option<String>,
@@ -580,6 +580,20 @@ pub struct CreateOrderLineItemPriceData {
 
   #[serde(skip_serializing_if = "Option::is_none")]
   pub unit_amount: Option<i64>,
+}
+
+impl CreateOrderLineItemPriceData {
+  pub fn new(currency: Currency, product: ProductId) -> Self {
+    CreateOrderLineItemPriceData {
+      currency,
+      product,
+      unit_amount_decimal: Default::default(),
+      metadata: Default::default(),
+      recurring: Default::default(),
+      tax_behavior: Default::default(),
+      unit_amount: Default::default(),
+    }
+  }
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -604,6 +618,20 @@ pub struct CreateOrderLineItem {
 
   #[serde(skip_serializing_if = "Option::is_none")]
   pub tax_rates: Option<Vec<TaxRateId>>,
+}
+
+impl CreateOrderLineItem {
+  pub fn new() -> Self {
+    CreateOrderLineItem {
+      description: Default::default(),
+      discounts: Default::default(),
+      price: Default::default(),
+      price_data: Default::default(),
+      product: Default::default(),
+      quantity: Default::default(),
+      tax_rates: Default::default(),
+    }
+  }
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -762,12 +790,17 @@ impl<'a> UpdateOrder<'a> {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct SubmitOrder {
+pub struct SubmitOrder<'a> {
   pub expected_total: i64,
+
+  pub expand: &'a [&'a str],
 }
 
-impl SubmitOrder {
+impl<'a> SubmitOrder<'a> {
   pub fn new(expected_total: i64) -> Self {
-    SubmitOrder { expected_total }
+    SubmitOrder {
+      expected_total,
+      expand: Default::default(),
+    }
   }
 }

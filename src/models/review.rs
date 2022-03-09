@@ -13,5 +13,5 @@ pub struct Review {
   pub skill_level: i16,
   pub title: String,
   pub state: ReviewState,
-  pub stripe_payment_intent_id: String,
+  pub stripe_order_id: String,
 }

@@ -60,7 +60,7 @@ table! {
         skill_level -> Int2,
         title -> Text,
         state -> ReviewStateMapping,
-        stripe_payment_intent_id -> Text,
+        stripe_order_id -> Text,
     }
 }
 

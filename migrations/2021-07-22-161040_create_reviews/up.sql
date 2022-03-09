@@ -10,7 +10,7 @@ CREATE TABLE reviews (
     skill_level smallint NOT NULL DEFAULT 0,
     title text NOT NULL DEFAULT '',
     state review_state NOT NULL DEFAULT 'awaiting_payment',
-    stripe_payment_intent_id text NOT NULL DEFAULT ''
+    stripe_order_id text NOT NULL DEFAULT ''
 );
 
 CREATE INDEX reviews_recording_id_idx ON reviews (recording_id);

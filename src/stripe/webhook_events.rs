@@ -3,15 +3,22 @@ use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
-use stripe::EventId;
-use stripe::WebhookError;
+use stripe::{EventId, WebhookError};
 
 use super::order::Order;
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
+pub enum EventTypeExt {
+  #[serde(rename = "order.completed")]
+  OrderCompleted,
+  #[serde(rename = "order.payment_succeeded")]
+  OrderPaymentSucceeded,
+}
+
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[serde(untagged)]
 pub enum EventType {
-  #[serde(rename = "order.submitted")]
-  OrderSubmitted,
+  Ext(EventTypeExt),
   Other(stripe::EventType),
 }
 
@@ -31,8 +38,14 @@ pub struct EventData {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "object", rename_all = "snake_case")]
-pub enum EventObject {
+pub enum EventObjectExt {
   Order(Order),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum EventObject {
+  Ext(EventObjectExt),
   Other(stripe::EventObject),
 }
 
@@ -67,7 +80,6 @@ impl Webhook {
 struct Signature<'r> {
   t: i64,
   v1: &'r str,
-  v0: Option<&'r str>,
 }
 
 impl<'r> Signature<'r> {
@@ -92,7 +104,6 @@ impl<'r> Signature<'r> {
     Ok(Signature {
       t: t.parse::<i64>().map_err(WebhookError::BadHeader)?,
       v1,
-      v0,
     })
   }
 }
