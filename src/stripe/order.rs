@@ -1,10 +1,19 @@
 use serde::{Deserialize, Serialize};
 use stripe::params as stripe_params;
+use stripe::CouponId;
+use stripe::CreatePriceRecurringInterval;
+use stripe::CustomerId;
+use stripe::DiscountId;
 use stripe::List;
 use stripe::ParseIdError;
 use stripe::PaymentIntent;
 use stripe::PaymentIntentPaymentMethodOptions;
 use stripe::Price;
+use stripe::PriceId;
+use stripe::PriceTaxBehavior;
+use stripe::ProductId;
+use stripe::PromotionCodeId;
+use stripe::TaxRateId;
 use stripe::TransferData;
 use stripe::{Address, TaxRate};
 use stripe::{Application, Expandable, Metadata, Object, Timestamp};
@@ -227,10 +236,11 @@ impl std::default::Default for OrderTaxExempt {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct OrderTaxDetails {
+pub struct OrderTaxIds {
   /// The type of the tax ID, one of `eu_vat`, `br_cnpj`, `br_cpf`, `gb_vat`, `nz_gst`, `au_abn`, `au_arn`, `in_gst`, `no_vat`, `za_vat`, `ch_vat`, `mx_rfc`, `sg_uen`, `ru_inn`, `ru_kpp`, `ca_bn`, `hk_br`, `es_cif`, `tw_vat`, `th_vat`, `jp_cn`, `jp_rn`, `li_uid`, `my_itn`, `us_ein`, `kr_brn`, `ca_qst`, `ca_gst_hst`, `ca_pst_bc`, `ca_pst_mb`, `ca_pst_sk`, `my_sst`, `sg_gst`, `ae_trn`, `cl_tin`, `sa_vat`, `id_npwp`, `my_frp`, `il_vat`, `ge_vat`, `ua_vat`, `is_vat`, or `unknown`.
   #[serde(rename = "type")]
-  pub tax_exempt: Option<OrderTaxExempt>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub type_: Option<TaxIdType>,
 
   /// The value of the tax ID.
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -528,6 +538,101 @@ impl Object for Order {
   }
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateOrderLineItemDiscount {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub coupon: Option<CouponId>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub discount: Option<DiscountId>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateOrderLineItemPriceDataRecurring {
+  pub interval: CreatePriceRecurringInterval,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub interval_count: Option<u64>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateOrderLineItemPriceData {
+  pub currency: Currency,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub product: Option<ProductId>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub unit_amount_decimal: Option<String>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub metadata: Option<Metadata>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub recurring: Option<CreateOrderLineItemPriceDataRecurring>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub tax_behavior: Option<PriceTaxBehavior>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub unit_amount: Option<i64>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateOrderLineItem {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub description: Option<String>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub discounts: Option<Vec<CreateOrderLineItemDiscount>>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub price: Option<PriceId>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub price_data: Option<CreateOrderLineItemPriceData>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub product: Option<ProductId>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub quantity: Option<i64>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub tax_rates: Option<Vec<TaxRateId>>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateOrderPayment {
+  pub settings: OrderPaymentSettings,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateOrderAutomaticTax {
+  pub enabled: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateOrderDiscount {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub coupon: Option<CouponId>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub discount: Option<DiscountId>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub promotion_code: Option<PromotionCodeId>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateOrderTaxDetails {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub tax_exempt: Option<OrderTaxExempt>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub tax_ids: Option<Vec<OrderTaxIds>>,
+}
+
 /// The parameters for `Order::create`.
 #[derive(Clone, Debug, Serialize)]
 pub struct CreateOrder<'a> {
@@ -535,13 +640,56 @@ pub struct CreateOrder<'a> {
 
   #[serde(skip_serializing_if = "Expand::is_empty")]
   pub expand: &'a [&'a str],
+
+  pub line_items: Vec<CreateOrderLineItem>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub customer: Option<CustomerId>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub description: Option<String>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub metadata: Option<Metadata>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub payment: Option<CreateOrderPayment>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub automatic_tax: Option<CreateOrderAutomaticTax>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub billing_details: Option<BillingDetails>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub discounts: Option<Vec<CreateOrderDiscount>>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub ip_address: Option<String>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub shipping_details: Option<OrderShippingDetails>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub tax_details: Option<CreateOrderTaxDetails>,
 }
 
 impl<'a> CreateOrder<'a> {
-  pub fn new(currency: Currency) -> Self {
+  pub fn new(currency: Currency, line_items: Vec<CreateOrderLineItem>) -> Self {
     CreateOrder {
       currency,
+      line_items,
       expand: Default::default(),
+      customer: Default::default(),
+      description: Default::default(),
+      metadata: Default::default(),
+      payment: Default::default(),
+      automatic_tax: Default::default(),
+      billing_details: Default::default(),
+      discounts: Default::default(),
+      ip_address: Default::default(),
+      shipping_details: Default::default(),
+      tax_details: Default::default(),
     }
   }
 }
@@ -549,14 +697,62 @@ impl<'a> CreateOrder<'a> {
 /// The parameters for `Order::update`.
 #[derive(Clone, Debug, Serialize, Default)]
 pub struct UpdateOrder<'a> {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub currency: Option<Currency>,
+
   #[serde(skip_serializing_if = "Expand::is_empty")]
   pub expand: &'a [&'a str],
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub line_items: Option<Vec<CreateOrderLineItem>>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub customer: Option<CustomerId>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub description: Option<String>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub metadata: Option<Metadata>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub payment: Option<CreateOrderPayment>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub automatic_tax: Option<CreateOrderAutomaticTax>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub billing_details: Option<BillingDetails>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub discounts: Option<Vec<CreateOrderDiscount>>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub ip_address: Option<String>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub shipping_details: Option<OrderShippingDetails>,
+
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub tax_details: Option<CreateOrderTaxDetails>,
 }
 
 impl<'a> UpdateOrder<'a> {
   pub fn new() -> Self {
     UpdateOrder {
+      currency: Default::default(),
+      line_items: Default::default(),
       expand: Default::default(),
+      customer: Default::default(),
+      description: Default::default(),
+      metadata: Default::default(),
+      payment: Default::default(),
+      automatic_tax: Default::default(),
+      billing_details: Default::default(),
+      discounts: Default::default(),
+      ip_address: Default::default(),
+      shipping_details: Default::default(),
+      tax_details: Default::default(),
     }
   }
 }
