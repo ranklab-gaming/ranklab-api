@@ -148,16 +148,6 @@ pub struct OrderTotalDetailsBreakdown {
   pub taxes: Vec<OrderTax>,
 }
 
-impl Object for OrderTotalDetailsBreakdown {
-  type Id = ();
-  fn id(_: Self::Id) -> String {
-    "".to_string()
-  }
-  fn object(&self) -> &'static str {
-    "order_total_details_breakdown"
-  }
-}
-
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct LineItemsDiscountAmount {
   /// The amount discounted.
@@ -180,14 +170,13 @@ pub struct OrderTotalDetails {
   pub amount_discount: i64,
 
   /// This is the sum of all the line item shipping amounts.
-  #[serde(skip_serializing_if = "Option::is_none")]
   pub amount_shipping: i64,
 
   /// This is the sum of all the line item tax amounts.
   pub amount_tax: i64,
 
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub breakdown: Option<Expandable<OrderTotalDetailsBreakdown>>,
+  pub breakdown: Option<OrderTotalDetailsBreakdown>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -416,13 +405,15 @@ pub struct OrderLineItem {
 
   pub description: Option<String>,
 
-  pub discounts: Vec<Expandable<Discount>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub discounts: Option<Vec<Discount>>,
 
   pub price: Price,
 
   pub quantity: i64,
 
-  pub taxes: Vec<Expandable<OrderTax>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub taxes: Option<Vec<OrderTax>>,
 }
 
 impl Object for OrderLineItem {
@@ -539,20 +530,33 @@ impl Object for Order {
 
 /// The parameters for `Order::create`.
 #[derive(Clone, Debug, Serialize)]
-pub struct CreateOrder<'a> {}
+pub struct CreateOrder<'a> {
+  pub currency: Currency,
+
+  #[serde(skip_serializing_if = "Expand::is_empty")]
+  pub expand: &'a [&'a str],
+}
 
 impl<'a> CreateOrder<'a> {
   pub fn new(currency: Currency) -> Self {
-    CreateOrder {}
+    CreateOrder {
+      currency,
+      expand: Default::default(),
+    }
   }
 }
 
 /// The parameters for `Order::update`.
 #[derive(Clone, Debug, Serialize, Default)]
-pub struct UpdateOrder<'a> {}
+pub struct UpdateOrder<'a> {
+  #[serde(skip_serializing_if = "Expand::is_empty")]
+  pub expand: &'a [&'a str],
+}
 
 impl<'a> UpdateOrder<'a> {
   pub fn new() -> Self {
-    UpdateOrder {}
+    UpdateOrder {
+      expand: Default::default(),
+    }
   }
 }
