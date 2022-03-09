@@ -1,5 +1,4 @@
-use crate::guards::Auth;
-use crate::guards::Stripe;
+use crate::guards::{Auth, Stripe};
 use crate::models::Coach;
 use crate::response::{MutationResponse, Response};
 use rocket::serde::json::Json;

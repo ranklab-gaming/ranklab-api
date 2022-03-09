@@ -4,9 +4,9 @@ use rocket::response::status::Custom;
 use rocket::response::Responder;
 use rocket::serde::json::Json;
 use rocket::{response, Request};
-use rocket_okapi::{
-  gen::OpenApiGenerator, response::OpenApiResponderInner, Result as OpenApiResult,
-};
+use rocket_okapi::gen::OpenApiGenerator;
+use rocket_okapi::response::OpenApiResponderInner;
+use rocket_okapi::Result as OpenApiResult;
 use std::error::Error;
 use validator::ValidationErrors;
 

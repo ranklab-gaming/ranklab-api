@@ -1,7 +1,5 @@
-use rocket_okapi::{
-  gen::OpenApiGenerator,
-  request::{OpenApiFromRequest, RequestHeaderInput},
-};
+use rocket_okapi::gen::OpenApiGenerator;
+use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use rocket_sync_db_pools::database;
 
 #[database("default")]

@@ -2,9 +2,7 @@ use std::net::SocketAddr;
 
 use crate::data_types::UserGame;
 use crate::guards::auth::Claims;
-use crate::guards::Auth;
-use crate::guards::DbConn;
-use crate::guards::Stripe;
+use crate::guards::{Auth, DbConn, Stripe};
 use crate::models::Player;
 use crate::response::{MutationResponse, Response};
 use crate::views::PlayerView;

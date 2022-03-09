@@ -1,4 +1,5 @@
-use crate::{data_types::UserGame, models::Coach};
+use crate::data_types::UserGame;
+use crate::models::Coach;
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;

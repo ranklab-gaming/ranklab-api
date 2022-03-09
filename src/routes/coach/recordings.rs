@@ -1,6 +1,5 @@
 use crate::data_types::ReviewState;
-use crate::guards::Auth;
-use crate::guards::DbConn;
+use crate::guards::{Auth, DbConn};
 use crate::models::{Coach, Recording, Review};
 use crate::response::{QueryResponse, Response};
 use crate::views::RecordingView;

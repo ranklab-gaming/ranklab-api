@@ -8,10 +8,8 @@ use regex::Regex;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
-use rocket_okapi::{
-  gen::OpenApiGenerator,
-  request::{OpenApiFromRequest, RequestHeaderInput},
-};
+use rocket_okapi::gen::OpenApiGenerator;
+use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 

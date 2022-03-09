@@ -1,5 +1,4 @@
-use crate::guards::Auth;
-use crate::guards::Stripe;
+use crate::guards::{Auth, Stripe};
 use crate::models::Coach;
 use crate::response::{MutationResponse, Response};
 use rocket::serde::json::Json;
@@ -38,7 +37,7 @@ pub async fn create(
   account_link_params.refresh_url = Some(body.refresh_url.as_str());
   account_link_params.return_url = Some(body.return_url.as_str());
 
-  let account_link = stripe::AccountLink::create(&stripe.0.0, account_link_params)
+  let account_link = stripe::AccountLink::create(&stripe.0 .0, account_link_params)
     .await
     .unwrap();
 

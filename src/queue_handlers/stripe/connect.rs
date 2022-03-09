@@ -1,6 +1,7 @@
 use super::StripeEventHandler;
+use crate::config::Config;
+use crate::guards::DbConn;
 use crate::stripe::webhook_events::{EventObject, EventType, WebhookEvent};
-use crate::{config::Config, guards::DbConn};
 use diesel::prelude::*;
 
 pub struct Connect {

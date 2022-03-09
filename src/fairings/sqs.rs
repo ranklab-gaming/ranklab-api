@@ -5,8 +5,7 @@ use crate::queue_handlers::stripe::{Connect, Direct};
 use crate::queue_handlers::{S3BucketHandler, StripeHandler};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
-use rusoto_core::HttpClient;
-use rusoto_core::Region;
+use rusoto_core::{HttpClient, Region};
 use rusoto_sqs::{DeleteMessageRequest, ReceiveMessageRequest, Sqs, SqsClient};
 
 pub enum QueueHandlerOutcome {

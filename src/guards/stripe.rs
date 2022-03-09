@@ -2,10 +2,8 @@ use crate::clients::StripeClient;
 use crate::config::Config;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
-use rocket_okapi::{
-  gen::OpenApiGenerator,
-  request::{OpenApiFromRequest, RequestHeaderInput},
-};
+use rocket_okapi::gen::OpenApiGenerator;
+use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 
 pub struct Stripe(pub crate::clients::StripeClient);
 
