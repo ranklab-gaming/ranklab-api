@@ -2,6 +2,7 @@ use super::StripeEventHandler;
 use crate::data_types::ReviewState;
 use crate::emails::{Email, Recipient};
 use crate::models::{Coach, Review};
+use crate::stripe::webhook_events::{EventObject, EventType, WebhookEvent};
 use crate::{config::Config, guards::DbConn};
 use diesel::prelude::*;
 use serde_json::json;
@@ -13,12 +14,11 @@ pub struct Direct {
 }
 
 impl Direct {
-  async fn handle_payment_intent_succeeded(
-    &self,
-    webhook: stripe::WebhookEvent,
-  ) -> anyhow::Result<()> {
+  async fn handle_payment_intent_succeeded(&self, webhook: WebhookEvent) -> anyhow::Result<()> {
     let payment_intent_id = match &webhook.data.object {
-      stripe::EventObject::PaymentIntent(payment_intent) => payment_intent.id.clone(),
+      EventObject::Other(stripe::EventObject::PaymentIntent(payment_intent)) => {
+        payment_intent.id.clone()
+      }
       _ => return Ok(()),
     };
 
@@ -71,9 +71,9 @@ impl Direct {
     Ok(())
   }
 
-  async fn handle_charge_refunded(&self, webhook: stripe::WebhookEvent) -> anyhow::Result<()> {
+  async fn handle_charge_refunded(&self, webhook: WebhookEvent) -> anyhow::Result<()> {
     let charge = match &webhook.data.object {
-      stripe::EventObject::Charge(charge) => charge,
+      EventObject::Other(stripe::EventObject::Charge(charge)) => charge,
       _ => return Ok(()),
     };
 
@@ -119,14 +119,16 @@ impl StripeEventHandler for Direct {
 
   async fn handle_event(
     &self,
-    webhook: stripe::WebhookEvent,
+    webhook: WebhookEvent,
     _profile: &rocket::figment::Profile,
   ) -> anyhow::Result<()> {
     match webhook.event_type {
-      stripe::EventType::PaymentIntentSucceeded => {
+      EventType::Other(stripe::EventType::PaymentIntentSucceeded) => {
         self.handle_payment_intent_succeeded(webhook).await?
       }
-      stripe::EventType::ChargeRefunded => self.handle_charge_refunded(webhook).await?,
+      EventType::Other(stripe::EventType::ChargeRefunded) => {
+        self.handle_charge_refunded(webhook).await?
+      }
       _ => (),
     }
 

@@ -526,6 +526,10 @@ impl Order {
   pub fn update(client: &Client, id: &OrderId, params: UpdateOrder<'_>) -> Response<Order> {
     client.post_form(&format!("/orders/{}", id), &params)
   }
+
+  pub fn submit(client: &Client, id: &OrderId, params: SubmitOrder) -> Response<Order> {
+    client.post_form(&format!("/orders/{}/submit", id), &params)
+  }
 }
 
 impl Object for Order {
@@ -754,5 +758,16 @@ impl<'a> UpdateOrder<'a> {
       shipping_details: Default::default(),
       tax_details: Default::default(),
     }
+  }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SubmitOrder {
+  pub expected_total: i64,
+}
+
+impl SubmitOrder {
+  pub fn new(expected_total: i64) -> Self {
+    SubmitOrder { expected_total }
   }
 }

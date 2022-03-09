@@ -1,4 +1,5 @@
 use super::StripeEventHandler;
+use crate::stripe::webhook_events::{EventObject, EventType, WebhookEvent};
 use crate::{config::Config, guards::DbConn};
 use diesel::prelude::*;
 
@@ -10,13 +11,13 @@ pub struct Connect {
 impl Connect {
   async fn handle_account_updated(
     &self,
-    webhook: &stripe::WebhookEvent,
+    webhook: &WebhookEvent,
     profile: &rocket::figment::Profile,
   ) -> anyhow::Result<()> {
     use crate::schema::coaches::dsl::*;
 
     let account = match &webhook.data.object {
-      stripe::EventObject::Account(account) => account,
+      EventObject::Other(stripe::EventObject::Account(account)) => account,
       _ => return Ok(()),
     };
 
@@ -77,11 +78,13 @@ impl StripeEventHandler for Connect {
 
   async fn handle_event(
     &self,
-    webhook: stripe::WebhookEvent,
+    webhook: WebhookEvent,
     profile: &rocket::figment::Profile,
   ) -> anyhow::Result<()> {
     match webhook.event_type {
-      stripe::EventType::AccountUpdated => self.handle_account_updated(&webhook, profile).await?,
+      EventType::Other(stripe::EventType::AccountUpdated) => {
+        self.handle_account_updated(&webhook, profile).await?
+      }
       _ => (),
     }
 

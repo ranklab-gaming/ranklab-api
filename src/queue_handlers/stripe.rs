@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::fairings::sqs::{QueueHandler, QueueHandlerOutcome};
 use crate::guards::DbConn;
+use crate::stripe::webhook_events::{Webhook, WebhookEvent};
 use serde::Deserialize;
 mod connect;
 mod direct;
@@ -27,7 +28,7 @@ pub trait StripeEventHandler {
 
   async fn handle_event(
     &self,
-    webhook: stripe::WebhookEvent,
+    webhook: WebhookEvent,
     profile: &rocket::figment::Profile,
   ) -> anyhow::Result<()>;
 }
@@ -60,7 +61,7 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
 
     let message_body: SqsMessageBody = serde_json::from_str(&body)?;
 
-    let webhook = stripe::Webhook::construct_event(
+    let webhook = Webhook::construct_event(
       message_body.body.as_str(),
       message_body.headers.stripe_signature.as_str(),
       self.handler.secret().as_str(),
