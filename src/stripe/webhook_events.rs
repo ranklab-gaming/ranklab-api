@@ -100,7 +100,6 @@ impl<'r> Signature<'r> {
       .collect();
     let t = headers.get("t").ok_or(WebhookError::BadSignature)?;
     let v1 = headers.get("v1").ok_or(WebhookError::BadSignature)?;
-    let v0 = headers.get("v0").map(|r| *r);
     Ok(Signature {
       t: t.parse::<i64>().map_err(WebhookError::BadHeader)?,
       v1,
