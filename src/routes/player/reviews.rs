@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use crate::config::Config;
 use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn, Stripe};
@@ -86,6 +88,7 @@ pub async fn create(
   stripe: Stripe,
   body: Json<CreateReviewMutation>,
   config: &State<Config>,
+  ip_address: SocketAddr,
 ) -> MutationResponse<ReviewView> {
   let body_recording_id = body.recording_id.clone();
   let auth_player_id = auth.0.id.clone();
@@ -119,11 +122,15 @@ pub async fn create(
     .parse::<stripe::ProductId>()
     .unwrap();
 
+  let ip_address = match ip_address.ip() {
+    std::net::IpAddr::V4(ip) => ip.to_string(),
+    std::net::IpAddr::V6(ip) => ip.to_ipv4().unwrap().to_string(),
+  };
+
   let mut price_data = CreateOrderLineItemPriceData::new(stripe::Currency::USD, product_id.clone());
   price_data.unit_amount = Some(10_00);
 
   let mut line_item = CreateOrderLineItem::new();
-  line_item.product = Some(product_id);
   line_item.quantity = Some(1);
   line_item.price_data = Some(price_data);
 
@@ -139,6 +146,9 @@ pub async fn create(
   params.payment = Some(CreateOrderPayment {
     settings: payment_settings,
   });
+  params.ip_address = Some(ip_address);
+  // enable when we add a valid address in test mode
+  // params.automatic_tax = Some(CreateOrderAutomaticTax { enabled: true });
 
   let submit_params = SubmitOrder {
     expected_total: 10_00,

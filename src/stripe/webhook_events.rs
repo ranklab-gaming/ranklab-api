@@ -11,8 +11,6 @@ use super::order::Order;
 pub enum EventTypeExt {
   #[serde(rename = "order.completed")]
   OrderCompleted,
-  #[serde(rename = "order.payment_succeeded")]
-  OrderPaymentSucceeded,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]

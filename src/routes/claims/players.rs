@@ -50,11 +50,16 @@ pub async fn create(
     })
     .await;
 
+  let ip_address = match ip_address.ip() {
+    std::net::IpAddr::V4(ip) => ip.to_string(),
+    std::net::IpAddr::V6(ip) => ip.to_ipv4().unwrap().to_string(),
+  };
+
   let mut params = stripe::CreateCustomer::new();
   params.email = Some(&player.email);
   params.tax = Some(
     stripe::CreateCustomerTax {
-      ip_address: Some(ip_address.to_string().into()),
+      ip_address: Some(ip_address.into()),
     }
     .into(),
   );

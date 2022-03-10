@@ -18,7 +18,7 @@ pub struct Direct {
 }
 
 impl Direct {
-  async fn handle_order_payment_succeeded(&self, webhook: WebhookEvent) -> anyhow::Result<()> {
+  async fn handle_order_completed(&self, webhook: WebhookEvent) -> anyhow::Result<()> {
     let order_id = match &webhook.data.object {
       EventObject::Ext(EventObjectExt::Order(order)) => order.id.clone(),
       _ => return Ok(()),
@@ -124,9 +124,7 @@ impl StripeEventHandler for Direct {
     _profile: &rocket::figment::Profile,
   ) -> anyhow::Result<()> {
     match webhook.event_type {
-      EventType::Ext(EventTypeExt::OrderPaymentSucceeded) => {
-        self.handle_order_payment_succeeded(webhook).await?
-      }
+      EventType::Ext(EventTypeExt::OrderCompleted) => self.handle_order_completed(webhook).await?,
       EventType::Other(stripe::EventType::ChargeRefunded) => {
         self.handle_charge_refunded(webhook).await?
       }

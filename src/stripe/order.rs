@@ -485,7 +485,8 @@ pub struct Order {
   /// List of items constituting the order.
   ///
   /// An order can have up to 25 items.
-  pub line_items: List<Expandable<OrderLineItem>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub line_items: Option<List<Expandable<OrderLineItem>>>,
 
   /// Set of [key-value pairs](https://stripe.com/docs/api/metadata) that you can attach to an object.
   ///
