@@ -1,8 +1,7 @@
 use crate::aws;
 use crate::config::Config;
 use rocket::tokio;
-use rusoto_core::Region;
-use rusoto_core::{HttpClient};
+use rusoto_core::{HttpClient, Region};
 use rusoto_sesv2::{
   BulkEmailContent, BulkEmailEntry, Destination, ReplacementEmailContent, ReplacementTemplate,
   SendBulkEmailRequest, SesV2, SesV2Client, Template,

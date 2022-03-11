@@ -13,4 +13,5 @@ pub struct Config {
   pub stripe_direct_webhooks_secret: String,
   pub stripe_connect_webhooks_queue: String,
   pub stripe_connect_webhooks_secret: String,
+  pub stripe_product_id: String,
 }

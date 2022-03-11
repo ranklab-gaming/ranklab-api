@@ -1,8 +1,13 @@
 use super::StripeEventHandler;
+use crate::config::Config;
 use crate::data_types::ReviewState;
 use crate::emails::{Email, Recipient};
+use crate::guards::DbConn;
 use crate::models::{Coach, Review};
-use crate::{config::Config, guards::DbConn};
+use crate::stripe::order::OrderId;
+use crate::stripe::webhook_events::{
+  EventObject, EventObjectExt, EventType, EventTypeExt, WebhookEvent,
+};
 use diesel::prelude::*;
 use serde_json::json;
 use stripe::Expandable;
@@ -13,21 +18,18 @@ pub struct Direct {
 }
 
 impl Direct {
-  async fn handle_payment_intent_succeeded(
-    &self,
-    webhook: stripe::WebhookEvent,
-  ) -> anyhow::Result<()> {
-    let payment_intent_id = match &webhook.data.object {
-      stripe::EventObject::PaymentIntent(payment_intent) => payment_intent.id.clone(),
+  async fn handle_order_completed(&self, webhook: WebhookEvent) -> anyhow::Result<()> {
+    let order_id = match &webhook.data.object {
+      EventObject::Ext(EventObjectExt::Order(order)) => order.id.clone(),
       _ => return Ok(()),
     };
 
     self
       .db_conn
       .run(move |conn| {
-        use crate::schema::reviews::dsl::{reviews, state, stripe_payment_intent_id};
+        use crate::schema::reviews::dsl::{reviews, state, stripe_order_id};
 
-        diesel::update(reviews.filter(stripe_payment_intent_id.eq(payment_intent_id.to_string())))
+        diesel::update(reviews.filter(stripe_order_id.eq(order_id.to_string())))
           .set(state.eq(ReviewState::AwaitingReview))
           .get_result::<Review>(conn)
           .unwrap()
@@ -71,9 +73,9 @@ impl Direct {
     Ok(())
   }
 
-  async fn handle_charge_refunded(&self, webhook: stripe::WebhookEvent) -> anyhow::Result<()> {
+  async fn handle_charge_refunded(&self, webhook: WebhookEvent) -> anyhow::Result<()> {
     let charge = match &webhook.data.object {
-      stripe::EventObject::Charge(charge) => charge,
+      EventObject::Other(stripe::EventObject::Charge(charge)) => charge,
       _ => return Ok(()),
     };
 
@@ -81,18 +83,17 @@ impl Direct {
       return Ok(());
     }
 
-    let payment_intent_id = match charge.payment_intent.clone() {
-      Some(Expandable::Id(payment_intent_id)) => payment_intent_id,
-      Some(Expandable::Object(payment_intent)) => payment_intent.id,
-      None => return Err(anyhow::anyhow!("No payment intent found")),
+    let order_id: OrderId = match charge.order.clone() {
+      Some(Expandable::Object(order)) => order.id.to_string().parse::<OrderId>().unwrap(),
+      _ => return Err(anyhow::anyhow!("No order found")),
     };
 
     self
       .db_conn
       .run(move |conn| {
-        use crate::schema::reviews::dsl::{reviews, state, stripe_payment_intent_id};
+        use crate::schema::reviews::dsl::{reviews, state, stripe_order_id};
 
-        diesel::update(reviews.filter(stripe_payment_intent_id.eq(payment_intent_id.to_string())))
+        diesel::update(reviews.filter(stripe_order_id.eq(order_id.to_string())))
           .set(state.eq(ReviewState::Refunded))
           .get_result::<Review>(conn)
           .unwrap()
@@ -119,14 +120,14 @@ impl StripeEventHandler for Direct {
 
   async fn handle_event(
     &self,
-    webhook: stripe::WebhookEvent,
+    webhook: WebhookEvent,
     _profile: &rocket::figment::Profile,
   ) -> anyhow::Result<()> {
     match webhook.event_type {
-      stripe::EventType::PaymentIntentSucceeded => {
-        self.handle_payment_intent_succeeded(webhook).await?
+      EventType::Ext(EventTypeExt::OrderCompleted) => self.handle_order_completed(webhook).await?,
+      EventType::Other(stripe::EventType::ChargeRefunded) => {
+        self.handle_charge_refunded(webhook).await?
       }
-      stripe::EventType::ChargeRefunded => self.handle_charge_refunded(webhook).await?,
       _ => (),
     }
 

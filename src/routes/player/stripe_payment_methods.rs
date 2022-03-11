@@ -1,7 +1,6 @@
 use crate::guards::{Auth, Stripe};
 use crate::models::Player;
-use crate::response::QueryResponse;
-use crate::response::Response;
+use crate::response::{QueryResponse, Response};
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::Serialize;

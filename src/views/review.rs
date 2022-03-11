@@ -1,4 +1,5 @@
-use crate::{data_types::ReviewState, models::Review};
+use crate::data_types::ReviewState;
+use crate::models::Review;
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;

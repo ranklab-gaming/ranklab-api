@@ -56,11 +56,11 @@ dependencies = [
 [[package]]
 name = "async-stripe"
 version = "0.13.0"
-source = "git+https://github.com/ranklab-gaming/async-stripe#0a65a3c91e2b06be30db72f6cdcb94d2a9b67019"
+source = "git+https://github.com/ranklab-gaming/async-stripe#23163682e48e8da1337bb99229f410f931620089"
 dependencies = [
  "chrono",
  "hex",
- "hmac 0.12.0",
+ "hmac 0.12.1",
  "hyper",
  "hyper-tls",
  "serde",
@@ -68,7 +68,7 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "serde_qs",
- "sha2 0.10.1",
+ "sha2 0.10.2",
  "smart-default",
  "smol_str",
  "thiserror",
@@ -281,11 +281,12 @@ dependencies = [
 
 [[package]]
 name = "crypto-common"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4600d695eb3f6ce1cd44e6e291adceb2cc3ab12f20a33777ecd0bf6eba34e06"
+checksum = "57952ca27b5e3606ff4dd79b0020231aaf9d6aa76dc05fd30137538c50bd3ce8"
 dependencies = [
  "generic-array",
+ "typenum",
 ]
 
 [[package]]
@@ -458,9 +459,9 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cb780dce4f9a8f5c087362b3a4595936b2019e7c8b30f2c3e9a7e94e6ae9837"
+checksum = "f2fb860ca6fafa5552fb6d0e816a69c8e49f0908bf524e30a90d97c85892d506"
 dependencies = [
  "block-buffer 0.10.2",
  "crypto-common",
@@ -773,11 +774,11 @@ dependencies = [
 
 [[package]]
 name = "hmac"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddca131f3e7f2ce2df364b57949a9d47915cfbd35e46cfee355ccebbf794d6a2"
+checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
- "digest 0.10.2",
+ "digest 0.10.3",
 ]
 
 [[package]]
@@ -1491,6 +1492,8 @@ dependencies = [
  "diesel_as_jsonb",
  "diesel_migrations",
  "dotenv",
+ "hex",
+ "hmac 0.12.1",
  "hyper",
  "hyper-tls",
  "jsonwebtoken",
@@ -1512,6 +1515,9 @@ dependencies = [
  "sentry",
  "serde",
  "serde_json",
+ "serde_path_to_error",
+ "sha2 0.10.2",
+ "smol_str",
  "thiserror",
  "uuid",
  "validator",
@@ -2191,13 +2197,13 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99c3bd8169c58782adad9290a9af5939994036b76187f7b4f0e6de91dbbfc0ec"
+checksum = "55deaec60f81eefe3cce0dc50bda92d6d8e88f2a27df7c5033b42afeb1ed2676"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.2.1",
- "digest 0.10.2",
+ "digest 0.10.3",
 ]
 
 [[package]]
@@ -2614,9 +2620,9 @@ dependencies = [
 
 [[package]]
 name = "typenum"
-version = "1.13.0"
+version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "879f6906492a7cd215bfa4cf595b600146ccfac0c79bcbd1f3000162af5e8b06"
+checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
 
 [[package]]
 name = "ubyte"

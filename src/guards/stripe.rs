@@ -2,10 +2,8 @@ use crate::clients::StripeClient;
 use crate::config::Config;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
-use rocket_okapi::{
-  gen::OpenApiGenerator,
-  request::{OpenApiFromRequest, RequestHeaderInput},
-};
+use rocket_okapi::gen::OpenApiGenerator;
+use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 
 pub struct Stripe(pub crate::clients::StripeClient);
 
@@ -15,7 +13,8 @@ impl<'r> FromRequest<'r> for Stripe {
 
   async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
     let config = req.guard::<&State<Config>>().await;
-    Outcome::Success(Stripe(StripeClient::new(config.as_ref().unwrap())))
+    let client = StripeClient::new(config.as_ref().unwrap());
+    Outcome::Success(Stripe(client))
   }
 }
 
