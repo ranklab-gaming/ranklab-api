@@ -148,7 +148,7 @@ pub async fn create(
     settings: payment_settings,
   });
   params.ip_address = Some(ip_address);
-  // enable when we add a valid address in test mode
+  // TODO: enable when we add a valid address in test mode
   // params.automatic_tax = Some(CreateOrderAutomaticTax { enabled: true });
 
   let submit_params = SubmitOrder {
