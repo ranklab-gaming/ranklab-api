@@ -67,7 +67,7 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
       self.handler.secret().as_str(),
     )?;
 
-    if profile == rocket::Config::RELEASE_PROFILE && !webhook.data.livemode {
+    if profile == rocket::Config::RELEASE_PROFILE && !webhook.livemode {
       return Err(anyhow::anyhow!("Received webhook in test mode").into());
     }
 

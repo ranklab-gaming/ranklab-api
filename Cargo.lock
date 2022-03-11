@@ -1515,6 +1515,7 @@ dependencies = [
  "sentry",
  "serde",
  "serde_json",
+ "serde_path_to_error",
  "sha2 0.10.2",
  "smol_str",
  "thiserror",

@@ -26,12 +26,12 @@ pub struct WebhookEvent {
   #[serde(rename = "type")]
   pub event_type: EventType,
   pub data: EventData,
+  pub livemode: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EventData {
   pub object: EventObject,
-  pub livemode: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -70,7 +70,16 @@ impl Webhook {
       .verify_slice(sig.as_slice())
       .map_err(|_| WebhookError::BadSignature)?;
 
-    Ok(serde_json::from_str(payload)?)
+    let deserializer = &mut serde_json::Deserializer::from_str(payload);
+    let result: Result<WebhookEvent, _> = serde_path_to_error::deserialize(deserializer);
+
+    match result {
+      Ok(event) => Ok(event),
+      Err(err) => {
+        println!("{:#?}", err);
+        Err(WebhookError::from(err.into_inner()))
+      }
+    }
   }
 }
 

@@ -49,6 +49,7 @@ hmac = "0.12.1"
 sha2 = "0.10.2"
 hex = "0.4.3"
 smol_str = "0.1.21"
+serde_path_to_error = "0.1.7"
 
 [profile.release]
 debug = true
