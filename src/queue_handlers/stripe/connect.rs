@@ -1,4 +1,5 @@
 use super::StripeEventHandler;
+use crate::clients::StripeClient;
 use crate::config::Config;
 use crate::guards::DbConn;
 use crate::stripe::webhook_events::{EventObject, EventType, WebhookEvent};
@@ -65,7 +66,7 @@ impl Connect {
 
 #[async_trait]
 impl StripeEventHandler for Connect {
-  fn new(db_conn: DbConn, config: Config) -> Self {
+  fn new(db_conn: DbConn, config: Config, _client: StripeClient) -> Self {
     Self { db_conn, config }
   }
 

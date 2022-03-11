@@ -5,6 +5,7 @@ use crate::stripe::webhook_events::{Webhook, WebhookEvent};
 use serde::Deserialize;
 mod connect;
 mod direct;
+use crate::clients::StripeClient;
 pub use connect::Connect;
 pub use direct::Direct;
 
@@ -22,7 +23,7 @@ struct SqsMessageBody {
 
 #[async_trait]
 pub trait StripeEventHandler {
-  fn new(db_conn: DbConn, config: Config) -> Self;
+  fn new(db_conn: DbConn, config: Config, client: StripeClient) -> Self;
   fn url(&self) -> String;
   fn secret(&self) -> String;
 
@@ -40,8 +41,10 @@ pub struct StripeHandler<T: StripeEventHandler> {
 #[async_trait]
 impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
   fn new(db_conn: DbConn, config: Config) -> Self {
+    let client = StripeClient::new(&config);
+
     Self {
-      handler: T::new(db_conn, config),
+      handler: T::new(db_conn, config, client),
     }
   }
 

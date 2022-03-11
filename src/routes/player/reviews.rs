@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::net::SocketAddr;
 
 use crate::config::Config;
@@ -167,10 +168,18 @@ pub async fn create(
   };
 
   let mut payment_intent_params = stripe::UpdatePaymentIntent::new();
-  payment_intent_params.setup_future_usage =
-    Some(stripe::PaymentIntentSetupFutureUsageFilter::OnSession);
+  let mut payment_intent_metadata = HashMap::new();
 
-  stripe::PaymentIntent::update(&stripe.0 .0, &payment_intent_id, payment_intent_params);
+  payment_intent_metadata.insert("order_id".to_string(), order.id.to_string());
+  payment_intent_params.metadata = Some(payment_intent_metadata);
+
+  // TODO: Ask support if this is possible
+  // payment_intent_params.setup_future_usage =
+  //   Some(stripe::PaymentIntentSetupFutureUsageFilter::OnSession);
+
+  stripe::PaymentIntent::update(&stripe.0 .0, &payment_intent_id, payment_intent_params)
+    .await
+    .unwrap();
 
   let order_id = order.id.clone();
 
