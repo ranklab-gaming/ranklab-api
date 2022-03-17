@@ -258,13 +258,9 @@ pub async fn update(
 
   let stripe_order_id = updated_review.stripe_order_id.parse::<OrderId>().unwrap();
 
-  let order = Order::retrieve(
-    &stripe.0 .0,
-    &stripe_order_id,
-    &["payment.payment_intent.charges"],
-  )
-  .await
-  .unwrap();
+  let order = Order::retrieve(&stripe.0 .0, &stripe_order_id, &["payment.payment_intent"])
+    .await
+    .unwrap();
 
   let payment_intent = match order.payment.payment_intent {
     Some(Expandable::Object(payment_intent)) => payment_intent,
