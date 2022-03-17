@@ -258,13 +258,23 @@ pub async fn update(
 
   let stripe_order_id = updated_review.stripe_order_id.parse::<OrderId>().unwrap();
 
-  let order = Order::retrieve(&stripe.0 .0, &stripe_order_id, &[])
-    .await
-    .unwrap();
+  let order = Order::retrieve(
+    &stripe.0 .0,
+    &stripe_order_id,
+    &["payment.payment_intent.charges"],
+  )
+  .await
+  .unwrap();
+
+  let payment_intent = match order.payment.payment_intent {
+    Some(Expandable::Object(payment_intent)) => payment_intent,
+    _ => panic!("No payment intent found"),
+  };
 
   let mut transfer_params =
     stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id.unwrap());
   transfer_params.amount = Some((order.amount_total as f64 * 0.8) as i64);
+  transfer_params.source_transaction = Some(payment_intent.charges.data[0].id.clone());
 
   stripe::Transfer::create(&stripe.0 .0, transfer_params)
     .await
