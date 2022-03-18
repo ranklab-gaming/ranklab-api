@@ -16,7 +16,8 @@
     "matklad.rust-analyzer",
     "vadimcn.vscode-lldb",
     "github.vscode-pull-request-github",
-    "ms-vscode.live-server"
+    "eamodio.gitlens",
+    "github.copilot"
   ],
   "settings": {
     "editor.codeLens": false,
