@@ -139,6 +139,19 @@ pub async fn create(
 
   let mut payment_settings = OrderPaymentSettings::new();
   payment_settings.payment_method_types = Some(vec![OrderPaymentSettingsPaymentMethodType::Card]);
+  payment_settings.payment_method_options = Some(stripe::PaymentIntentPaymentMethodOptions {
+    card: Some(
+      stripe::PaymentIntentPaymentMethodOptionsCardUnion::PaymentIntentPaymentMethodOptionsCard(
+        stripe::PaymentIntentPaymentMethodOptionsCard {
+          setup_future_usage: Some(
+            stripe::PaymentIntentPaymentMethodOptionsCardSetupFutureUsage::OnSession,
+          ),
+          ..Default::default()
+        },
+      ),
+    ),
+    ..Default::default()
+  });
 
   let mut params = CreateOrder::new(stripe::Currency::USD, line_items);
 
@@ -172,10 +185,6 @@ pub async fn create(
 
   payment_intent_metadata.insert("order_id".to_string(), order.id.to_string());
   payment_intent_params.metadata = Some(payment_intent_metadata);
-
-  // TODO: Ask support if this is possible
-  // payment_intent_params.setup_future_usage =
-  //   Some(stripe::PaymentIntentSetupFutureUsageFilter::OnSession);
 
   stripe::PaymentIntent::update(&stripe.0 .0, &payment_intent_id, payment_intent_params)
     .await
