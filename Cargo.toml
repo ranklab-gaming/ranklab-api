@@ -48,7 +48,7 @@ rocket_sync_db_pools = { version = "0.1.0-rc.1", features = [
 hmac = "0.12.1"
 sha2 = "0.10.2"
 hex = "0.4.3"
-smol_str = "0.1.21"
+smol_str = "0.1.22"
 serde_path_to_error = "0.1.7"
 
 [profile.release]
