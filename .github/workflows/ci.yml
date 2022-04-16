@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set up cargo cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/bin/
@@ -33,7 +33,7 @@ jobs:
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v1
       - name: Set up cargo cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/bin/
@@ -43,14 +43,14 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Set up pip cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Set up Docker cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
