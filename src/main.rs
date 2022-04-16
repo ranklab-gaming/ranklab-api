@@ -10,13 +10,13 @@ use ranklab_api::guards::DbConn;
 use ranklab_api::routes::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
+use rocket::figment::Profile;
 use rocket::http::Accept;
 use rocket::{Build, Rocket};
-use rocket_okapi::{openapi, openapi_get_routes};
-
-use rocket::serde::json::Json;
+use rocket_okapi::openapi_get_routes;
 use schemars::JsonSchema;
 use serde::Serialize;
+use std::env;
 
 #[derive(Serialize, JsonSchema)]
 pub struct Health {
@@ -38,19 +38,12 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
   rocket
 }
 
-#[openapi]
-#[get("/")]
-pub async fn get_health() -> Json<Health> {
-  Json(Health {
-    status: "ok".into(),
-  })
-}
-
 #[launch]
 fn rocket() -> Rocket<Build> {
-  let profile = std::env::var("ROCKET_PROFILE").unwrap_or_else(|_| "development".to_string());
+  let profile_name = env::var("ROCKET_PROFILE").unwrap_or_else(|_| "development".to_string());
+  let profile = Profile::new(&profile_name);
 
-  dotenv::from_filename(format!(".env.{}", profile)).ok();
+  dotenv::from_filename(format!(".env.{}", profile.as_str())).ok();
   dotenv::dotenv().ok();
 
   let mut figment = rocket::Config::figment()
@@ -76,7 +69,7 @@ fn rocket() -> Rocket<Build> {
     .mount(
       "/",
       openapi_get_routes![
-        get_health,
+        index::get_health,
         claims::coaches::create,
         claims::players::create,
         claims::coaches::available_countries,

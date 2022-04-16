@@ -3,11 +3,13 @@ use crate::clients::StripeClient;
 use crate::config::Config;
 use crate::data_types::ReviewState;
 use crate::emails::{Email, Recipient};
+use crate::fairings::sqs::QueueHandlerError;
 use crate::guards::DbConn;
-use crate::models::{Coach, Review};
+use crate::models::{Coach, Review, ReviewChangeset};
 use crate::stripe::webhook_events::{
   EventObject, EventObjectExt, EventType, EventTypeExt, WebhookEvent,
 };
+use anyhow::anyhow;
 use diesel::prelude::*;
 use serde_json::json;
 use stripe::Expandable;
@@ -19,7 +21,7 @@ pub struct Direct {
 }
 
 impl Direct {
-  async fn handle_order_completed(&self, webhook: WebhookEvent) -> anyhow::Result<()> {
+  async fn handle_order_completed(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
     let order_id = match &webhook.data.object {
       EventObject::Ext(EventObjectExt::Order(order)) => order.id.clone(),
       _ => return Ok(()),
@@ -28,23 +30,14 @@ impl Direct {
     self
       .db_conn
       .run(move |conn| {
-        use crate::schema::reviews::dsl::{reviews, state, stripe_order_id};
-
-        diesel::update(reviews.filter(stripe_order_id.eq(order_id.to_string())))
-          .set(state.eq(ReviewState::AwaitingReview))
-          .get_result::<Review>(conn)
-          .unwrap()
+        diesel::update(Review::find_by_order_id(order_id))
+          .set(ReviewChangeset::default().state(ReviewState::AwaitingReview))
+          .execute(conn)
       })
-      .await;
+      .await
+      .map_err(QueueHandlerError::from)?;
 
-    let coaches = self
-      .db_conn
-      .run(move |conn| {
-        use crate::schema::coaches::dsl::*;
-
-        coaches.load::<Coach>(conn).unwrap()
-      })
-      .await;
+    let coaches = self.db_conn.run(move |conn| Coach::all(conn)).await?;
 
     let email = Email::new(
       &self.config,
@@ -74,7 +67,7 @@ impl Direct {
     Ok(())
   }
 
-  async fn handle_charge_refunded(&self, webhook: WebhookEvent) -> anyhow::Result<()> {
+  async fn handle_charge_refunded(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
     let charge = match &webhook.data.object {
       EventObject::Other(stripe::EventObject::Charge(charge)) => charge,
       _ => return Ok(()),
@@ -86,31 +79,28 @@ impl Direct {
 
     let payment_intent_id = match &charge.payment_intent {
       Some(Expandable::Id(payment_intent_id)) => payment_intent_id,
-      _ => return Err(anyhow::anyhow!("No payment intent id found")),
+      _ => return Err(anyhow!("No payment intent id found in charge").into()),
     };
 
-    let payment_intent =
-      stripe::PaymentIntent::retrieve(&self.client.0, &payment_intent_id, &[]).await?;
+    let payment_intent = stripe::PaymentIntent::retrieve(&self.client.0, &payment_intent_id, &[])
+      .await
+      .map_err(anyhow::Error::from)?;
 
     let order_id = payment_intent
       .metadata
       .get("order_id")
-      .ok_or(anyhow::anyhow!(
-        "No order id found in payment intent metadata"
-      ))?
+      .ok_or(anyhow!("No order id found in payment intent metadata"))?
       .clone();
 
     self
       .db_conn
       .run(move |conn| {
-        use crate::schema::reviews::dsl::{reviews, state, stripe_order_id};
-
-        diesel::update(reviews.filter(stripe_order_id.eq(order_id)))
-          .set(state.eq(ReviewState::Refunded))
-          .get_result::<Review>(conn)
-          .unwrap()
+        diesel::update(Review::find_by_order_id(order_id))
+          .set(ReviewChangeset::default().state(ReviewState::Refunded))
+          .execute(conn)
       })
-      .await;
+      .await
+      .map_err(QueueHandlerError::from)?;
 
     Ok(())
   }
@@ -134,19 +124,13 @@ impl StripeEventHandler for Direct {
     self.config.stripe_direct_webhooks_secret.clone()
   }
 
-  async fn handle_event(
-    &self,
-    webhook: WebhookEvent,
-    _profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<()> {
+  async fn handle_event(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
     match webhook.event_type {
-      EventType::Ext(EventTypeExt::OrderCompleted) => self.handle_order_completed(webhook).await?,
+      EventType::Ext(EventTypeExt::OrderCompleted) => self.handle_order_completed(webhook).await,
       EventType::Other(stripe::EventType::ChargeRefunded) => {
-        self.handle_charge_refunded(webhook).await?
+        self.handle_charge_refunded(webhook).await
       }
-      _ => (),
+      _ => Ok(()),
     }
-
-    Ok(())
   }
 }

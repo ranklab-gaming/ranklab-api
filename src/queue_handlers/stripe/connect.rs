@@ -1,7 +1,9 @@
 use super::StripeEventHandler;
 use crate::clients::StripeClient;
 use crate::config::Config;
+use crate::fairings::sqs::QueueHandlerError;
 use crate::guards::DbConn;
+use crate::models::{Coach, CoachChangeset};
 use crate::stripe::webhook_events::{EventObject, EventType, WebhookEvent};
 use diesel::prelude::*;
 
@@ -11,55 +13,30 @@ pub struct Connect {
 }
 
 impl Connect {
-  async fn handle_account_updated(
-    &self,
-    webhook: &WebhookEvent,
-    profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<()> {
-    use crate::schema::coaches::dsl::*;
-
+  async fn handle_account_updated(&self, webhook: &WebhookEvent) -> Result<(), QueueHandlerError> {
     let account = match &webhook.data.object {
       EventObject::Other(stripe::EventObject::Account(account)) => account,
       _ => return Ok(()),
     };
 
-    let details_submitted = match &account.details_submitted {
-      Some(details_submitted) => *details_submitted,
-      None => false,
-    };
-
-    let payouts_enabled = match &account.payouts_enabled {
-      Some(payouts_enabled) => *payouts_enabled,
-      None => false,
-    };
-
+    let details_submitted = account.details_submitted.unwrap_or(false);
+    let payouts_enabled = account.payouts_enabled.unwrap_or(false);
     let account_id = account.id.clone();
 
-    let result = self
+    self
       .db_conn
-      .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-        let existing_coach = coaches.filter(stripe_account_id.eq(account_id.to_string()));
-
-        diesel::update(existing_coach)
-          .set((
-            stripe_payouts_enabled.eq(payouts_enabled),
-            stripe_details_submitted.eq(details_submitted),
-          ))
-          .execute(conn)?;
-
-        Ok(())
+      .run(move |conn| {
+        diesel::update(Coach::find_by_stripe_account_id(account_id))
+          .set(
+            CoachChangeset::default()
+              .stripe_details_submitted(details_submitted)
+              .stripe_payouts_enabled(payouts_enabled),
+          )
+          .execute(conn)
       })
-      .await;
+      .await
+      .map_err(QueueHandlerError::from)?;
 
-    if let Err(diesel::result::Error::NotFound) = result {
-      if profile == rocket::Config::RELEASE_PROFILE {
-        return Err(diesel::result::Error::NotFound.into());
-      } else {
-        return Ok(());
-      }
-    }
-
-    result?;
     Ok(())
   }
 }
@@ -78,18 +55,12 @@ impl StripeEventHandler for Connect {
     self.config.stripe_connect_webhooks_secret.clone()
   }
 
-  async fn handle_event(
-    &self,
-    webhook: WebhookEvent,
-    profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<()> {
+  async fn handle_event(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
     match webhook.event_type {
       EventType::Other(stripe::EventType::AccountUpdated) => {
-        self.handle_account_updated(&webhook, profile).await?
+        self.handle_account_updated(&webhook).await
       }
-      _ => (),
+      _ => Ok(()),
     }
-
-    Ok(())
   }
 }

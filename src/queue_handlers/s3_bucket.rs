@@ -1,6 +1,8 @@
 use crate::config::Config;
-use crate::fairings::sqs::{QueueHandler, QueueHandlerOutcome};
+use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
+use crate::models::{Recording, RecordingChangeset};
+use anyhow::anyhow;
 use diesel::prelude::*;
 use serde::Deserialize;
 
@@ -40,34 +42,26 @@ impl QueueHandler for S3BucketHandler {
     self.config.s3_bucket_queue.clone()
   }
 
-  async fn handle(
-    &self,
-    message: &rusoto_sqs::Message,
-    _profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<QueueHandlerOutcome> {
-    use crate::schema::recordings::dsl::*;
-
+  async fn handle(&self, message: &rusoto_sqs::Message) -> Result<(), QueueHandlerError> {
     let body = message
       .body
       .clone()
-      .ok_or(anyhow::anyhow!("No body in message"))?;
-    let message_body: SqsMessageBody = serde_json::from_str(&body)?;
+      .ok_or(anyhow!("No body found in sqs message"))?;
+
+    let message_body: SqsMessageBody = serde_json::from_str(&body).map_err(anyhow::Error::from)?;
 
     for record in message_body.records {
       self
         .db_conn
         .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-          let existing_recording = recordings.filter(video_key.eq(&record.s3.object.key));
-
-          diesel::update(existing_recording)
-            .set(uploaded.eq(true))
-            .execute(conn)?;
-
-          Ok(QueueHandlerOutcome::Success)
+          diesel::update(Recording::find_by_video_key(record.s3.object.key))
+            .set(RecordingChangeset::default().uploaded(true))
+            .execute(conn)
         })
-        .await?;
+        .await
+        .map_err(QueueHandlerError::from)?;
     }
 
-    Ok(QueueHandlerOutcome::Success)
+    Ok(())
   }
 }
