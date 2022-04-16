@@ -24,9 +24,7 @@ thiserror = "1.0.30"
 validator = { version = "0.14.0", features = ["derive"] }
 rocket_okapi = { git = "https://github.com/GREsau/okapi", features = ["uuid"] }
 schemars = "0.8.8"
-okapi = { git = "https://github.com/GREsau/okapi", features = [
-  "derive_json_schema",
-] }
+okapi = { git = "https://github.com/GREsau/okapi" }
 sentry = "0.25.0"
 dotenv = "0.15.0"
 mime_guess = "2.0.4"
@@ -48,8 +46,8 @@ rocket_sync_db_pools = { version = "0.1.0-rc.1", features = [
 hmac = "0.12.1"
 sha2 = "0.10.2"
 hex = "0.4.3"
-smol_str = "0.1.22"
 serde_path_to_error = "0.1.7"
+smol_str = "0.1.21"
 
 [profile.release]
 debug = true
