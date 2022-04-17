@@ -54,7 +54,7 @@ impl QueueHandler for S3BucketHandler {
       self
         .db_conn
         .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-          diesel::update(Recording::find_by_video_key(record.s3.object.key))
+          diesel::update(Recording::find_by_video_key(&record.s3.object.key))
             .set(RecordingChangeset::default().uploaded(true))
             .execute(conn)
         })

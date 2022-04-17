@@ -3,8 +3,9 @@ use std::net::SocketAddr;
 use crate::data_types::UserGame;
 use crate::guards::auth::Claims;
 use crate::guards::{Auth, DbConn, Stripe};
-use crate::models::Player;
+use crate::models::{Player, PlayerChangeset};
 use crate::response::{MutationResponse, Response};
+use crate::schema::players;
 use crate::views::PlayerView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
@@ -35,16 +36,15 @@ pub async fn create(
 
   let player: Player = db_conn
     .run(move |conn| {
-      use crate::schema::players::dsl::*;
-
-      diesel::insert_into(players)
-        .values((
-          email.eq(auth.0.email.clone()),
-          name.eq(player.name.clone()),
-          auth0_id.eq(auth.0.sub.clone()),
-          games.eq(player.games.clone()),
-          stripe_customer_id.eq::<Option<String>>(None),
-        ))
+      diesel::insert_into(players::table)
+        .values(
+          PlayerChangeset::default()
+            .email(auth.0.email.clone())
+            .name(player.name.clone())
+            .auth0_id(auth.0.sub.clone())
+            .games(player.games.clone())
+            .stripe_customer_id(None),
+        )
         .get_result(conn)
         .unwrap()
     })
@@ -70,10 +70,8 @@ pub async fn create(
 
   let player: PlayerView = db_conn
     .run(move |conn| {
-      use crate::schema::players::dsl::*;
-
       diesel::update(&player)
-        .set(stripe_customer_id.eq(Some(customer.id.to_string())))
+        .set(PlayerChangeset::default().stripe_customer_id(Some(customer.id.to_string())))
         .get_result::<Player>(conn)
         .unwrap()
     })

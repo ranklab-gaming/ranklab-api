@@ -1,8 +1,9 @@
 use crate::data_types::UserGame;
 use crate::guards::auth::Claims;
 use crate::guards::{Auth, DbConn, Stripe};
-use crate::models::Coach;
+use crate::models::{Coach, CoachChangeset};
 use crate::response::{MutationResponse, Response};
+use crate::schema::coaches;
 use crate::views::CoachView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
@@ -43,17 +44,16 @@ pub async fn create(
 
   let coach: Coach = db_conn
     .run(move |conn| {
-      use crate::schema::coaches::dsl::*;
-
-      diesel::insert_into(coaches)
-        .values((
-          email.eq(auth.0.email.clone()),
-          name.eq(coach.name.clone()),
-          bio.eq(coach.bio.clone()),
-          games.eq(coach.games.clone()),
-          auth0_id.eq(auth.0.sub.clone()),
-          country.eq(coach.country.clone()),
-        ))
+      diesel::insert_into(coaches::table)
+        .values(
+          CoachChangeset::default()
+            .email(auth.0.email.clone())
+            .name(coach.name.clone())
+            .bio(coach.bio.clone())
+            .games(coach.games.clone())
+            .auth0_id(auth.0.sub.clone())
+            .country(coach.country.clone()),
+        )
         .get_result(conn)
         .unwrap()
     })
@@ -140,10 +140,8 @@ pub async fn create(
 
   let coach: CoachView = db_conn
     .run(move |conn| {
-      use crate::schema::coaches::dsl::*;
-
       diesel::update(&coach)
-        .set(stripe_account_id.eq(Some(account.id.to_string())))
+        .set(CoachChangeset::default().stripe_account_id(Some(account.id.to_string())))
         .get_result::<Coach>(conn)
         .unwrap()
     })

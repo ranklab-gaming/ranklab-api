@@ -1,12 +1,19 @@
 use crate::data_types::ReviewState;
+use crate::models::Coach;
 use crate::schema::reviews;
 use derive_builder::Builder;
-use diesel::dsl::FindBy;
+use diesel::dsl::{sql, And, Eq, Filter, FindBy, Or};
+use diesel::pg::Pg;
 use diesel::prelude::*;
+use diesel::sql_types::Bool;
 use uuid::Uuid;
 
 #[derive(Builder, Queryable, Identifiable)]
-#[builder(derive(AsChangeset), pattern = "owned", name = "ReviewChangeset")]
+#[builder(
+  derive(AsChangeset, Insertable),
+  pattern = "owned",
+  name = "ReviewChangeset"
+)]
 #[builder_struct_attr(table_name = "reviews")]
 pub struct Review {
   pub coach_id: Option<Uuid>,
@@ -23,8 +30,91 @@ pub struct Review {
 
 impl Review {
   pub fn find_by_order_id<T: ToString>(
-    order_id: T,
+    order_id: &T,
   ) -> FindBy<reviews::table, reviews::stripe_order_id, String> {
     reviews::table.filter(reviews::stripe_order_id.eq(order_id.to_string()))
+  }
+
+  pub fn filter_for_coach(coach: &Coach, pending: Option<bool>) -> reviews::BoxedQuery<'_, Pg> {
+    let mut games_expression: Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Bool>> =
+      Box::new(sql::<Bool>("false"));
+
+    for game in coach.games.clone().into_iter() {
+      games_expression = Box::new(
+        games_expression.or(
+          reviews::game_id
+            .eq(game.game_id)
+            .and(reviews::skill_level.lt(game.skill_level as i16)),
+        ),
+      );
+    }
+
+    if pending.unwrap_or(false) {
+      reviews::table
+        .filter(
+          reviews::state
+            .eq(ReviewState::AwaitingReview)
+            .and(games_expression),
+        )
+        .into_boxed()
+    } else {
+      reviews::table
+        .filter(reviews::coach_id.eq(coach.id))
+        .into_boxed()
+    }
+  }
+
+  pub fn find_by_recording_for_coach(
+    recording_id: &Uuid,
+    coach_id: &Uuid,
+  ) -> Filter<
+    reviews::table,
+    And<
+      Or<Eq<reviews::coach_id, Option<Uuid>>, Eq<reviews::state, ReviewState>>,
+      Eq<reviews::recording_id, Uuid>,
+    >,
+  > {
+    reviews::table.filter(
+      reviews::coach_id
+        .eq(Some(*coach_id))
+        .or(reviews::state.eq(ReviewState::AwaitingReview))
+        .and(reviews::recording_id.eq(*recording_id)),
+    )
+  }
+
+  pub fn find_draft_for_coach(
+    id: &Uuid,
+    coach_id: &Uuid,
+  ) -> Filter<
+    reviews::table,
+    And<
+      And<Eq<reviews::coach_id, Option<Uuid>>, Eq<reviews::state, ReviewState>>,
+      Eq<reviews::id, Uuid>,
+    >,
+  > {
+    reviews::table.filter(
+      reviews::coach_id
+        .eq(Some(*coach_id))
+        .and(reviews::state.eq(ReviewState::Draft))
+        .and(reviews::id.eq(*id)),
+    )
+  }
+
+  pub fn find_for_coach(
+    id: &Uuid,
+    coach_id: &Uuid,
+  ) -> Filter<
+    reviews::table,
+    And<
+      Or<Eq<reviews::coach_id, Option<Uuid>>, Eq<reviews::state, ReviewState>>,
+      Eq<reviews::id, Uuid>,
+    >,
+  > {
+    reviews::table.filter(
+      reviews::coach_id
+        .eq(Some(*coach_id))
+        .or(reviews::state.eq(ReviewState::AwaitingReview))
+        .and(reviews::id.eq(*id)),
+    )
   }
 }

@@ -34,6 +34,7 @@ pub async fn create(
       .unwrap(),
     stripe::AccountLinkType::AccountOnboarding,
   );
+
   account_link_params.refresh_url = Some(body.refresh_url.as_str());
   account_link_params.return_url = Some(body.return_url.as_str());
 

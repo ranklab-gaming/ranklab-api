@@ -26,7 +26,7 @@ impl Connect {
     self
       .db_conn
       .run(move |conn| {
-        diesel::update(Coach::find_by_stripe_account_id(account_id))
+        diesel::update(Coach::find_by_stripe_account_id(&account_id))
           .set(
             CoachChangeset::default()
               .stripe_details_submitted(details_submitted)

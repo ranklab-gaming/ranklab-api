@@ -1,6 +1,6 @@
 use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn};
-use crate::models::{Coach, Review};
+use crate::models::{Coach, Review, ReviewChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::views::ReviewView;
 use diesel::prelude::*;
@@ -25,33 +25,9 @@ pub async fn list(
 ) -> QueryResponse<Vec<ReviewView>> {
   let reviews: Vec<ReviewView> = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::*;
-      use diesel::dsl::sql;
-      use diesel::pg::Pg;
-      use diesel::sql_types::Bool;
-
-      let mut games_expression: Box<dyn BoxableExpression<reviews, Pg, SqlType = Bool>> =
-        Box::new(sql::<Bool>("false"));
-
-      for game in auth.0.games.into_iter() {
-        games_expression = Box::new(
-          games_expression.or(
-            game_id
-              .eq(game.game_id)
-              .and(skill_level.lt(game.skill_level as i16)),
-          ),
-        );
-      }
-
-      let query = if params.pending.unwrap_or(false) {
-        reviews
-          .filter(state.eq(ReviewState::AwaitingReview).and(games_expression))
-          .into_boxed()
-      } else {
-        reviews.filter(coach_id.eq(auth.0.id)).into_boxed()
-      };
-
-      query.load::<Review>(conn).unwrap()
+      Review::filter_for_coach(&auth.0, params.pending)
+        .load::<Review>(conn)
+        .unwrap()
     })
     .await
     .into_iter()
@@ -72,17 +48,7 @@ pub struct UpdateReviewRequest {
 #[get("/coach/reviews/<id>")]
 pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<ReviewView> {
   let review = db_conn
-    .run(move |conn| {
-      use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews, state};
-      reviews
-        .filter(
-          coach_id
-            .eq(auth.0.id)
-            .or(state.eq(ReviewState::AwaitingReview))
-            .and(review_id.eq(id)),
-        )
-        .first::<Review>(conn)
-    })
+    .run(move |conn| Review::find_for_coach(&id, &auth.0.id).first::<Review>(conn))
     .await?;
 
   Response::success(ReviewView::from(review, None))
@@ -99,19 +65,7 @@ pub async fn update(
   let auth_id = auth.0.id.clone();
 
   let existing_review = db_conn
-    .run(move |conn| {
-      use crate::schema::reviews::dsl::{coach_id, id as review_id, reviews, state};
-
-      reviews
-        .filter(
-          review_id.eq(id).and(
-            state
-              .eq(ReviewState::AwaitingReview)
-              .or(coach_id.eq(auth_id)),
-          ),
-        )
-        .first::<Review>(conn)
-    })
+    .run(move |conn| Review::find_for_coach(&id, &auth.0.id).first::<Review>(conn))
     .await?;
 
   if let Err(errors) = review.validate() {
@@ -122,10 +76,8 @@ pub async fn update(
     if existing_review.state == ReviewState::Draft {
       let updated_review = db_conn
         .run(move |conn| {
-          use crate::schema::reviews::dsl::state;
-
           diesel::update(&existing_review)
-            .set(state.eq(ReviewState::Published))
+            .set(ReviewChangeset::default().state(ReviewState::Published))
             .get_result::<Review>(conn)
             .unwrap()
         })
@@ -139,10 +91,12 @@ pub async fn update(
     if existing_review.state == ReviewState::AwaitingReview {
       let updated_review = db_conn
         .run(move |conn| {
-          use crate::schema::reviews::dsl::*;
-
           diesel::update(&existing_review)
-            .set((coach_id.eq(auth_id), state.eq(ReviewState::Draft)))
+            .set(
+              ReviewChangeset::default()
+                .coach_id(Some(auth_id))
+                .state(ReviewState::Draft),
+            )
             .get_result::<Review>(conn)
             .unwrap()
         })

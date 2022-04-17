@@ -30,14 +30,17 @@ impl Direct {
     self
       .db_conn
       .run(move |conn| {
-        diesel::update(Review::find_by_order_id(order_id))
+        diesel::update(Review::find_by_order_id(&order_id))
           .set(ReviewChangeset::default().state(ReviewState::AwaitingReview))
           .execute(conn)
       })
       .await
       .map_err(QueueHandlerError::from)?;
 
-    let coaches = self.db_conn.run(move |conn| Coach::all(conn)).await?;
+    let coaches: Vec<Coach> = self
+      .db_conn
+      .run(move |conn| Coach::all().load(conn))
+      .await?;
 
     let email = Email::new(
       &self.config,
@@ -95,7 +98,7 @@ impl Direct {
     self
       .db_conn
       .run(move |conn| {
-        diesel::update(Review::find_by_order_id(order_id))
+        diesel::update(Review::find_by_order_id(&order_id))
           .set(ReviewChangeset::default().state(ReviewState::Refunded))
           .execute(conn)
       })
