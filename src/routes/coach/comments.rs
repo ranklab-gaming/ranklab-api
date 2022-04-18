@@ -1,6 +1,7 @@
 use crate::guards::{Auth, DbConn};
-use crate::models::{Coach, Comment, Review};
+use crate::models::{Coach, Comment, CommentChangeset, Review};
 use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::schema::comments;
 use crate::views::CommentView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
@@ -34,16 +35,10 @@ pub async fn create(
   db_conn: DbConn,
 ) -> MutationResponse<CommentView> {
   let review_id = comment.review_id.clone();
-  let auth_id = auth.0.id.clone();
+  let coach_id = auth.0.id.clone();
 
-  let review = db_conn
-    .run(move |conn| {
-      use crate::schema::reviews::dsl::*;
-
-      reviews
-        .filter(id.eq(review_id).and(coach_id.eq(Some(auth_id.clone()))))
-        .first::<Review>(conn)
-    })
+  let review: Review = db_conn
+    .run(move |conn| Review::find_draft_for_coach(&review_id, &coach_id).first(conn))
     .await?;
 
   if let Err(errors) = comment.validate() {
@@ -52,16 +47,15 @@ pub async fn create(
 
   let comment: CommentView = db_conn
     .run(move |conn| {
-      use crate::schema::comments::dsl::*;
-
-      diesel::insert_into(comments)
-        .values((
-          body.eq(comment.body.clone()),
-          video_timestamp.eq(comment.video_timestamp),
-          review_id.eq(review.id),
-          coach_id.eq(auth_id),
-          drawing.eq(comment.drawing.clone()),
-        ))
+      diesel::insert_into(comments::table)
+        .values(
+          CommentChangeset::default()
+            .body(comment.body.clone())
+            .video_timestamp(comment.video_timestamp)
+            .review_id(review.id)
+            .coach_id(coach_id)
+            .drawing(comment.drawing.clone()),
+        )
         .get_result::<Comment>(conn)
         .unwrap()
     })
@@ -79,16 +73,10 @@ pub async fn update(
   auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> MutationResponse<CommentView> {
-  let auth_id = auth.0.id.clone();
+  let coach_id = auth.0.id.clone();
 
   let existing_comment = db_conn
-    .run(move |conn| {
-      use crate::schema::comments::dsl::{coach_id, comments, id as comment_id};
-
-      comments
-        .filter(comment_id.eq(id).and(coach_id.eq(auth_id)))
-        .first::<Comment>(conn)
-    })
+    .run(move |conn| Comment::find_for_coach(&id, &coach_id).first::<Comment>(conn))
     .await?;
 
   if let Err(errors) = comment.validate() {
@@ -97,13 +85,12 @@ pub async fn update(
 
   let updated_comment: CommentView = db_conn
     .run(move |conn| {
-      use crate::schema::comments::dsl::*;
-
       diesel::update(&existing_comment)
-        .set((
-          body.eq(comment.body.clone()),
-          drawing.eq(comment.drawing.clone()),
-        ))
+        .set(
+          CommentChangeset::default()
+            .body(comment.body.clone())
+            .drawing(comment.drawing.clone()),
+        )
         .get_result::<Comment>(conn)
         .unwrap()
     })
@@ -127,10 +114,7 @@ pub async fn list(
 ) -> QueryResponse<Vec<CommentView>> {
   let comments: Vec<CommentView> = db_conn
     .run(move |conn| {
-      use crate::schema::comments::dsl::*;
-
-      comments
-        .filter(review_id.eq(params.review_id).and(coach_id.eq(auth.0.id)))
+      Comment::filter_by_review_for_coach(&params.review_id, &auth.0.id)
         .load::<Comment>(conn)
         .unwrap()
     })

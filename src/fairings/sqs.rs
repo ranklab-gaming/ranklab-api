@@ -1,28 +1,27 @@
 use crate::aws;
-use crate::config::Config;
+use crate::config::{Config, PRODUCTION_PROFILE};
 use crate::guards::DbConn;
 use crate::queue_handlers::stripe::{Connect, Direct};
 use crate::queue_handlers::{S3BucketHandler, StripeHandler};
+use anyhow::anyhow;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
 use rusoto_core::{HttpClient, Region};
 use rusoto_sqs::{DeleteMessageRequest, ReceiveMessageRequest, Sqs, SqsClient};
 
-pub enum QueueHandlerOutcome {
-  IgnoreEvent,
-  Success,
+#[derive(thiserror::Error, Debug)]
+pub enum QueueHandlerError {
+  #[error(transparent)]
+  Ignorable(anyhow::Error),
+  #[error(transparent)]
+  Unknown(#[from] anyhow::Error),
 }
 
 #[async_trait]
 pub trait QueueHandler: Send + Sync {
   fn new(db_conn: DbConn, config: Config) -> Self;
   fn url(&self) -> String;
-
-  async fn handle(
-    &self,
-    message: &rusoto_sqs::Message,
-    profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<QueueHandlerOutcome>;
+  async fn handle(&self, message: &rusoto_sqs::Message) -> Result<(), QueueHandlerError>;
 }
 
 #[derive(Clone)]
@@ -43,6 +42,7 @@ impl SqsFairing {
     let db_conn = DbConn::get_one(&rocket)
       .await
       .expect("Failed to get db connection");
+
     let config = rocket.state::<Config>().unwrap().clone();
     let profile = rocket.config().profile.clone();
     let aws_access_key_id = config.aws_access_key_id.clone();
@@ -89,9 +89,13 @@ impl SqsFairing {
 
     if let Some(messages) = response.messages {
       for message in messages {
-        match handler.handle(&message, profile).await? {
-          QueueHandlerOutcome::IgnoreEvent => return Ok(()),
-          QueueHandlerOutcome::Success => (),
+        match handler.handle(&message).await {
+          Err(QueueHandlerError::Ignorable(e)) => {
+            if profile == PRODUCTION_PROFILE {
+              return Err(e.into());
+            }
+          }
+          _ => (),
         };
 
         let delete_request = DeleteMessageRequest {
@@ -99,7 +103,7 @@ impl SqsFairing {
           receipt_handle: message
             .receipt_handle
             .clone()
-            .ok_or(anyhow::anyhow!("Receipt handle missing from message"))?,
+            .ok_or(anyhow!("Receipt handle missing from message"))?,
         };
 
         client.delete_message(delete_request).await?;
@@ -121,5 +125,15 @@ impl Fairing for SqsFairing {
 
   async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
     self.init(rocket).await;
+  }
+}
+
+impl From<diesel::result::Error> for QueueHandlerError {
+  fn from(e: diesel::result::Error) -> Self {
+    if e == diesel::result::Error::NotFound {
+      QueueHandlerError::Ignorable(e.into())
+    } else {
+      anyhow::Error::from(e).into()
+    }
   }
 }

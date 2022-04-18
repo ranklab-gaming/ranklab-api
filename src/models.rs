@@ -6,10 +6,10 @@ mod recording;
 mod review;
 mod user;
 
-pub use coach::Coach;
-pub use comment::Comment;
+pub use coach::{Coach, CoachChangeset};
+pub use comment::{Comment, CommentChangeset};
 pub use game::Game;
-pub use player::Player;
-pub use recording::Recording;
-pub use review::Review;
+pub use player::{Player, PlayerChangeset};
+pub use recording::{Recording, RecordingChangeset};
+pub use review::{Review, ReviewChangeset};
 pub use user::User;

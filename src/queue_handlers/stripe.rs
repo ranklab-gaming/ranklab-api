@@ -1,11 +1,12 @@
 use crate::config::Config;
-use crate::fairings::sqs::{QueueHandler, QueueHandlerOutcome};
+use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
 use crate::stripe::webhook_events::{Webhook, WebhookEvent};
 use serde::Deserialize;
 mod connect;
 mod direct;
 use crate::clients::StripeClient;
+use anyhow::anyhow;
 pub use connect::Connect;
 pub use direct::Direct;
 
@@ -26,12 +27,7 @@ pub trait StripeEventHandler {
   fn new(db_conn: DbConn, config: Config, client: StripeClient) -> Self;
   fn url(&self) -> String;
   fn secret(&self) -> String;
-
-  async fn handle_event(
-    &self,
-    webhook: WebhookEvent,
-    profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<()>;
+  async fn handle_event(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError>;
 }
 
 pub struct StripeHandler<T: StripeEventHandler> {
@@ -52,31 +48,27 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
     self.handler.url()
   }
 
-  async fn handle(
-    &self,
-    message: &rusoto_sqs::Message,
-    profile: &rocket::figment::Profile,
-  ) -> anyhow::Result<QueueHandlerOutcome> {
+  async fn handle(&self, message: &rusoto_sqs::Message) -> Result<(), QueueHandlerError> {
     let body = message
       .body
       .clone()
-      .ok_or(anyhow::anyhow!("No body in message"))?;
+      .ok_or(anyhow!("No body found in sqs message"))?;
 
-    let message_body: SqsMessageBody = serde_json::from_str(&body)?;
+    let message_body: SqsMessageBody = serde_json::from_str(&body).map_err(anyhow::Error::from)?;
 
     let webhook = Webhook::construct_event(
       message_body.body.as_str(),
       message_body.headers.stripe_signature.as_str(),
       self.handler.secret().as_str(),
-    )?;
+    )
+    .map_err(anyhow::Error::from)?;
 
-    if profile == rocket::Config::RELEASE_PROFILE && !webhook.livemode {
-      return Err(anyhow::anyhow!("Received webhook in test mode").into());
+    if !webhook.livemode {
+      return Err(QueueHandlerError::Ignorable(anyhow!(
+        "Received webhook in test mode"
+      )));
     }
 
-    match self.handler.handle_event(webhook, profile).await {
-      Ok(_) => Ok(QueueHandlerOutcome::Success),
-      Err(e) => Err(e),
-    }
+    self.handler.handle_event(webhook).await
   }
 }
