@@ -1,4 +1,4 @@
 #!/bin/sh
 
-./bin/test-prepare
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/app_test diesel database reset
 ROCKET_PROFILE=test cargo run
