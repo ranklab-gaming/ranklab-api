@@ -1,9 +1,4 @@
-use rocket::figment::Profile;
 use serde::{Deserialize, Serialize};
-
-pub const DEVELOPMENT_PROFILE: Profile = Profile::const_new("development");
-pub const TEST_PROFILE: Profile = Profile::const_new("test");
-pub const PRODUCTION_PROFILE: Profile = Profile::const_new("production");
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {

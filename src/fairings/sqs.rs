@@ -1,5 +1,5 @@
 use crate::aws;
-use crate::config::{Config, PRODUCTION_PROFILE};
+use crate::config::Config;
 use crate::guards::DbConn;
 use crate::queue_handlers::stripe::{Connect, Direct};
 use crate::queue_handlers::{S3BucketHandler, StripeHandler};
@@ -91,7 +91,7 @@ impl SqsFairing {
       for message in messages {
         match handler.handle(&message).await {
           Err(QueueHandlerError::Ignorable(e)) => {
-            if profile == PRODUCTION_PROFILE {
+            if profile == rocket::config::Config::RELEASE_PROFILE {
               return Err(e.into());
             }
           }

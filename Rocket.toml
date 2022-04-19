@@ -1,4 +1,4 @@
-[development.databases.default]
+[debug.databases.default]
 url = "postgres://postgres:postgres@postgres:5432/app"
 
 [test.databases.default]

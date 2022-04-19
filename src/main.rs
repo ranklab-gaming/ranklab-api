@@ -40,10 +40,16 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 fn rocket() -> Rocket<Build> {
-  let profile_name = env::var("ROCKET_PROFILE").unwrap_or_else(|_| "development".to_string());
+  let profile_name = env::var("ROCKET_PROFILE").unwrap_or("debug".to_string());
   let profile = Profile::new(&profile_name);
 
-  dotenv::from_filename(format!(".env.{}", profile.as_str())).ok();
+  let env_suffix = if profile == rocket::config::Config::DEBUG_PROFILE {
+    "development".into()
+  } else {
+    profile.as_str()
+  };
+
+  dotenv::from_filename(format!(".env.{}", env_suffix)).ok();
   dotenv::dotenv().ok();
 
   let mut figment = rocket::Config::figment()
