@@ -17,15 +17,15 @@ use thiserror::Error;
 pub enum AuthError {
   #[error("missing authorization header")]
   Missing,
-  #[error("invalid token")]
-  Invalid,
+  #[error("invalid token: {0}")]
+  Invalid(String),
 }
 
 impl From<AuthError> for (Status, AuthError) {
   fn from(error: AuthError) -> Self {
     match error {
       AuthError::Missing => (Status::Unauthorized, error),
-      AuthError::Invalid => (Status::BadRequest, error),
+      AuthError::Invalid(_) => (Status::BadRequest, error),
     }
   }
 }
@@ -109,10 +109,18 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
 
   let captures = jwt_regexp
     .captures(authorization)
-    .ok_or(AuthError::Invalid)?;
+    .ok_or(AuthError::Invalid(
+      "malformed authorization header".to_string(),
+    ))?;
 
-  let jwt = captures.name("jwt").ok_or(AuthError::Invalid)?.as_str();
-  let header = decode_header(jwt).map_err(|_| AuthError::Invalid)?;
+  let jwt = captures
+    .name("jwt")
+    .ok_or(AuthError::Invalid("jwt not found in header".to_string()))?
+    .as_str();
+
+  let header =
+    decode_header(jwt).map_err(|_| AuthError::Invalid("invalid jwt header".to_string()))?;
+
   let kid = header.kid.unwrap();
   let jwk = jwks.keys.iter().find(|jwk| jwk.kid == kid).unwrap();
   let validation = Validation::new(Algorithm::RS256);
@@ -122,7 +130,7 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
     &DecodingKey::from_rsa_components(&jwk.n, &jwk.e).unwrap(),
     &validation,
   )
-  .map_err(|_| AuthError::Invalid)
+  .map_err(|_| AuthError::Invalid("invalid jwt".to_string()))
   .map(|data| data.claims)
 }
 
@@ -133,7 +141,7 @@ impl Auth<Coach> {
     let coach = db_conn
       .run(|conn| coaches.filter(auth0_id.eq(jwt.sub)).first(conn))
       .await
-      .map_err(|_| AuthError::Invalid)?;
+      .map_err(|_| AuthError::Invalid("coach not found".to_string()))?;
 
     Ok(Auth(coach))
   }
@@ -146,7 +154,7 @@ impl Auth<Player> {
     let player = db_conn
       .run(|conn| players.filter(auth0_id.eq(jwt.sub)).first(conn))
       .await
-      .map_err(|_| AuthError::Invalid)?;
+      .map_err(|_| AuthError::Invalid("player not found".to_string()))?;
 
     Ok(Auth(player))
   }
