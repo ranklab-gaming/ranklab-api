@@ -4,8 +4,9 @@ use std::net::SocketAddr;
 use crate::config::Config;
 use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn, Stripe};
-use crate::models::{Coach, Player, Review};
+use crate::models::{Coach, Player, Review, ReviewChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::schema::reviews;
 use crate::stripe::order::{
   CreateOrder, CreateOrderLineItem, CreateOrderLineItemPriceData, CreateOrderPayment, Order,
   OrderId, OrderPaymentSettings, OrderPaymentSettingsPaymentMethodType, SubmitOrder,
@@ -26,9 +27,7 @@ use uuid::Uuid;
 pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<ReviewView>> {
   let reviews: Vec<ReviewView> = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::*;
-      reviews
-        .filter(player_id.eq(auth.0.id))
+      Review::filter_for_player(&auth.0.id)
         .load::<Review>(conn)
         .unwrap()
     })
@@ -49,12 +48,7 @@ pub async fn get(
   stripe: Stripe,
 ) -> QueryResponse<ReviewView> {
   let review = db_conn
-    .run(move |conn| {
-      use crate::schema::reviews::dsl::{id as review_id, player_id, reviews};
-      reviews
-        .filter(player_id.eq(auth.0.id).and(review_id.eq(id)))
-        .first::<Review>(conn)
-    })
+    .run(move |conn| Review::find_for_player(&id, &auth.0.id).first::<Review>(conn))
     .await?;
 
   let stripe_order_id = review.stripe_order_id.parse::<OrderId>().unwrap();
@@ -96,16 +90,15 @@ pub async fn create(
 
   let review = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::*;
-
-      diesel::insert_into(reviews)
-        .values((
-          recording_id.eq(body_recording_id),
-          player_id.eq(auth_player_id),
-          title.eq(body.title.clone()),
-          notes.eq(body.notes.clone()),
-          game_id.eq(body.game_id.clone()),
-        ))
+      diesel::insert_into(reviews::table)
+        .values(
+          ReviewChangeset::default()
+            .recording_id(body_recording_id)
+            .player_id(auth_player_id)
+            .title(body.title.clone())
+            .notes(body.notes.clone())
+            .game_id(body.game_id.clone()),
+        )
         .get_result::<Review>(conn)
         .unwrap()
     })
@@ -194,10 +187,8 @@ pub async fn create(
 
   let review = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::*;
-
       diesel::update(&review)
-        .set(stripe_order_id.eq(order_id.to_string()))
+        .set(ReviewChangeset::default().stripe_order_id(order_id.to_string()))
         .get_result::<Review>(conn)
         .unwrap()
     })
@@ -223,18 +214,8 @@ pub async fn update(
 ) -> MutationResponse<ReviewView> {
   let auth_id = auth.0.id.clone();
 
-  let existing_review = db_conn
-    .run(move |conn| {
-      use crate::schema::reviews::dsl::{id as review_id, player_id, reviews, state};
-
-      reviews
-        .filter(
-          review_id
-            .eq(id)
-            .and(state.eq(ReviewState::Published).or(player_id.eq(auth_id))),
-        )
-        .first::<Review>(conn)
-    })
+  let existing_review: Review = db_conn
+    .run(move |conn| Review::find_for_player(&id, &auth_id).first(conn))
     .await?;
 
   if !review.accepted {
@@ -243,10 +224,8 @@ pub async fn update(
 
   let updated_review = db_conn
     .run(move |conn| {
-      use crate::schema::reviews::dsl::state;
-
       diesel::update(&existing_review)
-        .set(state.eq(ReviewState::Accepted))
+        .set(ReviewChangeset::default().state(ReviewState::Accepted))
         .get_result::<Review>(conn)
         .unwrap()
     })
@@ -254,15 +233,8 @@ pub async fn update(
 
   let review_coach_id = updated_review.coach_id.unwrap().clone();
 
-  let coach = db_conn
-    .run(move |conn| {
-      use crate::schema::coaches::dsl::{coaches, id as coach_id};
-
-      coaches
-        .filter(coach_id.eq(review_coach_id))
-        .first::<Coach>(conn)
-        .unwrap()
-    })
+  let coach: Coach = db_conn
+    .run(move |conn| Coach::find(&review_coach_id).first(conn).unwrap())
     .await;
 
   let stripe_order_id = updated_review.stripe_order_id.parse::<OrderId>().unwrap();

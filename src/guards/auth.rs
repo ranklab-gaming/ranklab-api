@@ -136,10 +136,8 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
 
 impl Auth<Coach> {
   async fn from_jwt(db_conn: DbConn, jwt: Claims) -> Result<Self, AuthError> {
-    use crate::schema::coaches::dsl::*;
-
     let coach = db_conn
-      .run(|conn| coaches.filter(auth0_id.eq(jwt.sub)).first(conn))
+      .run(|conn| Coach::find_by_auth0_id(jwt.sub).first(conn))
       .await
       .map_err(|_| AuthError::Invalid("coach not found".to_string()))?;
 
@@ -149,10 +147,8 @@ impl Auth<Coach> {
 
 impl Auth<Player> {
   async fn from_jwt(db_conn: DbConn, jwt: Claims) -> Result<Self, AuthError> {
-    use crate::schema::players::dsl::*;
-
     let player = db_conn
-      .run(|conn| players.filter(auth0_id.eq(jwt.sub)).first(conn))
+      .run(|conn| Player::find_by_auth0_id(jwt.sub).first(conn))
       .await
       .map_err(|_| AuthError::Invalid("player not found".to_string()))?;
 

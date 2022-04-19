@@ -35,6 +35,19 @@ impl Review {
     reviews::table.filter(reviews::stripe_order_id.eq(order_id.to_string()))
   }
 
+  pub fn find_for_player(
+    id: &Uuid,
+    player_id: &Uuid,
+  ) -> Filter<reviews::table, And<Eq<reviews::id, Uuid>, Eq<reviews::player_id, Uuid>>> {
+    reviews::table.filter(reviews::id.eq(*id).and(reviews::player_id.eq(*player_id)))
+  }
+
+  pub fn filter_for_player(
+    player_id: &Uuid,
+  ) -> Filter<reviews::table, Eq<reviews::player_id, Uuid>> {
+    reviews::table.filter(reviews::player_id.eq(*player_id))
+  }
+
   pub fn filter_for_coach(coach: &Coach, pending: Option<bool>) -> reviews::BoxedQuery<'_, Pg> {
     let mut games_expression: Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Bool>> =
       Box::new(sql::<Bool>("false"));

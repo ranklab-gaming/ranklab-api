@@ -28,6 +28,12 @@ impl Comment {
     comments::table.filter(comments::id.eq(*id).and(comments::coach_id.eq(*coach_id)))
   }
 
+  pub fn filter_by_review_id(
+    review_id: &Uuid,
+  ) -> Filter<comments::table, Eq<comments::review_id, Uuid>> {
+    comments::table.filter(comments::review_id.eq(*review_id))
+  }
+
   pub fn filter_by_review_for_coach(
     review_id: &Uuid,
     coach_id: &Uuid,

@@ -1,6 +1,8 @@
 use crate::data_types::UserGame;
 use crate::schema::players;
 use derive_builder::Builder;
+use diesel::dsl::FindBy;
+use diesel::prelude::*;
 use uuid::Uuid;
 
 #[derive(Builder, Queryable, Identifiable)]
@@ -17,4 +19,10 @@ pub struct Player {
   pub id: Uuid,
   pub name: String,
   pub stripe_customer_id: Option<String>,
+}
+
+impl Player {
+  pub fn find_by_auth0_id(auth0_id: String) -> FindBy<players::table, players::auth0_id, String> {
+    players::table.filter(players::auth0_id.eq(auth0_id))
+  }
 }

@@ -19,24 +19,13 @@ pub async fn list(
   auth: Auth<Player>,
   db_conn: DbConn,
 ) -> QueryResponse<Vec<CommentView>> {
-  let review = db_conn
-    .run(move |conn| {
-      use crate::schema::reviews::dsl::*;
-      reviews
-        .filter(player_id.eq(auth.0.id).and(id.eq(params.review_id)))
-        .first::<Review>(conn)
-    })
+  let review: Review = db_conn
+    .run(move |conn| Review::find_for_player(&params.review_id, &auth.0.id).first(conn))
     .await?;
 
   let comments: Vec<CommentView> = db_conn
-    .run(move |conn| {
-      use crate::schema::comments::dsl::*;
-      comments
-        .filter(review_id.eq(review.id))
-        .load::<Comment>(conn)
-        .unwrap()
-    })
-    .await
+    .run(move |conn| Comment::filter_by_review_id(&review.id).load::<Comment>(conn))
+    .await?
     .into_iter()
     .map(Into::into)
     .collect();

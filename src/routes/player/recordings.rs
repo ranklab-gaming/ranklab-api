@@ -1,7 +1,8 @@
 use crate::config::Config;
 use crate::guards::{Auth, DbConn};
-use crate::models::{Player, Recording};
+use crate::models::{Player, Recording, RecordingChangeset};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
+use crate::schema::recordings;
 use crate::views::RecordingView;
 use diesel::prelude::*;
 use lazy_static::lazy_static;
@@ -69,15 +70,14 @@ pub async fn create(
 
   let recording: RecordingView = db_conn
     .run(move |conn| {
-      use crate::schema::recordings::dsl::*;
-
-      diesel::insert_into(recordings)
-        .values((
-          player_id.eq(auth.0.id.clone()),
-          upload_url.eq(url),
-          video_key.eq(key),
-          mime_type.eq(recording.mime_type.clone()),
-        ))
+      diesel::insert_into(recordings::table)
+        .values(
+          RecordingChangeset::default()
+            .player_id(auth.0.id.clone())
+            .upload_url(url)
+            .video_key(key)
+            .mime_type(recording.mime_type.clone()),
+        )
         .get_result::<Recording>(conn)
         .unwrap()
     })
@@ -91,12 +91,7 @@ pub async fn create(
 #[get("/player/recordings/<id>")]
 pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<RecordingView> {
   let recording: RecordingView = db_conn
-    .run(move |conn| {
-      use crate::schema::recordings::dsl::{id as recording_id, player_id, recordings};
-      recordings
-        .filter(player_id.eq(auth.0.id).and(recording_id.eq(id)))
-        .first::<Recording>(conn)
-    })
+    .run(move |conn| Recording::find_for_player(&id, &auth.0.id).first::<Recording>(conn))
     .await?
     .into();
 
