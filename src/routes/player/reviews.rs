@@ -6,7 +6,7 @@ use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn, Stripe};
 use crate::models::{Coach, Player, Review, ReviewChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
-use crate::schema::reviews;
+use crate::schema::{coaches, reviews};
 use crate::stripe::order::{
   CreateOrder, CreateOrderLineItem, CreateOrderLineItemPriceData, CreateOrderPayment, Order,
   OrderId, OrderPaymentSettings, OrderPaymentSettingsPaymentMethodType, SubmitOrder,
@@ -234,7 +234,7 @@ pub async fn update(
   let review_coach_id = updated_review.coach_id.unwrap().clone();
 
   let coach: Coach = db_conn
-    .run(move |conn| Coach::find(&review_coach_id).first(conn).unwrap())
+    .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
     .await;
 
   let stripe_order_id = updated_review.stripe_order_id.parse::<OrderId>().unwrap();

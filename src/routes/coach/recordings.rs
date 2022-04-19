@@ -1,6 +1,7 @@
 use crate::guards::{Auth, DbConn};
 use crate::models::{Coach, Recording, Review};
 use crate::response::{QueryResponse, Response};
+use crate::schema::recordings;
 use crate::views::RecordingView;
 use diesel::prelude::*;
 use rocket_okapi::openapi;
@@ -14,7 +15,11 @@ pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<
     .await?;
 
   let recording: RecordingView = db_conn
-    .run(move |conn| Recording::find(&review.recording_id).get_result::<Recording>(conn))
+    .run(move |conn| {
+      recordings::table
+        .find(&review.recording_id)
+        .get_result::<Recording>(conn)
+    })
     .await?
     .into();
 

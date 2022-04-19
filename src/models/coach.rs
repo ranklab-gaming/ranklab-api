@@ -1,7 +1,7 @@
 use crate::data_types::UserGame;
 use crate::schema::coaches;
 use derive_builder::Builder;
-use diesel::helper_types::{Find, FindBy, Select};
+use diesel::helper_types::FindBy;
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -27,10 +27,6 @@ pub struct Coach {
 }
 
 impl Coach {
-  pub fn find(id: &Uuid) -> Find<coaches::table, Uuid> {
-    coaches::table.find(*id)
-  }
-
   pub fn find_by_stripe_account_id<T: ToString>(
     stripe_account_id: &T,
   ) -> FindBy<coaches::table, coaches::stripe_account_id, Option<String>> {
@@ -39,9 +35,5 @@ impl Coach {
 
   pub fn find_by_auth0_id(auth0_id: String) -> FindBy<coaches::table, coaches::auth0_id, String> {
     coaches::table.filter(coaches::auth0_id.eq(auth0_id))
-  }
-
-  pub fn all() -> Select<coaches::table, <coaches::table as Table>::AllColumns> {
-    coaches::table.select(coaches::all_columns)
   }
 }

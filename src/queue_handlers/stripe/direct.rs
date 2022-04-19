@@ -6,6 +6,7 @@ use crate::emails::{Email, Recipient};
 use crate::fairings::sqs::QueueHandlerError;
 use crate::guards::DbConn;
 use crate::models::{Coach, Review, ReviewChangeset};
+use crate::schema::coaches;
 use crate::stripe::webhook_events::{
   EventObject, EventObjectExt, EventType, EventTypeExt, WebhookEvent,
 };
@@ -39,7 +40,7 @@ impl Direct {
 
     let coaches: Vec<Coach> = self
       .db_conn
-      .run(move |conn| Coach::all().load(conn))
+      .run(move |conn| coaches::table.select(coaches::all_columns).load(conn))
       .await?;
 
     let email = Email::new(

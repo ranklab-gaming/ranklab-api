@@ -1,6 +1,6 @@
 use crate::schema::recordings;
 use derive_builder::Builder;
-use diesel::dsl::{And, Eq, Filter, Find, FindBy};
+use diesel::dsl::{And, Eq, Filter, FindBy};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -36,9 +36,5 @@ impl Recording {
         .eq(*id)
         .and(recordings::player_id.eq(*player_id)),
     )
-  }
-
-  pub fn find(id: &Uuid) -> Find<recordings::table, Uuid> {
-    recordings::table.find(*id)
   }
 }
