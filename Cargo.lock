@@ -370,7 +370,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6ee87af31d84ef885378aebca32be3d682b0e0dc119d5b4860a2c5bb5046730"
 dependencies = [
  "serde",
- "uuid",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -448,7 +448,7 @@ dependencies = [
  "diesel_derives",
  "pq-sys",
  "r2d2",
- "uuid",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -1560,7 +1560,7 @@ dependencies = [
  "sha2 0.10.2",
  "smol_str",
  "thiserror",
- "uuid",
+ "uuid 1.0.0",
  "validator",
 ]
 
@@ -1725,7 +1725,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util 0.6.9",
  "ubyte",
- "uuid",
+ "uuid 0.8.2",
  "version_check",
  "yansi",
 ]
@@ -1772,7 +1772,7 @@ dependencies = [
  "time 0.2.27",
  "tokio",
  "uncased",
- "uuid",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -2003,7 +2003,7 @@ dependencies = [
  "schemars_derive",
  "serde",
  "serde_json",
- "uuid",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -2151,7 +2151,7 @@ dependencies = [
  "thiserror",
  "time 0.3.9",
  "url",
- "uuid",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -2837,6 +2837,16 @@ name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+dependencies = [
+ "getrandom",
+ "serde",
+]
+
+[[package]]
+name = "uuid"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8cfcd319456c4d6ea10087ed423473267e1a071f3bc0aa89f80d60997843c6f0"
 dependencies = [
  "getrandom",
  "serde",
