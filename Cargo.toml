@@ -48,7 +48,7 @@ sha2 = "0.10.2"
 hex = "0.4.3"
 serde_path_to_error = "0.1.7"
 smol_str = "0.1.21"
-derive_builder = "0.11.1"
+derive_builder = "0.11.2"
 
 [profile.release]
 debug = true
