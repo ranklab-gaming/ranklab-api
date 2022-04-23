@@ -28,6 +28,8 @@ pub struct Review {
   pub stripe_order_id: String,
 }
 
+type BoxedExpression = Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Bool>>;
+
 impl Review {
   pub fn find_by_order_id<T: ToString>(
     order_id: &T,
@@ -49,8 +51,7 @@ impl Review {
   }
 
   pub fn filter_for_coach(coach: &Coach, pending: Option<bool>) -> reviews::BoxedQuery<'_, Pg> {
-    let mut games_expression: Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Bool>> =
-      Box::new(sql::<Bool>("false"));
+    let mut games_expression: BoxedExpression = Box::new(sql("false"));
 
     for game in coach.games.clone().into_iter() {
       games_expression = Box::new(
@@ -62,19 +63,21 @@ impl Review {
       );
     }
 
-    if pending.unwrap_or(false) {
-      reviews::table
-        .filter(
-          reviews::state
-            .eq(ReviewState::AwaitingReview)
-            .and(games_expression),
-        )
-        .into_boxed()
-    } else {
-      reviews::table
-        .filter(reviews::coach_id.eq(coach.id))
-        .into_boxed()
-    }
+    let pending_expression = Box::new(
+      reviews::state
+        .eq(ReviewState::AwaitingReview)
+        .and(games_expression),
+    );
+
+    let taken_expression = Box::new(reviews::coach_id.eq(coach.id));
+
+    let filter_expression: BoxedExpression = match pending {
+      Some(true) => pending_expression,
+      Some(false) => taken_expression,
+      None => Box::new(pending_expression.or(taken_expression)),
+    };
+
+    reviews::table.filter(filter_expression).into_boxed()
   }
 
   pub fn find_by_recording_for_coach(
