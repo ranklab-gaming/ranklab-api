@@ -16,5 +16,6 @@ RUN cargo build --release \
   && cp target/release/ranklab-api Rocket.toml Ranklab.toml /root/app \
   && rm -rf /usr/src/ranklab-api
 
+WORKDIR /root/app
 EXPOSE 8000
 ENTRYPOINT ["/root/app/ranklab-api"]
