@@ -1547,7 +1547,7 @@ dependencies = [
  "rocket_okapi",
  "rocket_sync_db_pools",
  "rusoto_core 0.48.0",
- "rusoto_credential 0.47.0",
+ "rusoto_credential 0.48.0",
  "rusoto_s3",
  "rusoto_sesv2",
  "rusoto_signature 0.47.0",
