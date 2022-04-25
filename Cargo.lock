@@ -1550,7 +1550,7 @@ dependencies = [
  "rusoto_credential 0.48.0",
  "rusoto_s3",
  "rusoto_sesv2",
- "rusoto_signature 0.47.0",
+ "rusoto_signature 0.48.0",
  "rusoto_sqs",
  "schemars",
  "sentry",
