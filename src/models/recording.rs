@@ -37,4 +37,10 @@ impl Recording {
         .and(recordings::player_id.eq(*player_id)),
     )
   }
+
+  pub fn filter_for_player(
+    player_id: &Uuid,
+  ) -> Filter<recordings::table, Eq<recordings::player_id, Uuid>> {
+    recordings::table.filter(recordings::player_id.eq(*player_id))
+  }
 }

@@ -33,6 +33,19 @@ pub struct CreateRecordingRequest {
 }
 
 #[openapi(tag = "Ranklab")]
+#[get("/player/recordings")]
+pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<RecordingView>> {
+  let recordings: Vec<RecordingView> = db_conn
+    .run(move |conn| Recording::filter_for_player(&auth.0.id).load::<Recording>(conn))
+    .await?
+    .into_iter()
+    .map(Into::into)
+    .collect();
+
+  Response::success(recordings)
+}
+
+#[openapi(tag = "Ranklab")]
 #[post("/player/recordings", data = "<recording>")]
 pub async fn create(
   config: &State<Config>,
