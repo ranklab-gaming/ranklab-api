@@ -5,7 +5,7 @@ authors = ["Matteo Depalo <matteo@depalo.me>"]
 edition = "2018"
 
 [dependencies]
-rocket = { version = "0.5.0-rc.2", features = ["json", "serde_json", "uuid"] }
+rocket = { version = "0.5.0-rc.1", features = ["json", "serde_json", "uuid"] }
 rusoto_core = "0.48.0"
 rusoto_s3 = "0.48.0"
 rusoto_credential = "0.48.0"
