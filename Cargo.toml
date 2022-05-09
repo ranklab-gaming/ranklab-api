@@ -40,7 +40,7 @@ anyhow = "1.0.57"
 hyper = "0.14.18"
 hyper-tls = "0.5.0"
 diesel-derive-enum = { version = "1.1.2", features = ["postgres"] }
-rocket_sync_db_pools = { version = "0.1.0-rc.1", features = [
+rocket_sync_db_pools = { version = "0.1.0-rc.2", features = [
   "diesel_postgres_pool",
 ] }
 hmac = "0.12.1"
