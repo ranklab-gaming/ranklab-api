@@ -23,7 +23,7 @@ jsonwebtoken = "8.1.0"
 thiserror = "1.0.31"
 validator = { version = "0.15.0", features = ["derive"] }
 rocket_okapi = { git = "https://github.com/GREsau/okapi", features = ["uuid"] }
-schemars = "0.8.9"
+schemars = "0.8.10"
 okapi = { git = "https://github.com/GREsau/okapi" }
 sentry = "0.25.0"
 dotenv = "0.15.0"
