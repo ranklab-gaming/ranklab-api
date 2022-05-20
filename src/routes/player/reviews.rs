@@ -96,7 +96,7 @@ pub async fn create(
             .recording_id(body_recording_id)
             .player_id(auth_player_id)
             .title(body.title.clone())
-            .notes(body.notes.clone())
+            .notes(ammonia::clean(&body.notes))
             .game_id(body.game_id.clone()),
         )
         .get_result::<Review>(conn)

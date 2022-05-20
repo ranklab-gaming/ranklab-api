@@ -50,7 +50,7 @@ pub async fn create(
       diesel::insert_into(comments::table)
         .values(
           CommentChangeset::default()
-            .body(comment.body.clone())
+            .body(ammonia::clean(&comment.body))
             .video_timestamp(comment.video_timestamp)
             .review_id(review.id)
             .coach_id(coach_id)
