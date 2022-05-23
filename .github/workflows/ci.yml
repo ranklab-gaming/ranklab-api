@@ -71,7 +71,7 @@ jobs:
         uses: docker/login-action@d398f07826957cd0a18ea1b059cf1207835e60bc
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: $
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push to ECR and Github Container Registry
         id: docker-build
