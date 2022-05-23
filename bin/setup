@@ -2,6 +2,8 @@
 set -e
 
 sudo chown -R vscode .
+sudo apt-get update && sudo apt-get upgrade -y && sudo apt autoremove --purge -y
+cargo install-update -a
 aws s3 cp s3://ranklab-development-secrets/.env.api .env.development
 aws s3 cp s3://ranklab-test-secrets/.env.api .env.test --profile test
 ./bin/diesel setup
