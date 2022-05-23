@@ -35,7 +35,7 @@ rocket_okapi = {git = "https://github.com/GREsau/okapi", tag = "rocket-okapi-v0.
 rocket_sync_db_pools = {version = "=0.1.0-rc.1", features = [
   "diesel_postgres_pool",
 ]}
-rocket_sync_db_pools_codegen = "=0.1.0-rc.1"
+rocket_sync_db_pools_codegen = "=0.1.0-rc.2"
 rusoto_core = "=0.48.0"
 rusoto_credential = "=0.48.0"
 rusoto_s3 = "=0.48.0"
