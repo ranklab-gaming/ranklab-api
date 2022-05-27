@@ -10,6 +10,8 @@ table! {
         stripe_account_id -> Nullable<Text>,
         stripe_details_submitted -> Bool,
         stripe_payouts_enabled -> Bool,
+        updated_at -> Timestamp,
+        created_at -> Timestamp,
     }
 }
 
@@ -21,6 +23,8 @@ table! {
         id -> Uuid,
         review_id -> Uuid,
         video_timestamp -> Int4,
+        updated_at -> Timestamp,
+        created_at -> Timestamp,
     }
 }
 
@@ -32,6 +36,8 @@ table! {
         id -> Uuid,
         name -> Text,
         stripe_customer_id -> Nullable<Text>,
+        updated_at -> Timestamp,
+        created_at -> Timestamp,
     }
 }
 
@@ -43,6 +49,8 @@ table! {
         upload_url -> Text,
         uploaded -> Bool,
         video_key -> Text,
+        updated_at -> Timestamp,
+        created_at -> Timestamp,
     }
 }
 
@@ -61,6 +69,8 @@ table! {
         title -> Text,
         state -> ReviewStateMapping,
         stripe_order_id -> Text,
+        updated_at -> Timestamp,
+        created_at -> Timestamp,
     }
 }
 

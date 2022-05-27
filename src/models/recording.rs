@@ -18,6 +18,8 @@ pub struct Recording {
   pub upload_url: String,
   pub uploaded: bool,
   pub video_key: String,
+  pub updated_at: chrono::NaiveDateTime,
+  pub created_at: chrono::NaiveDateTime
 }
 
 impl Recording {

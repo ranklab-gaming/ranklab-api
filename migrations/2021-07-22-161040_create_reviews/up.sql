@@ -10,7 +10,10 @@ CREATE TABLE reviews (
     skill_level smallint NOT NULL DEFAULT 0,
     title text NOT NULL DEFAULT '',
     state review_state NOT NULL DEFAULT 'awaiting_payment',
-    stripe_order_id text NOT NULL DEFAULT ''
+    stripe_order_id text NOT NULL DEFAULT '',
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+SELECT diesel_manage_updated_at('reviews');
 CREATE INDEX reviews_recording_id_idx ON reviews (recording_id);

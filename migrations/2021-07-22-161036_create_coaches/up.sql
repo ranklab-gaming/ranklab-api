@@ -8,5 +8,9 @@ CREATE TABLE coaches (
     name text NOT NULL DEFAULT '',
     stripe_account_id text,
     stripe_details_submitted boolean NOT NULL DEFAULT false,
-    stripe_payouts_enabled boolean NOT NULL DEFAULT false
+    stripe_payouts_enabled boolean NOT NULL DEFAULT false,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+SELECT diesel_manage_updated_at('coaches');

@@ -26,6 +26,8 @@ pub struct Review {
   pub title: String,
   pub state: ReviewState,
   pub stripe_order_id: String,
+  pub updated_at: chrono::NaiveDateTime,
+  pub created_at: chrono::NaiveDateTime
 }
 
 type BoxedExpression = Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Bool>>;

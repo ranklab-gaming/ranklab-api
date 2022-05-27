@@ -19,6 +19,8 @@ pub struct Player {
   pub id: Uuid,
   pub name: String,
   pub stripe_customer_id: Option<String>,
+  pub updated_at: chrono::NaiveDateTime,
+  pub created_at: chrono::NaiveDateTime
 }
 
 impl Player {

@@ -12,6 +12,8 @@ pub struct RecordingView {
   pub upload_url: String,
   pub uploaded: bool,
   pub mime_type: String,
+  pub created_at: chrono::NaiveDateTime,
+  pub updated_at: chrono::NaiveDateTime,
 }
 
 impl From<Recording> for RecordingView {
@@ -23,6 +25,8 @@ impl From<Recording> for RecordingView {
       upload_url: recording.upload_url,
       uploaded: recording.uploaded,
       mime_type: recording.mime_type,
+      created_at: recording.created_at,
+      updated_at: recording.updated_at,
     }
   }
 }

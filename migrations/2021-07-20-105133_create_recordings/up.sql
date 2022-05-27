@@ -4,5 +4,9 @@ CREATE TABLE recordings (
     player_id uuid NOT NULL REFERENCES players(id),
     upload_url text NOT NULL DEFAULT '',
     uploaded boolean NOT NULL DEFAULT false,
-    video_key text NOT NULL DEFAULT ''
+    video_key text NOT NULL DEFAULT '',
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+SELECT diesel_manage_updated_at('recordings');
