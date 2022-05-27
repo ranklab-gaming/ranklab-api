@@ -18,6 +18,7 @@ use validator::Validate;
 pub struct CreatePlayerRequest {
   #[validate(length(min = 1))]
   name: String,
+  #[validate(length(min = 1))]
   games: Vec<UserGame>,
 }
 
