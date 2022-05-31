@@ -1,5 +1,5 @@
 use crate::data_types::ReviewState;
-use crate::models::Coach;
+use crate::models::{Coach, Recording};
 use crate::schema::reviews;
 use derive_builder::Builder;
 use diesel::dsl::{sql, And, Eq, Filter, FindBy, Or};
@@ -8,7 +8,8 @@ use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use uuid::Uuid;
 
-#[derive(Builder, Queryable, Identifiable)]
+#[derive(Builder, Queryable, Identifiable, Associations)]
+#[belongs_to(Recording)]
 #[builder(
   derive(AsChangeset, Insertable),
   pattern = "owned",
@@ -27,7 +28,7 @@ pub struct Review {
   pub state: ReviewState,
   pub stripe_order_id: String,
   pub updated_at: chrono::NaiveDateTime,
-  pub created_at: chrono::NaiveDateTime
+  pub created_at: chrono::NaiveDateTime,
 }
 
 type BoxedExpression = Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Bool>>;

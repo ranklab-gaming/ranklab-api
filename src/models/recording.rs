@@ -4,7 +4,7 @@ use diesel::dsl::{And, Eq, Filter, FindBy};
 use diesel::prelude::*;
 use uuid::Uuid;
 
-#[derive(Builder, Queryable, Identifiable)]
+#[derive(Builder, Queryable, Identifiable, Clone)]
 #[builder(
   derive(AsChangeset, Insertable),
   pattern = "owned",
@@ -19,7 +19,7 @@ pub struct Recording {
   pub uploaded: bool,
   pub video_key: String,
   pub updated_at: chrono::NaiveDateTime,
-  pub created_at: chrono::NaiveDateTime
+  pub created_at: chrono::NaiveDateTime,
 }
 
 impl Recording {

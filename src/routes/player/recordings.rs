@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::guards::{Auth, DbConn};
-use crate::models::{Player, Recording, RecordingChangeset};
+use crate::models::{Player, Recording, RecordingChangeset, Review};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::schema::recordings;
 use crate::views::RecordingView;
@@ -35,14 +35,29 @@ pub struct CreateRecordingRequest {
 #[openapi(tag = "Ranklab")]
 #[get("/player/recordings")]
 pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<RecordingView>> {
-  let recordings: Vec<RecordingView> = db_conn
+  let recordings: Vec<Recording> = db_conn
     .run(move |conn| Recording::filter_for_player(&auth.0.id).load::<Recording>(conn))
-    .await?
+    .await?;
+
+  let review_recordings = recordings.clone();
+
+  let reviews: Vec<Review> = db_conn
+    .run(move |conn| Review::belonging_to(&review_recordings).load(conn))
+    .await?;
+
+  let recording_views: Vec<RecordingView> = recordings
     .into_iter()
-    .map(Into::into)
+    .map(|recording| {
+      RecordingView::new(
+        recording.clone(),
+        reviews
+          .iter()
+          .find(|review| review.recording_id == recording.id),
+      )
+    })
     .collect();
 
-  Response::success(recordings)
+  Response::success(recording_views)
 }
 
 #[openapi(tag = "Ranklab")]
