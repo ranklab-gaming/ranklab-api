@@ -13,16 +13,17 @@
   "remoteUser": "vscode",
   "extensions": [
     "esbenp.prettier-vscode",
-    "matklad.rust-analyzer",
+    "rust-lang.rust-analyzer",
     "vadimcn.vscode-lldb",
     "github.vscode-pull-request-github",
     "eamodio.gitlens",
-    "github.copilot"
+    "github.copilot",
+    "serayuzgur.crates"
   ],
   "settings": {
     "editor.codeLens": false,
     "[rust]": {
-      "editor.defaultFormatter": "matklad.rust-analyzer"
+      "editor.defaultFormatter": "rust-lang.rust-analyzer"
     },
     "editor.detectIndentation": false,
     "editor.formatOnSave": true,

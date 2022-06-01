@@ -1,6 +1,7 @@
 use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn};
 use crate::models::{Coach, Review, ReviewChangeset};
+use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::views::ReviewView;
 use diesel::prelude::*;
@@ -14,6 +15,7 @@ use validator::Validate;
 #[derive(FromForm, JsonSchema)]
 pub struct ListReviewsQuery {
   pending: Option<bool>,
+  page: Option<i64>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -22,19 +24,22 @@ pub async fn list(
   auth: Auth<Coach>,
   db_conn: DbConn,
   params: ListReviewsQuery,
-) -> QueryResponse<Vec<ReviewView>> {
-  let reviews: Vec<ReviewView> = db_conn
+) -> QueryResponse<PaginatedResult<ReviewView>> {
+  let (reviews, total_pages): (Vec<Review>, i64) = db_conn
     .run(move |conn| {
       Review::filter_for_coach(&auth.0, params.pending)
-        .load::<Review>(conn)
+        .paginate(params.page.unwrap_or(1))
+        .load_and_count_pages::<Review>(conn)
         .unwrap()
     })
-    .await
+    .await;
+
+  let review_views = reviews
     .into_iter()
     .map(|review| ReviewView::from(review, None))
     .collect();
 
-  Response::success(reviews)
+  Response::success((review_views, total_pages).into())
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]

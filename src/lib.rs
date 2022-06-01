@@ -18,6 +18,7 @@ pub mod fairings;
 pub mod games;
 pub mod guards;
 pub mod models;
+pub mod pagination;
 pub mod queue_handlers;
 pub mod response;
 pub mod routes;

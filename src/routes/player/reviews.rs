@@ -5,6 +5,7 @@ use crate::config::Config;
 use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn, Stripe};
 use crate::models::{Coach, Player, Review, ReviewChangeset};
+use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::{coaches, reviews};
 use crate::stripe::order::{
@@ -23,20 +24,27 @@ use stripe::Expandable;
 use uuid::Uuid;
 
 #[openapi(tag = "Ranklab")]
-#[get("/player/reviews")]
-pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<ReviewView>> {
-  let reviews: Vec<ReviewView> = db_conn
+#[get("/player/reviews?<page>")]
+pub async fn list(
+  page: Option<i64>,
+  auth: Auth<Player>,
+  db_conn: DbConn,
+) -> QueryResponse<PaginatedResult<ReviewView>> {
+  let (reviews, total_pages): (Vec<Review>, i64) = db_conn
     .run(move |conn| {
       Review::filter_for_player(&auth.0.id)
-        .load::<Review>(conn)
+        .paginate(page.unwrap_or(1))
+        .load_and_count_pages::<Review>(conn)
         .unwrap()
     })
-    .await
+    .await;
+
+  let review_views = reviews
     .into_iter()
     .map(|review| ReviewView::from(review, None))
     .collect();
 
-  Response::success(reviews)
+  Response::success((review_views, total_pages).into())
 }
 
 #[openapi(tag = "Ranklab")]
