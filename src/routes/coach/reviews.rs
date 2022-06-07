@@ -5,6 +5,7 @@ use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::views::ReviewView;
 use diesel::prelude::*;
+use diesel::sql_types::Bool;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -28,6 +29,17 @@ pub async fn list(
   let (reviews, total_pages): (Vec<Review>, i64) = db_conn
     .run(move |conn| {
       Review::filter_for_coach(&auth.0, params.pending)
+        .order(diesel::dsl::sql::<Bool>(
+          "case \"state\"
+            when 'awaiting_payment' then 1
+            when 'awaiting_review' then 2
+            when 'draft' then 3
+            when 'published' then 4
+            when 'accepted' then 5
+            when 'refunded' then 5
+          end,
+          created_at desc",
+        ))
         .paginate(params.page.unwrap_or(1))
         .load_and_count_pages::<Review>(conn)
         .unwrap()
