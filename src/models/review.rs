@@ -2,7 +2,7 @@ use crate::data_types::ReviewState;
 use crate::models::{Coach, Recording};
 use crate::schema::reviews;
 use derive_builder::Builder;
-use diesel::dsl::{sql, And, Eq, Filter, FindBy, Or};
+use diesel::dsl::{any, sql, And, Eq, Filter, FindBy, Or};
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
@@ -53,7 +53,7 @@ impl Review {
     reviews::table.filter(reviews::player_id.eq(*player_id))
   }
 
-  pub fn filter_for_coach(coach: &Coach, pending: Option<bool>) -> reviews::BoxedQuery<'_, Pg> {
+  pub fn filter_for_coach(coach: &Coach) -> reviews::BoxedQuery<'_, Pg> {
     let mut games_expression: BoxedExpression = Box::new(sql("false"));
 
     for game in coach.games.clone().into_iter() {
@@ -66,21 +66,26 @@ impl Review {
       );
     }
 
-    let pending_expression = Box::new(
-      reviews::state
-        .eq(ReviewState::AwaitingReview)
-        .and(games_expression),
-    );
-
-    let taken_expression = Box::new(reviews::coach_id.eq(coach.id));
-
-    let filter_expression: BoxedExpression = match pending {
-      Some(true) => pending_expression,
-      Some(false) => taken_expression,
-      None => Box::new(pending_expression.or(taken_expression)),
-    };
-
-    reviews::table.filter(filter_expression).into_boxed()
+    reviews::table
+      .filter(
+        reviews::state
+          .eq(any(vec![
+            ReviewState::AwaitingReview,
+            ReviewState::Draft,
+            ReviewState::Published,
+          ]))
+          .and(games_expression)
+          .or(reviews::coach_id.eq(coach.id)),
+      )
+      .order(diesel::dsl::sql::<Bool>(
+        "case \"state\"
+        when 'awaiting_review' then 1
+        when 'draft' then 2
+        when 'published' then 3
+      end,
+      created_at desc",
+      ))
+      .into_boxed()
   }
 
   pub fn find_by_recording_for_coach(
