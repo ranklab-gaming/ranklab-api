@@ -7,15 +7,15 @@ version = "0.1.0"
 [dependencies]
 ammonia = "=3.2.0"
 anyhow = "=1.0.57"
-async-stripe = {git = "https://github.com/ranklab-gaming/async-stripe", rev = "23163682e48e8da1337bb99229f410f931620089", features = [
+async-stripe = { git = "https://github.com/ranklab-gaming/async-stripe", rev = "23163682e48e8da1337bb99229f410f931620089", features = [
   "runtime-tokio-hyper",
   "checkout",
   "connect",
   "webhook-events",
-], default_features = false}
+], default_features = false }
 derive_builder = "=0.11.2"
-diesel = {version = "=1.4.8", features = ["uuidv07", "chrono"]}
-diesel-derive-enum = {version = "=1.1.2", features = ["postgres"]}
+diesel = { version = "=1.4.8", features = ["uuidv07", "chrono"] }
+diesel-derive-enum = { version = "=1.1.2", features = ["postgres"] }
 diesel_as_jsonb = "=0.1.3"
 diesel_migrations = "=1.4.0"
 dotenv = "=0.15.0"
@@ -26,15 +26,17 @@ hyper-tls = "=0.5.0"
 jsonwebtoken = "=8.1.0"
 lazy_static = "=1.4.0"
 mime_guess = "=2.0.4"
-okapi = {git = "https://github.com/GREsau/okapi", tag = "rocket-okapi-v0.8.0-rc.1"}
+okapi = { git = "https://github.com/GREsau/okapi", tag = "rocket-okapi-v0.8.0-rc.1" }
 regex = "=1.5.6"
-reqwest = {version = "=0.11.10", features = ["json"]}
-rocket = {version = "=0.5.0-rc.1", features = ["json", "serde_json", "uuid"]}
+reqwest = { version = "=0.11.10", features = ["json"] }
+rocket = { version = "=0.5.0-rc.1", features = ["json", "serde_json", "uuid"] }
 rocket_http = "=0.5.0-rc.1"
-rocket_okapi = {git = "https://github.com/GREsau/okapi", tag = "rocket-okapi-v0.8.0-rc.1", features = ["uuid"]}
-rocket_sync_db_pools = {version = "=0.1.0-rc.1", features = [
+rocket_okapi = { git = "https://github.com/GREsau/okapi", tag = "rocket-okapi-v0.8.0-rc.1", features = [
+  "uuid",
+] }
+rocket_sync_db_pools = { version = "=0.1.0-rc.1", features = [
   "diesel_postgres_pool",
-]}
+] }
 rocket_sync_db_pools_codegen = "=0.1.0-rc.1"
 rusoto_core = "=0.48.0"
 rusoto_credential = "=0.48.0"
@@ -50,6 +52,6 @@ serde_path_to_error = "=0.1.7"
 sha2 = "=0.10.2"
 smol_str = "=0.1.23"
 thiserror = "=1.0.31"
-uuid = {version = "=0.8.2", features = ["v4", "serde"]}
-validator = {version = "=0.15.0", features = ["derive"]}
+uuid = { version = "=0.8.2", features = ["v4", "serde"] }
+validator = { version = "=0.15.0", features = ["derive"] }
 chrono = "=0.4.19"

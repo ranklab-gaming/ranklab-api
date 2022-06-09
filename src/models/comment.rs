@@ -19,7 +19,7 @@ pub struct Comment {
   pub review_id: Uuid,
   pub video_timestamp: i32,
   pub updated_at: chrono::NaiveDateTime,
-  pub created_at: chrono::NaiveDateTime
+  pub created_at: chrono::NaiveDateTime,
 }
 
 impl Comment {

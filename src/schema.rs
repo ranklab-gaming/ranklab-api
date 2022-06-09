@@ -81,10 +81,4 @@ joinable!(reviews -> coaches (coach_id));
 joinable!(reviews -> players (player_id));
 joinable!(reviews -> recordings (recording_id));
 
-allow_tables_to_appear_in_same_query!(
-    coaches,
-    comments,
-    players,
-    recordings,
-    reviews,
-);
+allow_tables_to_appear_in_same_query!(coaches, comments, players, recordings, reviews,);
