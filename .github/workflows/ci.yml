@@ -1,7 +1,7 @@
 name: ci
 on: [push]
 jobs:
-  build_and_test:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,27 +19,17 @@ jobs:
     runs-on: ubuntu-latest
     env:
       app-name: ranklab-api-production
-      buildx-cache: /tmp/.buildx-cache
     if: github.ref == 'refs/heads/master'
-    needs: build_and_test
+    needs: build-and-test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Set up Docker buildx
-        uses: docker/setup-buildx-action@v2
       - name: Set up Rust cache
         uses: Swatinem/rust-cache@v1
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           cache: pip
-      - name: Set up Docker buildx cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.buildx-cache }}
-          key: buildx-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            buildx-${{ runner.os }}-
       - name: Install pip requirements
         run: pip install -r requirements.txt
       - name: Configure AWS credentials
@@ -52,7 +42,7 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v1
       - name: Login to GCR
-        uses: docker/login-action@d398f07826957cd0a18ea1b059cf1207835e60bc
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: $
@@ -62,8 +52,8 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          cache-from: type=local,src=${{ env.buildx-cache }}
-          cache-to: type=local,dest=${{ env.buildx-cache }}-new,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:latest
+          cache-to: type=inline
           tags: |
             ${{ steps.ecr-login.outputs.registry }}/${{ env.app-name }}:latest
             ghcr.io/${{ github.repository }}:latest
