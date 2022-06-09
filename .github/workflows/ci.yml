@@ -1,61 +1,45 @@
 name: ci
 on: [push]
-
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up cargo cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-      - uses: actions-rs/cargo@v1
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v1
+      - name: Run Cargo build
+        uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --all-features
+          args: --release
   deploy:
     runs-on: ubuntu-latest
     env:
-      APP: ranklab-api-production
+      app-name: ranklab-api-production
+      buildx-cache: /tmp/.buildx-cache
     if: github.ref == 'refs/heads/master'
     needs: build_and_test
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v3
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v2
-      - name: Set up cargo cache
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v1
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          cache: pip
+      - name: Set up Docker buildx cache
         uses: actions/cache@v3
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Set up pip cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          path: ${{ env.buildx-cache }}
+          key: buildx-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Set up Docker cache
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+            buildx-${{ runner.os }}-
       - name: Install pip requirements
         run: pip install -r requirements.txt
       - name: Configure AWS credentials
@@ -67,35 +51,30 @@ jobs:
       - name: Login to ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v1
-      - name: Log in to the Github Container registry
+      - name: Login to GCR
         uses: docker/login-action@d398f07826957cd0a18ea1b059cf1207835e60bc
         with:
           registry: ghcr.io
           username: $
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push to ECR and Github Container Registry
+      - name: Build and push to ECR and GCR
         id: docker-build
         uses: docker/build-push-action@v3
-        timeout-minutes: 40
         with:
           push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          cache-from: type=local,src=${{ env.buildx-cache }}
+          cache-to: type=local,dest=${{ env.buildx-cache }}-new,mode=max
           tags: |
-            ${{ steps.ecr-login.outputs.registry }}/${{ env.APP }}:latest
+            ${{ steps.ecr-login.outputs.registry }}/${{ env.app-name }}:latest
             ghcr.io/${{ github.repository }}:latest
-      - name: Move Docker cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
       - name: Set up Dockerrun.aws.json
         run: |
           registry="${{ steps.ecr-login.outputs.registry }}"
           digest="${{ steps.docker-build.outputs.digest }}"
-          content=$(jq ".Image.Name = \"${registry}/${{ env.APP }}@${digest}\"" Dockerrun.aws.json)
+          content=$(jq ".Image.Name = \"${registry}/${{ env.app-name }}@${digest}\"" Dockerrun.aws.json)
           echo "${content}" > Dockerrun.aws.json
           git add Dockerrun.aws.json
       - name: Deploy to EB
         run: |
-          eb init --region eu-west-2 --platform docker ${{ env.APP }}
-          eb deploy --staged ${{ env.APP }}
+          eb init --region eu-west-2 --platform docker ${{ env.app-name }}
+          eb deploy --staged ${{ env.app-name }}
