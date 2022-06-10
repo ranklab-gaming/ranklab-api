@@ -7,6 +7,11 @@ RUN apk add --update-cache \
     clang \
     && rm -rf /var/cache/apk/*
 
+RUN version=$(wget -q -O- https://api.github.com/repos/rui314/mold/releases/latest | jq -r .tag_name | sed 's/^v//'); \
+    wget -q -O- https://github.com/rui314/mold/releases/download/v$version/mold-$version-$(uname -m)-linux.tar.gz | \
+    sudo tar -C /usr/local --strip-components=1 -xzf - && \
+    sudo ln -sf /usr/local/bin/mold $(realpath /usr/bin/ld)
+
 WORKDIR /usr/src/
 RUN cargo new ranklab-api
 WORKDIR /usr/src/ranklab-api
