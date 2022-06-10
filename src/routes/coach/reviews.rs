@@ -15,6 +15,7 @@ use validator::Validate;
 #[derive(FromForm, JsonSchema)]
 pub struct ListReviewsQuery {
   page: Option<i64>,
+  archived: Option<bool>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -26,7 +27,7 @@ pub async fn list(
 ) -> QueryResponse<PaginatedResult<ReviewView>> {
   let (reviews, total_pages): (Vec<Review>, i64) = db_conn
     .run(move |conn| {
-      Review::filter_for_coach(&auth.0)
+      Review::filter_for_coach(&auth.0, params.archived.unwrap_or(false))
         .paginate(params.page.unwrap_or(1))
         .load_and_count_pages::<Review>(conn)
         .unwrap()

@@ -4,6 +4,7 @@ RUN apk add --update-cache \
     openssl-dev \
     postgresql-dev \
     musl-dev \
+    clang \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /usr/src/

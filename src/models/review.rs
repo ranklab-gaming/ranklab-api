@@ -53,7 +53,7 @@ impl Review {
     reviews::table.filter(reviews::player_id.eq(*player_id))
   }
 
-  pub fn filter_for_coach(coach: &Coach) -> reviews::BoxedQuery<'_, Pg> {
+  pub fn filter_for_coach(coach: &Coach, archived: bool) -> reviews::BoxedQuery<'_, Pg> {
     let mut games_expression: BoxedExpression = Box::new(sql("false"));
 
     for game in coach.games.clone().into_iter() {
@@ -79,11 +79,11 @@ impl Review {
       )
       .order(diesel::dsl::sql::<Bool>(
         "case \"state\"
-        when 'awaiting_review' then 1
-        when 'draft' then 2
-        when 'published' then 3
-      end,
-      created_at desc",
+          when 'awaiting_review' then 1
+          when 'draft' then 2
+          when 'published' then 3
+        end,
+        created_at desc",
       ))
       .into_boxed()
   }
