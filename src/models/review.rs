@@ -70,7 +70,6 @@ impl Review {
       vec![ReviewState::Accepted, ReviewState::Refunded]
     } else {
       vec![
-        ReviewState::AwaitingPayment,
         ReviewState::AwaitingReview,
         ReviewState::Draft,
         ReviewState::Published,
