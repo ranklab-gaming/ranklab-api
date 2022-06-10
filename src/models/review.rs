@@ -66,14 +66,21 @@ impl Review {
       );
     }
 
+    let states = if archived {
+      vec![ReviewState::Accepted, ReviewState::Refunded]
+    } else {
+      vec![
+        ReviewState::AwaitingPayment,
+        ReviewState::AwaitingReview,
+        ReviewState::Draft,
+        ReviewState::Published,
+      ]
+    };
+
     reviews::table
       .filter(
         reviews::state
-          .eq(any(vec![
-            ReviewState::AwaitingReview,
-            ReviewState::Draft,
-            ReviewState::Published,
-          ]))
+          .eq(any(states))
           .and(games_expression)
           .or(reviews::coach_id.eq(coach.id)),
       )
