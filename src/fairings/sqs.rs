@@ -39,7 +39,7 @@ impl SqsFairing {
   }
 
   async fn start<T: QueueHandler>(&self, rocket: &Rocket<Orbit>) {
-    let db_conn = DbConn::get_one(&rocket)
+    let db_conn = DbConn::get_one(rocket)
       .await
       .expect("Failed to get db connection");
 

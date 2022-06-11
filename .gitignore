@@ -4,4 +4,3 @@
 /.vscode
 /tmp
 /.env.test
-schema.rs.orig

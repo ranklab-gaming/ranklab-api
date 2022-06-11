@@ -24,7 +24,7 @@ impl From<Coach> for CoachView {
       name: coach.name,
       email: coach.email,
       bio: coach.bio,
-      games: coach.games,
+      games: coach.games.into_iter().map(|game| game.unwrap()).collect(),
       country: coach.country,
       can_review: coach.stripe_payouts_enabled,
       stripe_details_submitted: coach.stripe_details_submitted,

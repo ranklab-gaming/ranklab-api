@@ -6,19 +6,19 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 #[derive(Builder, Queryable, Identifiable)]
-#[table_name = "coaches"]
+#[diesel(table_name = coaches)]
 #[builder(
   derive(AsChangeset, Insertable),
   pattern = "owned",
   name = "CoachChangeset"
 )]
-#[builder_struct_attr(table_name = "coaches")]
+#[builder_struct_attr(diesel(table_name = coaches))]
 pub struct Coach {
   pub auth0_id: String,
   pub bio: String,
   pub country: String,
   pub email: String,
-  pub games: Vec<UserGame>,
+  pub games: Vec<Option<UserGame>>,
   pub id: Uuid,
   pub name: String,
   pub stripe_account_id: Option<String>,

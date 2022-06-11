@@ -50,7 +50,7 @@ pub async fn create(
             .email(auth.0.email.clone())
             .name(coach.name.clone())
             .bio(coach.bio.clone())
-            .games(coach.games.clone())
+            .games(coach.games.clone().into_iter().map(|g| Some(g)).collect())
             .auth0_id(auth.0.sub.clone())
             .country(coach.country.clone()),
         )

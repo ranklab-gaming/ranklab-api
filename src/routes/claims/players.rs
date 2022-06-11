@@ -43,7 +43,7 @@ pub async fn create(
             .email(auth.0.email.clone())
             .name(player.name.clone())
             .auth0_id(auth.0.sub.clone())
-            .games(player.games.clone())
+            .games(player.games.clone().into_iter().map(|g| Some(g)).collect())
             .stripe_customer_id(None),
         )
         .get_result(conn)

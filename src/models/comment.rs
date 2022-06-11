@@ -10,7 +10,7 @@ use uuid::Uuid;
   pattern = "owned",
   name = "CommentChangeset"
 )]
-#[builder_struct_attr(table_name = "comments")]
+#[builder_struct_attr(diesel(table_name = comments))]
 pub struct Comment {
   pub body: String,
   pub coach_id: Uuid,
