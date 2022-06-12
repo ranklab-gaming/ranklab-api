@@ -2,20 +2,20 @@ use crate::data_types::ReviewState;
 use crate::models::{Coach, Recording};
 use crate::schema::reviews;
 use derive_builder::Builder;
-use diesel::dsl::{any, sql, And, Eq, Filter, FindBy, Or};
+use diesel::dsl::{sql, And, Eq, Filter, FindBy, Or};
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use uuid::Uuid;
 
 #[derive(Builder, Queryable, Identifiable, Associations)]
-#[belongs_to(Recording)]
+#[diesel(belongs_to(Recording))]
 #[builder(
   derive(AsChangeset, Insertable),
   pattern = "owned",
   name = "ReviewChangeset"
 )]
-#[builder_struct_attr(table_name = "reviews")]
+#[builder_struct_attr(diesel(table_name = reviews))]
 pub struct Review {
   pub coach_id: Option<Uuid>,
   pub game_id: String,
@@ -56,7 +56,9 @@ impl Review {
   pub fn filter_for_coach(coach: &Coach, archived: bool) -> reviews::BoxedQuery<'_, Pg> {
     let mut games_expression: BoxedExpression = Box::new(sql("false"));
 
-    for game in coach.games.clone().into_iter() {
+    for game_option in coach.games.clone().into_iter() {
+      let game = game_option.unwrap().clone();
+
       games_expression = Box::new(
         games_expression.or(
           reviews::game_id
@@ -79,7 +81,7 @@ impl Review {
     reviews::table
       .filter(
         reviews::state
-          .eq(any(states))
+          .eq_any(states)
           .and(games_expression)
           .or(reviews::coach_id.eq(coach.id)),
       )

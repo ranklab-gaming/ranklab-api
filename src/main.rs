@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate rocket;
 
-#[macro_use]
-extern crate diesel_migrations;
-
+use diesel::pg::PgConnection;
+use diesel::Connection;
+use diesel_migrations::*;
 use ranklab_api::config::Config;
 use ranklab_api::fairings;
 use ranklab_api::guards::DbConn;
@@ -18,21 +18,23 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use std::env;
 
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+
 #[derive(Serialize, JsonSchema)]
 pub struct Health {
   status: String,
 }
 
 pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
-  embed_migrations!();
+  let database_url: String = rocket
+    .figment()
+    .extract_inner("databases.default.url")
+    .unwrap();
 
-  let db_conn = DbConn::get_one(&rocket)
-    .await
-    .expect("Failed to get db connection");
+  let mut conn = PgConnection::establish(&database_url).unwrap();
 
-  db_conn
-    .run(|c| embedded_migrations::run(c))
-    .await
+  conn
+    .run_pending_migrations(MIGRATIONS)
     .expect("Failed to run migrations");
 
   rocket

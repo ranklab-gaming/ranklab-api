@@ -10,7 +10,7 @@ use uuid::Uuid;
   pattern = "owned",
   name = "RecordingChangeset"
 )]
-#[builder_struct_attr(table_name = "recordings")]
+#[builder_struct_attr(diesel(table_name = recordings))]
 pub struct Recording {
   pub id: Uuid,
   pub mime_type: String,

@@ -1,10 +1,18 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+pub mod sql_types {
+  #[derive(diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "review_state"))]
+  pub struct ReviewState;
+}
+
+diesel::table! {
     coaches (id) {
         auth0_id -> Text,
         bio -> Text,
         country -> Text,
         email -> Text,
-        games -> Array<Jsonb>,
+        games -> Array<Nullable<Jsonb>>,
         id -> Uuid,
         name -> Text,
         stripe_account_id -> Nullable<Text>,
@@ -15,7 +23,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     comments (id) {
         body -> Text,
         coach_id -> Uuid,
@@ -28,11 +36,11 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     players (id) {
         auth0_id -> Text,
         email -> Text,
-        games -> Array<Jsonb>,
+        games -> Array<Nullable<Jsonb>>,
         id -> Uuid,
         name -> Text,
         stripe_customer_id -> Nullable<Text>,
@@ -41,7 +49,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     recordings (id) {
         id -> Uuid,
         mime_type -> Text,
@@ -54,9 +62,9 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     use diesel::sql_types::*;
-    use crate::data_types::review_state::ReviewStateMapping;
+    use super::sql_types::ReviewState;
 
     reviews (id) {
         coach_id -> Nullable<Uuid>,
@@ -67,18 +75,18 @@ table! {
         recording_id -> Uuid,
         skill_level -> Int2,
         title -> Text,
-        state -> ReviewStateMapping,
+        state -> ReviewState,
         stripe_order_id -> Text,
         updated_at -> Timestamp,
         created_at -> Timestamp,
     }
 }
 
-joinable!(comments -> coaches (coach_id));
-joinable!(comments -> reviews (review_id));
-joinable!(recordings -> players (player_id));
-joinable!(reviews -> coaches (coach_id));
-joinable!(reviews -> players (player_id));
-joinable!(reviews -> recordings (recording_id));
+diesel::joinable!(comments -> coaches (coach_id));
+diesel::joinable!(comments -> reviews (review_id));
+diesel::joinable!(recordings -> players (player_id));
+diesel::joinable!(reviews -> coaches (coach_id));
+diesel::joinable!(reviews -> players (player_id));
+diesel::joinable!(reviews -> recordings (recording_id));
 
-allow_tables_to_appear_in_same_query!(coaches, comments, players, recordings, reviews,);
+diesel::allow_tables_to_appear_in_same_query!(coaches, comments, players, recordings, reviews,);

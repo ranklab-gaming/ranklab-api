@@ -11,11 +11,11 @@ use uuid::Uuid;
   pattern = "owned",
   name = "PlayerChangeset"
 )]
-#[builder_struct_attr(table_name = "players")]
+#[builder_struct_attr(diesel(table_name = players))]
 pub struct Player {
   pub auth0_id: String,
   pub email: String,
-  pub games: Vec<UserGame>,
+  pub games: Vec<Option<UserGame>>,
   pub id: Uuid,
   pub name: String,
   pub stripe_customer_id: Option<String>,

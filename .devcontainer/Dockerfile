@@ -12,5 +12,5 @@ RUN version=$(wget -q -O- https://api.github.com/repos/rui314/mold/releases/late
     sudo tar -C /usr/local --strip-components=1 -xzf -
 
 RUN sudo ln -sf /usr/local/bin/mold $(realpath /usr/bin/ld)
-RUN cargo install diesel_cli --no-default-features --features postgres
+RUN cargo install diesel_cli@2.0.0-rc.0 --no-default-features --features postgres
 RUN cargo install cargo-watch
