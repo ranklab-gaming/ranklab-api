@@ -6,7 +6,6 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::{Deserialize, Serialize};
-use stripe::CreateLoginLinkExt;
 
 #[derive(Serialize, JsonSchema)]
 pub struct LoginLink {

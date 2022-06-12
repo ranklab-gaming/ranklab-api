@@ -4,8 +4,8 @@ use crate::config::Config;
 use crate::fairings::sqs::QueueHandlerError;
 use crate::guards::DbConn;
 use crate::models::{Coach, CoachChangeset};
-use crate::stripe::webhook_events::{EventObject, EventType, WebhookEvent};
 use diesel::prelude::*;
+use stripe::{EventObject, EventType, WebhookEvent};
 
 pub struct Connect {
   db_conn: DbConn,
@@ -15,7 +15,7 @@ pub struct Connect {
 impl Connect {
   async fn handle_account_updated(&self, webhook: &WebhookEvent) -> Result<(), QueueHandlerError> {
     let account = match &webhook.data.object {
-      EventObject::Other(stripe::EventObject::Account(account)) => account,
+      EventObject::Account(account) => account,
       _ => return Ok(()),
     };
 
@@ -57,9 +57,7 @@ impl StripeEventHandler for Connect {
 
   async fn handle_event(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
     match webhook.event_type {
-      EventType::Other(stripe::EventType::AccountUpdated) => {
-        self.handle_account_updated(&webhook).await
-      }
+      EventType::AccountUpdated => self.handle_account_updated(&webhook).await,
       _ => Ok(()),
     }
   }

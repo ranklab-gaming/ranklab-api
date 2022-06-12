@@ -8,10 +8,6 @@ use crate::models::{Coach, Player, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::{coaches, reviews};
-use crate::stripe::order::{
-  CreateOrder, CreateOrderLineItem, CreateOrderLineItemPriceData, CreateOrderPayment, Order,
-  OrderId, OrderPaymentSettings, OrderPaymentSettingsPaymentMethodType, SubmitOrder,
-};
 use crate::views::ReviewView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
@@ -20,7 +16,11 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
-use stripe::Expandable;
+use stripe::{
+  CreateOrder, CreateOrderLineItems, CreateOrderLineItemsPriceData, CreateOrderPayment,
+  CreateOrderPaymentSettings, CreateOrderPaymentSettingsPaymentMethodTypes, Expandable, Order,
+  OrderId, SubmitOrder,
+};
 use uuid::Uuid;
 
 #[openapi(tag = "Ranklab")]
@@ -129,39 +129,41 @@ pub async fn create(
     std::net::IpAddr::V6(ip) => ip.to_ipv4().unwrap().to_string(),
   };
 
-  let mut price_data = CreateOrderLineItemPriceData::new(stripe::Currency::USD, product_id.clone());
+  let mut price_data = CreateOrderLineItemsPriceData {
+    currency: Some(stripe::Currency::USD),
+    product: Some(product_id.to_string()),
+    ..Default::default()
+  };
   price_data.unit_amount = Some(10_00);
 
-  let mut line_item = CreateOrderLineItem::new();
+  let mut line_item = CreateOrderLineItems::default();
   line_item.quantity = Some(1);
   line_item.price_data = Some(price_data);
 
   let line_items = vec![line_item];
 
-  let mut payment_settings = OrderPaymentSettings::new();
-  payment_settings.payment_method_types = Some(vec![OrderPaymentSettingsPaymentMethodType::Card]);
-  payment_settings.payment_method_options = Some(stripe::PaymentIntentPaymentMethodOptions {
-    card: Some(
-      stripe::PaymentIntentPaymentMethodOptionsCardUnion::PaymentIntentPaymentMethodOptionsCard(
-        stripe::PaymentIntentPaymentMethodOptionsCard {
-          setup_future_usage: Some(
-            stripe::PaymentIntentPaymentMethodOptionsCardSetupFutureUsage::OnSession,
-          ),
-          ..Default::default()
-        },
-      ),
-    ),
-    ..Default::default()
-  });
+  let mut payment_settings = CreateOrderPaymentSettings::default();
+  payment_settings.payment_method_types =
+    Some(vec![CreateOrderPaymentSettingsPaymentMethodTypes::Card]);
+  payment_settings.payment_method_options =
+    Some(stripe::CreateOrderPaymentSettingsPaymentMethodOptions {
+      card: Some(stripe::CreateOrderPaymentSettingsPaymentMethodOptionsCard {
+        capture_method: None,
+        setup_future_usage: Some(
+          stripe::CreateOrderPaymentSettingsPaymentMethodOptionsCardSetupFutureUsage::OnSession,
+        ),
+      }),
+      ..Default::default()
+    });
 
   let mut params = CreateOrder::new(stripe::Currency::USD, line_items);
 
   params.customer = Some(customer_id);
-  params.description = Some("Recording payment".to_string());
+  params.description = Some("Recording payment");
   params.payment = Some(CreateOrderPayment {
     settings: payment_settings,
   });
-  params.ip_address = Some(ip_address);
+  params.ip_address = Some(&ip_address);
   // TODO: enable when we add a valid address in test mode
   // params.automatic_tax = Some(CreateOrderAutomaticTax { enabled: true });
 

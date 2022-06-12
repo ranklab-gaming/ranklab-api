@@ -1,8 +1,8 @@
 use crate::config::Config;
 use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
-use crate::stripe::webhook_events::{Webhook, WebhookEvent};
 use serde::Deserialize;
+use stripe::{Webhook, WebhookEvent};
 mod connect;
 mod direct;
 use crate::clients::StripeClient;

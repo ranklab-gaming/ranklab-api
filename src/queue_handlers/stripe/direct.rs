@@ -7,13 +7,10 @@ use crate::fairings::sqs::QueueHandlerError;
 use crate::guards::DbConn;
 use crate::models::{Coach, Review, ReviewChangeset};
 use crate::schema::coaches;
-use crate::stripe::webhook_events::{
-  EventObject, EventObjectExt, EventType, EventTypeExt, WebhookEvent,
-};
 use anyhow::anyhow;
 use diesel::prelude::*;
 use serde_json::json;
-use stripe::Expandable;
+use stripe::{EventObject, EventType, Expandable, WebhookEvent};
 
 pub struct Direct {
   config: Config,
@@ -24,7 +21,7 @@ pub struct Direct {
 impl Direct {
   async fn handle_order_completed(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
     let order_id = match &webhook.data.object {
-      EventObject::Ext(EventObjectExt::Order(order)) => order.id.clone(),
+      EventObject::Order(order) => order.id.clone(),
       _ => return Ok(()),
     };
 
@@ -73,7 +70,7 @@ impl Direct {
 
   async fn handle_charge_refunded(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
     let charge = match &webhook.data.object {
-      EventObject::Other(stripe::EventObject::Charge(charge)) => charge,
+      EventObject::Charge(charge) => charge,
       _ => return Ok(()),
     };
 
@@ -130,10 +127,8 @@ impl StripeEventHandler for Direct {
 
   async fn handle_event(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
     match webhook.event_type {
-      EventType::Ext(EventTypeExt::OrderCompleted) => self.handle_order_completed(webhook).await,
-      EventType::Other(stripe::EventType::ChargeRefunded) => {
-        self.handle_charge_refunded(webhook).await
-      }
+      EventType::OrderCompleted => self.handle_order_completed(webhook).await,
+      EventType::ChargeRefunded => self.handle_charge_refunded(webhook).await,
       _ => Ok(()),
     }
   }

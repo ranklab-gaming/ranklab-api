@@ -71,6 +71,12 @@ pub async fn create(
         }
         .into(),
       ),
+      affirm_payments: None,
+      bank_transfer_payments: None,
+      link_payments: None,
+      paynow_payments: None,
+      treasury: None,
+      us_bank_account_ach_payments: None,
       acss_debit_payments: None,
       afterpay_clearpay_payments: None,
       au_becs_debit_payments: None,
@@ -127,6 +133,7 @@ pub async fn create(
 
   params.settings = Some(
     stripe::AccountSettingsParams {
+      treasury: None,
       branding: None,
       card_payments: None,
       payments: None,
