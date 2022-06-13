@@ -94,9 +94,9 @@ impl Review {
       .filter(filter_expression.and(games_expression))
       .order(diesel::dsl::sql::<Bool>(
         "case \"state\"
-          when 'awaiting_review' then 1
+          when 'awaiting_review' then 3
           when 'draft' then 2
-          when 'published' then 3
+          when 'published' then 1
         end,
         created_at desc",
       ))
