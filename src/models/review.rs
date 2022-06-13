@@ -5,7 +5,7 @@ use derive_builder::Builder;
 use diesel::dsl::{sql, And, Eq, Filter, FindBy, Or};
 use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::sql_types::Bool;
+use diesel::sql_types::{Bool, Nullable};
 use uuid::Uuid;
 
 #[derive(Builder, Queryable, Identifiable, Associations)]
@@ -30,6 +30,9 @@ pub struct Review {
   pub updated_at: chrono::NaiveDateTime,
   pub created_at: chrono::NaiveDateTime,
 }
+
+type NullableBoxedExpression =
+  Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Nullable<Bool>>>;
 
 type BoxedExpression = Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Bool>>;
 
@@ -68,23 +71,27 @@ impl Review {
       );
     }
 
-    let states = if archived {
-      vec![ReviewState::Accepted, ReviewState::Refunded]
+    let mut filter_expression: NullableBoxedExpression = Box::new(reviews::coach_id.eq(coach.id));
+
+    filter_expression = if archived {
+      Box::new(
+        filter_expression
+          .and(reviews::state.eq_any(vec![ReviewState::Accepted, ReviewState::Refunded])),
+      )
     } else {
-      vec![
-        ReviewState::AwaitingReview,
-        ReviewState::Draft,
-        ReviewState::Published,
-      ]
+      Box::new(
+        filter_expression
+          .and(reviews::state.eq_any(vec![ReviewState::Draft, ReviewState::Published]))
+          .or(
+            reviews::state
+              .eq(ReviewState::AwaitingReview)
+              .and(reviews::coach_id.is_null()),
+          ),
+      )
     };
 
     reviews::table
-      .filter(
-        reviews::state
-          .eq_any(states)
-          .and(games_expression)
-          .or(reviews::coach_id.eq(coach.id)),
-      )
+      .filter(filter_expression.and(games_expression))
       .order(diesel::dsl::sql::<Bool>(
         "case \"state\"
           when 'awaiting_review' then 1
