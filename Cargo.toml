@@ -31,7 +31,7 @@ lazy_static = "1.4.0"
 mime_guess = "2.0.4"
 okapi = { git = "https://github.com/ranklab-gaming/okapi" }
 regex = "1.5.6"
-reqwest = { version = "0.11.10", features = ["json"] }
+reqwest = { version = "0.11.11", features = ["json"] }
 rocket = { git = "https://github.com/ranklab-gaming/Rocket", features = [
   "json",
   "serde_json",
