@@ -78,6 +78,7 @@ where
 pub struct PaginatedResult<T> {
   records: Vec<T>,
   total_pages: i64,
+  per_page: i64,
 }
 
 impl<T> From<(Vec<T>, i64)> for PaginatedResult<T> {
@@ -85,6 +86,7 @@ impl<T> From<(Vec<T>, i64)> for PaginatedResult<T> {
     PaginatedResult {
       records: tuple.0,
       total_pages: tuple.1,
+      per_page: DEFAULT_PER_PAGE,
     }
   }
 }

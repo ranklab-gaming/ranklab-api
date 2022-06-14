@@ -21,7 +21,11 @@ pub enum QueueHandlerError {
 pub trait QueueHandler: Send + Sync {
   fn new(db_conn: DbConn, config: Config) -> Self;
   fn url(&self) -> String;
-  async fn handle(&self, message: &rusoto_sqs::Message) -> Result<(), QueueHandlerError>;
+  async fn handle(
+    &self,
+    message: &rusoto_sqs::Message,
+    profile: &rocket::figment::Profile,
+  ) -> Result<(), QueueHandlerError>;
 }
 
 #[derive(Clone)]
@@ -89,13 +93,14 @@ impl SqsFairing {
 
     if let Some(messages) = response.messages {
       for message in messages {
-        match handler.handle(&message).await {
+        match handler.handle(&message, profile).await {
           Err(QueueHandlerError::Ignorable(e)) => {
             if profile == rocket::config::Config::RELEASE_PROFILE {
               return Err(e.into());
             }
           }
-          _ => (),
+          Err(e) => return Err(e.into()),
+          Ok(()) => (),
         };
 
         let delete_request = DeleteMessageRequest {

@@ -42,7 +42,11 @@ impl QueueHandler for S3BucketHandler {
     self.config.s3_bucket_queue.clone()
   }
 
-  async fn handle(&self, message: &rusoto_sqs::Message) -> Result<(), QueueHandlerError> {
+  async fn handle(
+    &self,
+    message: &rusoto_sqs::Message,
+    _profile: &rocket::figment::Profile,
+  ) -> Result<(), QueueHandlerError> {
     let body = message
       .body
       .clone()

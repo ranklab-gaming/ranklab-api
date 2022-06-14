@@ -48,7 +48,11 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
     self.handler.url()
   }
 
-  async fn handle(&self, message: &rusoto_sqs::Message) -> Result<(), QueueHandlerError> {
+  async fn handle(
+    &self,
+    message: &rusoto_sqs::Message,
+    profile: &rocket::figment::Profile,
+  ) -> Result<(), QueueHandlerError> {
     let body = message
       .body
       .clone()
@@ -63,7 +67,7 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
     )
     .map_err(anyhow::Error::from)?;
 
-    if !webhook.livemode {
+    if profile == rocket::Config::RELEASE_PROFILE && !webhook.livemode {
       return Err(QueueHandlerError::Ignorable(anyhow!(
         "Received webhook in test mode"
       )));
