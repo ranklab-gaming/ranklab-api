@@ -5,7 +5,7 @@ use diesel::helper_types::FindBy;
 use diesel::prelude::*;
 use uuid::Uuid;
 
-#[derive(Builder, Queryable, Identifiable)]
+#[derive(Builder, Queryable, Identifiable, Clone)]
 #[diesel(table_name = coaches)]
 #[builder(
   derive(AsChangeset, Insertable),

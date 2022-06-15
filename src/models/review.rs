@@ -8,7 +8,7 @@ use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable};
 use uuid::Uuid;
 
-#[derive(Builder, Queryable, Identifiable, Associations)]
+#[derive(Builder, Queryable, Identifiable, Associations, Clone)]
 #[diesel(belongs_to(Recording))]
 #[builder(
   derive(AsChangeset, Insertable),

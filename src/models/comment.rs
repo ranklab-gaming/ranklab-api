@@ -4,7 +4,7 @@ use diesel::dsl::{And, Eq, Filter};
 use diesel::prelude::*;
 use uuid::Uuid;
 
-#[derive(Builder, Queryable, Identifiable)]
+#[derive(Builder, Queryable, Identifiable, Clone)]
 #[builder(
   derive(AsChangeset, Insertable),
   pattern = "owned",

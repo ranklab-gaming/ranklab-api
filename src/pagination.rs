@@ -40,16 +40,27 @@ impl<T> Paginated<T> {
     }
   }
 
-  pub fn load_and_count_pages<'a, U>(self, conn: &mut PgConnection) -> QueryResult<(Vec<U>, i64)>
+  pub fn load_and_count_pages<'a, U>(
+    self,
+    conn: &mut PgConnection,
+  ) -> QueryResult<PaginatedResult<U>>
   where
     Self: LoadQuery<'a, PgConnection, (U, i64)>,
   {
     let per_page = self.per_page;
+    let page = self.page;
     let results = self.load::<(U, i64)>(conn)?;
-    let total = results.get(0).map(|x| x.1).unwrap_or(0);
+    let count = results.get(0).map(|x| x.1).unwrap_or(0);
     let records = results.into_iter().map(|x| x.0).collect();
-    let total_pages = (total as f64 / per_page as f64).ceil() as i64;
-    Ok((records, total_pages))
+    let total_pages = (count as f64 / per_page as f64).ceil() as i64;
+
+    Ok(PaginatedResult {
+      records,
+      total_pages,
+      page,
+      per_page,
+      count,
+    })
   }
 }
 
@@ -76,17 +87,21 @@ where
 
 #[derive(Serialize, JsonSchema)]
 pub struct PaginatedResult<T> {
-  records: Vec<T>,
+  pub records: Vec<T>,
   total_pages: i64,
   per_page: i64,
+  page: i64,
+  count: i64,
 }
 
-impl<T> From<(Vec<T>, i64)> for PaginatedResult<T> {
-  fn from(tuple: (Vec<T>, i64)) -> Self {
+impl<T> PaginatedResult<T> {
+  pub fn records<U>(&self, records: Vec<U>) -> PaginatedResult<U> {
     PaginatedResult {
-      records: tuple.0,
-      total_pages: tuple.1,
-      per_page: DEFAULT_PER_PAGE,
+      records,
+      total_pages: self.total_pages,
+      per_page: self.per_page,
+      page: self.page,
+      count: self.count,
     }
   }
 }

@@ -25,7 +25,7 @@ pub async fn list(
   db_conn: DbConn,
   params: ListReviewsQuery,
 ) -> QueryResponse<PaginatedResult<ReviewView>> {
-  let (reviews, total_pages): (Vec<Review>, i64) = db_conn
+  let paginated_reviews: PaginatedResult<Review> = db_conn
     .run(move |conn| {
       Review::filter_for_coach(&auth.0, params.archived.unwrap_or(false))
         .paginate(params.page.unwrap_or(1))
@@ -34,12 +34,14 @@ pub async fn list(
     })
     .await;
 
-  let review_views = reviews
+  let review_views: Vec<ReviewView> = paginated_reviews
+    .records
+    .clone()
     .into_iter()
     .map(|review| ReviewView::from(review, None))
     .collect();
 
-  Response::success((review_views, total_pages).into())
+  Response::success(paginated_reviews.records(review_views))
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
