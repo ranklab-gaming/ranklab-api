@@ -23,17 +23,23 @@ use stripe::{
 };
 use uuid::Uuid;
 
-#[openapi(tag = "Ranklab")]
-#[get("/player/reviews?<page>")]
-pub async fn list(
+#[derive(FromForm, JsonSchema)]
+pub struct ListReviewsQuery {
   page: Option<i64>,
+  archived: Option<bool>,
+}
+
+#[openapi(tag = "Ranklab")]
+#[get("/player/reviews?<params..>")]
+pub async fn list(
+  params: ListReviewsQuery,
   auth: Auth<Player>,
   db_conn: DbConn,
 ) -> QueryResponse<PaginatedResult<ReviewView>> {
   let paginated_reviews: PaginatedResult<Review> = db_conn
     .run(move |conn| {
-      Review::filter_for_player(&auth.0.id)
-        .paginate(page.unwrap_or(1))
+      Review::filter_for_player(&auth.0.id, params.archived.unwrap_or(false))
+        .paginate(params.page.unwrap_or(1))
         .load_and_count_pages::<Review>(conn)
         .unwrap()
     })

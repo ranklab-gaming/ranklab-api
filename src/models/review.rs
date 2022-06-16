@@ -2,7 +2,8 @@ use crate::data_types::ReviewState;
 use crate::models::{Coach, Recording};
 use crate::schema::reviews;
 use derive_builder::Builder;
-use diesel::dsl::{sql, And, Eq, Filter, FindBy, Or};
+use diesel::dsl::{sql, And, Eq, EqAny, Filter, FindBy, Or, Order};
+use diesel::expression::SqlLiteral;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable};
@@ -52,8 +53,40 @@ impl Review {
 
   pub fn filter_for_player(
     player_id: &Uuid,
-  ) -> Filter<reviews::table, Eq<reviews::player_id, Uuid>> {
-    reviews::table.filter(reviews::player_id.eq(*player_id))
+    archived: bool,
+  ) -> Order<
+    Filter<
+      reviews::table,
+      And<Eq<reviews::player_id, Uuid>, EqAny<reviews::state, Vec<ReviewState>>>,
+    >,
+    SqlLiteral<Bool>,
+  > {
+    let states = if archived {
+      vec![ReviewState::Accepted, ReviewState::Refunded]
+    } else {
+      vec![
+        ReviewState::Draft,
+        ReviewState::AwaitingPayment,
+        ReviewState::AwaitingReview,
+        ReviewState::Published,
+      ]
+    };
+
+    reviews::table
+      .filter(
+        reviews::player_id
+          .eq(*player_id)
+          .and(reviews::state.eq_any(states)),
+      )
+      .order(diesel::dsl::sql::<Bool>(
+        "case \"state\"
+          when 'awaiting_payment' then 1
+          when 'published' then 2
+          when 'draft' then 3
+          when 'awaiting_review' then 4
+        end,
+        created_at desc",
+      ))
   }
 
   pub fn filter_for_coach(coach: &Coach, archived: bool) -> reviews::BoxedQuery<'_, Pg> {
