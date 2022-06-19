@@ -6,7 +6,7 @@ version = "0.1.0"
 
 [dependencies]
 ammonia = "3.2.0"
-anyhow = "1.0.57"
+anyhow = "1.0.58"
 async-stripe = { git = "https://github.com/ranklab-gaming/async-stripe", features = [
   "runtime-tokio-hyper",
   "checkout",
