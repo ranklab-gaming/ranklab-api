@@ -64,14 +64,3 @@ jobs:
           tags: |
             ${{ steps.ecr-login.outputs.registry }}/${{ env.app-name }}:latest
             ghcr.io/${{ github.repository }}:latest
-      - name: Set up Dockerrun.aws.json
-        run: |
-          registry="${{ steps.ecr-login.outputs.registry }}"
-          digest="${{ steps.docker-build.outputs.digest }}"
-          content=$(jq ".Image.Name = \"${registry}/${{ env.app-name }}@${digest}\"" Dockerrun.aws.json)
-          echo "${content}" > Dockerrun.aws.json
-          git add Dockerrun.aws.json
-      - name: Deploy to EB
-        run: |
-          eb init --region eu-west-2 --platform docker ${{ env.app-name }}
-          eb deploy --staged ${{ env.app-name }}
