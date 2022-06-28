@@ -1,27 +1,14 @@
-use std::collections::HashMap;
-use std::net::SocketAddr;
-
-use crate::config::Config;
-use crate::data_types::ReviewState;
-use crate::guards::{Auth, DbConn, Stripe};
-use crate::models::{Coach, Player, Review, ReviewChangeset};
-use crate::pagination::{Paginate, PaginatedResult};
-use crate::response::{MutationResponse, QueryResponse, Response};
-use crate::schema::{coaches, reviews};
-use crate::views::ReviewView;
+use crate::data_types::UserGame;
+use crate::guards::{Auth, Auth0Management, DbConn};
+use crate::models::{Player, PlayerChangeset};
+use crate::response::{MutationResponse, Response};
+use crate::views::PlayerView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
-use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
-use stripe::{
-  CreateOrder, CreateOrderLineItems, CreateOrderLineItemsPriceData, CreateOrderPayment,
-  CreateOrderPaymentSettings, CreateOrderPaymentSettingsPaymentMethodTypes, Expandable, Order,
-  OrderId, SubmitOrder,
-};
-use uuid::Uuid;
 
 #[derive(Deserialize, JsonSchema)]
 #[schemars(rename = "PlayerUpdateAccountRequest")]
@@ -37,55 +24,33 @@ pub struct UpdateAccountRequest {
 #[openapi(tag = "Ranklab")]
 #[put("/player/account", data = "<account>")]
 pub async fn update(
-  id: Uuid,
   account: Json<UpdateAccountRequest>,
   auth: Auth<Player>,
   db_conn: DbConn,
-) -> MutationResponse<ReviewView> {
-  let auth_id = auth.0.id.clone();
+  auth0_management: Auth0Management,
+) -> MutationResponse<PlayerView> {
+  let player = auth.0.clone();
 
-  let existing_review: Review = db_conn
-    .run(move |conn| Review::find_for_player(&id, &auth_id).first(conn))
-    .await?;
-
-  if !review.accepted {
-    return Response::success(ReviewView::from(existing_review, None));
-  }
-
-  let updated_review = db_conn
+  let player: PlayerView = db_conn
     .run(move |conn| {
-      diesel::update(&existing_review)
-        .set(ReviewChangeset::default().state(ReviewState::Accepted))
-        .get_result::<Review>(conn)
+      diesel::update(&player)
+        .set(
+          PlayerChangeset::default()
+            .email(account.email.clone())
+            .name(account.name.clone())
+            .games(account.games.clone().into_iter().map(|g| Some(g)).collect()),
+        )
+        .get_result::<Player>(conn)
         .unwrap()
     })
-    .await;
+    .await
+    .into();
 
-  let review_coach_id = updated_review.coach_id.unwrap().clone();
-
-  let coach: Coach = db_conn
-    .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
-    .await;
-
-  let stripe_order_id = updated_review.stripe_order_id.parse::<OrderId>().unwrap();
-
-  let order = Order::retrieve(&stripe.0 .0, &stripe_order_id, &["payment.payment_intent"])
+  auth0_management
+    .0
+    .update_user(player.auth0_id.clone(), &player.email)
     .await
     .unwrap();
 
-  let payment_intent = match order.payment.payment_intent {
-    Some(Expandable::Object(payment_intent)) => payment_intent,
-    _ => panic!("No payment intent found"),
-  };
-
-  let mut transfer_params =
-    stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id.unwrap());
-  transfer_params.amount = Some((order.amount_total as f64 * 0.8) as i64);
-  transfer_params.source_transaction = Some(payment_intent.charges.data[0].id.clone());
-
-  stripe::Transfer::create(&stripe.0 .0, transfer_params)
-    .await
-    .unwrap();
-
-  Response::success(ReviewView::from(updated_review, None))
+  Response::success(player)
 }

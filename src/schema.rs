@@ -1,9 +1,9 @@
 // @generated automatically by Diesel CLI.
 
 pub mod sql_types {
-    #[derive(diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "review_state"))]
-    pub struct ReviewState;
+  #[derive(diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "review_state"))]
+  pub struct ReviewState;
 }
 
 diesel::table! {
@@ -89,10 +89,4 @@ diesel::joinable!(reviews -> coaches (coach_id));
 diesel::joinable!(reviews -> players (player_id));
 diesel::joinable!(reviews -> recordings (recording_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    coaches,
-    comments,
-    players,
-    recordings,
-    reviews,
-);
+diesel::allow_tables_to_appear_in_same_query!(coaches, comments, players, recordings, reviews,);
