@@ -18,7 +18,7 @@ impl<'r> FromRequest<'r> for Auth0Management {
   }
 }
 
-impl<'a> OpenApiFromRequest<'a> for Auth0 {
+impl<'a> OpenApiFromRequest<'a> for Auth0Management {
   fn from_request_input(
     _gen: &mut OpenApiGenerator,
     _name: String,
