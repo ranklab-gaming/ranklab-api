@@ -107,7 +107,7 @@ fn rocket() -> Rocket<Build> {
         player::stripe_billing_portal_sessions::create,
         player::stripe_payment_methods::list,
         public::games::list,
-        user::users::get_me
+        user::me::get_me
       ],
     )
 }

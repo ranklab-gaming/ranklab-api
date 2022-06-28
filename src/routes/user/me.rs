@@ -5,7 +5,7 @@ use crate::views::UserView;
 use rocket_okapi::openapi;
 
 #[openapi(tag = "Ranklab")]
-#[get("/user/users/me")]
+#[get("/user/me")]
 pub async fn get_me(auth: Auth<User>) -> QueryResponse<UserView> {
   Response::success(auth.0.into())
 }

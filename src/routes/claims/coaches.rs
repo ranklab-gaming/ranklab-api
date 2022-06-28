@@ -22,11 +22,13 @@ struct CountrySpecParams {}
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateCoachRequest {
-  #[validate(length(min = 1))]
+  #[validate(length(min = 2))]
   name: String,
-  #[validate(length(min = 1))]
+  #[validate(length(min = 30))]
   bio: String,
+  #[validate(length(min = 1))]
   games: Vec<UserGame>,
+  #[validate(length(min = 1))]
   country: String,
 }
 

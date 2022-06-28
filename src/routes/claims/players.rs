@@ -16,7 +16,7 @@ use validator::Validate;
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreatePlayerRequest {
-  #[validate(length(min = 1))]
+  #[validate(length(min = 2))]
   name: String,
   #[validate(length(min = 1))]
   games: Vec<UserGame>,
