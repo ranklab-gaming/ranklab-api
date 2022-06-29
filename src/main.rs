@@ -96,6 +96,7 @@ fn rocket() -> Rocket<Build> {
         coach::reviews::update,
         coach::stripe_account_links::create,
         coach::stripe_login_links::create,
+        player::account::update,
         player::comments::list,
         player::recordings::create,
         player::recordings::get,
