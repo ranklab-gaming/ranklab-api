@@ -31,7 +31,7 @@ impl Auth0ManagementClient {
     }
   }
 
-  pub async fn update_user(&self, auth0_id: String, email: &str) -> Result<(), Auth0Error> {
+  pub async fn update_user(&self, auth0_id: &str, email: &str) -> Result<(), Auth0Error> {
     let body = UpdateUserRequest { email };
     let client = reqwest::Client::new();
 

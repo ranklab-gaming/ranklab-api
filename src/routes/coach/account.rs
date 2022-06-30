@@ -1,8 +1,8 @@
 use crate::data_types::UserGame;
 use crate::guards::{Auth, Auth0Management, DbConn};
-use crate::models::{Player, PlayerChangeset};
+use crate::models::{Coach, CoachChangeset};
 use crate::response::{MutationResponse, Response};
-use crate::views::PlayerView;
+use crate::views::CoachView;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -11,7 +11,7 @@ use serde;
 use serde::Deserialize;
 
 #[derive(Deserialize, JsonSchema)]
-#[schemars(rename = "PlayerUpdateAccountRequest")]
+#[schemars(rename = "CoachUpdateAccountRequest")]
 pub struct UpdateAccountRequest {
   #[validate(length(min = 2))]
   name: String,
@@ -19,28 +19,31 @@ pub struct UpdateAccountRequest {
   email: String,
   #[validate(length(min = 1))]
   games: Vec<UserGame>,
+  #[validate(length(min = 1))]
+  bio: String,
 }
 
 #[openapi(tag = "Ranklab")]
-#[put("/player/account", data = "<account>")]
+#[put("/coach/account", data = "<account>")]
 pub async fn update(
   account: Json<UpdateAccountRequest>,
-  auth: Auth<Player>,
+  auth: Auth<Coach>,
   db_conn: DbConn,
   auth0_management: Auth0Management,
-) -> MutationResponse<PlayerView> {
-  let player = auth.0.clone();
+) -> MutationResponse<CoachView> {
+  let coach = auth.0.clone();
 
-  let player: PlayerView = db_conn
+  let coach: CoachView = db_conn
     .run(move |conn| {
-      diesel::update(&player)
+      diesel::update(&coach)
         .set(
-          PlayerChangeset::default()
+          CoachChangeset::default()
             .email(account.email.clone())
             .name(account.name.clone())
+            .bio(account.bio.clone())
             .games(account.games.clone().into_iter().map(|g| Some(g)).collect()),
         )
-        .get_result::<Player>(conn)
+        .get_result::<Coach>(conn)
         .unwrap()
     })
     .await
@@ -48,9 +51,9 @@ pub async fn update(
 
   auth0_management
     .0
-    .update_user(&auth.0.auth0_id, &player.email)
+    .update_user(&auth.0.auth0_id, &coach.email)
     .await
     .unwrap();
 
-  Response::success(player)
+  Response::success(coach)
 }
