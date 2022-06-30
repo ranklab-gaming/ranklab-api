@@ -4,6 +4,7 @@ ENV CARGO_HOME /home/vscode/.cargo
 ENV RUSTUP_HOME /home/vscode/.rustup
 ENV PATH="${PATH}:/home/vscode/.cargo/bin"
 
+RUN sudo apt-get update
 RUN sudo apt-get install -y libssl-dev libpq-dev clang jq
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2022-05-22
 
