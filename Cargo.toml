@@ -20,7 +20,7 @@ diesel-derive-enum = { git = "https://github.com/adwhit/diesel-derive-enum", rev
   "postgres",
 ] }
 diesel = { version = "=2.0.0-rc.1", features = ["uuid", "chrono", "postgres"] }
-diesel_migrations = "=2.0.0-rc.0"
+diesel_migrations = "=2.0.0-rc.1"
 diesel_as_jsonb = { git = "https://github.com/ranklab-gaming/diesel_as_jsonb" }
 dotenv = "0.15.0"
 hex = "0.4.3"
