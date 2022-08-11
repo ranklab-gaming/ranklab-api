@@ -2,7 +2,7 @@ use crate::aws;
 use crate::config::Config;
 use crate::guards::DbConn;
 use crate::queue_handlers::stripe::{Connect, Direct};
-use crate::queue_handlers::{S3BucketHandler, StripeHandler};
+use crate::queue_handlers::{S3BucketHandler, StripeHandler, ScheduledTasksHandler};
 use anyhow::anyhow;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
@@ -40,6 +40,7 @@ impl SqsFairing {
     self.start::<S3BucketHandler>(rocket).await;
     self.start::<StripeHandler<Connect>>(rocket).await;
     self.start::<StripeHandler<Direct>>(rocket).await;
+    self.start::<ScheduledTasksHandler>(rocket).await;
   }
 
   async fn start<T: QueueHandler>(&self, rocket: &Rocket<Orbit>) {
