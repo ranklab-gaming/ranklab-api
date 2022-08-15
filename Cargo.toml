@@ -5,7 +5,7 @@ name = "ranklab-api"
 version = "0.1.0"
 
 [dependencies]
-ammonia = "3.2.0"
+ammonia = "3.2.1"
 anyhow = "1.0.61"
 async-mutex = "1.4.0"
 async-stripe = { git = "https://github.com/ranklab-gaming/async-stripe", features = [
