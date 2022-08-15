@@ -1,12 +1,14 @@
+use crate::clients::StripeClient;
 use crate::config::Config;
 use crate::data_types::ReviewState;
 use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
-use crate::models::{Review, ReviewChangeset};
+use crate::models::Review;
 use crate::schema::reviews;
 use anyhow::anyhow;
 use diesel::prelude::*;
 use serde::Deserialize;
+use stripe::CreateRefund;
 
 #[derive(Deserialize)]
 struct SqsMessageBody {
@@ -17,16 +19,23 @@ struct SqsMessageBody {
 pub struct ScheduledTasksHandler {
   db_conn: DbConn,
   config: Config,
+  client: StripeClient,
 }
 
 #[async_trait]
 impl QueueHandler for ScheduledTasksHandler {
   fn new(db_conn: DbConn, config: Config) -> Self {
-    Self { db_conn, config }
+    let client = StripeClient::new(&config);
+
+    Self {
+      db_conn,
+      config,
+      client,
+    }
   }
 
   fn url(&self) -> String {
-    self.config.scheduled_tasks_queue.clone()
+    self.config.scheduled_tasks_queue.as_ref().unwrap().clone()
   }
 
   async fn handle(
@@ -51,17 +60,16 @@ impl QueueHandler for ScheduledTasksHandler {
       .await
       .map_err(anyhow::Error::from)?;
 
-    // if review.state == ReviewState::AwaitingReview {
-    self
-      .db_conn
-      .run(move |conn| {
-        diesel::update(&review)
-          .set(ReviewChangeset::default().state(ReviewState::Refunded))
-          .execute(conn)
-      })
-      .await
-      .map_err(QueueHandlerError::from)?;
-    // }
+    if review.state == ReviewState::AwaitingReview {
+      let payment_intent = review.get_payment_intent(&self.client.0).await;
+      let mut create_refund = CreateRefund::new();
+
+      create_refund.payment_intent = Some(payment_intent.id.clone());
+
+      stripe::Refund::create(&self.client.0, create_refund)
+        .await
+        .map_err(anyhow::Error::from)?;
+    }
 
     Ok(())
   }

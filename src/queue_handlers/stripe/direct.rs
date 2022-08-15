@@ -1,4 +1,5 @@
 use super::StripeEventHandler;
+use crate::aws;
 use crate::clients::StripeClient;
 use crate::config::Config;
 use crate::data_types::ReviewState;
@@ -9,6 +10,8 @@ use crate::models::{Coach, Review, ReviewChangeset};
 use crate::schema::coaches;
 use anyhow::anyhow;
 use diesel::prelude::*;
+use rusoto_core::{HttpClient, Region};
+use rusoto_stepfunctions::StepFunctionsClient;
 use serde_json::json;
 use stripe::{EventObject, EventType, Expandable, WebhookEvent};
 
@@ -16,6 +19,7 @@ pub struct Direct {
   config: Config,
   db_conn: DbConn,
   client: StripeClient,
+  step_functions: StepFunctionsClient,
 }
 
 impl Direct {
@@ -25,10 +29,31 @@ impl Direct {
       _ => return Ok(()),
     };
 
+    let review: Review = self
+      .db_conn
+      .run(move |conn| Review::find_by_order_id(&order_id).get_result::<Review>(conn))
+      .await?;
+
+    if let Some(state_machine_arn) = &self.config.scheduled_tasks_state_machine_arn {
+      rusoto_stepfunctions::StepFunctions::start_execution(
+        &self.step_functions,
+        rusoto_stepfunctions::StartExecutionInput {
+          state_machine_arn: state_machine_arn.clone(),
+          input: Some(
+            serde_json::json!({ "input": { "reviewId": review.id.to_string() } }).to_string(),
+          ),
+          name: None,
+          trace_header: None,
+        },
+      )
+      .await
+      .map_err(anyhow::Error::from)?;
+    }
+
     self
       .db_conn
       .run(move |conn| {
-        diesel::update(Review::find_by_order_id(&order_id))
+        diesel::update(&review)
           .set(ReviewChangeset::default().state(ReviewState::AwaitingReview))
           .execute(conn)
       })
@@ -110,10 +135,21 @@ impl Direct {
 #[async_trait]
 impl StripeEventHandler for Direct {
   fn new(db_conn: DbConn, config: Config, client: StripeClient) -> Self {
+    let aws_access_key_id = config.aws_access_key_id.clone();
+    let aws_secret_key = config.aws_secret_key.clone();
+    let mut builder = hyper::Client::builder();
+
+    builder.pool_max_idle_per_host(0);
+
     Self {
       config,
       db_conn,
       client,
+      step_functions: StepFunctionsClient::new_with(
+        HttpClient::from_builder(builder, hyper_tls::HttpsConnector::new()),
+        aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
+        Region::EuWest2,
+      ),
     }
   }
 

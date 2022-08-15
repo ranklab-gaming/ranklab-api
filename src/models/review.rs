@@ -7,6 +7,7 @@ use diesel::expression::SqlLiteral;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable};
+use stripe::{Expandable, OrderId, PaymentIntent};
 use uuid::Uuid;
 
 #[derive(Builder, Queryable, Identifiable, Associations, Clone)]
@@ -188,5 +189,18 @@ impl Review {
         .or(reviews::state.eq(ReviewState::AwaitingReview))
         .and(reviews::id.eq(*id)),
     )
+  }
+
+  pub async fn get_payment_intent(&self, client: &stripe::Client) -> PaymentIntent {
+    let stripe_order_id = self.stripe_order_id.parse::<OrderId>().unwrap();
+
+    let order = stripe::Order::retrieve(client, &stripe_order_id, &["payment.payment_intent"])
+      .await
+      .unwrap();
+
+    match order.payment.payment_intent.clone() {
+      Some(Expandable::Object(payment_intent)) => *payment_intent,
+      _ => panic!("No payment intent found"),
+    }
   }
 }

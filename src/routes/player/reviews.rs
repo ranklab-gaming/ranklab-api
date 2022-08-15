@@ -67,18 +67,9 @@ pub async fn get(
     .run(move |conn| Review::find_for_player(&id, &auth.0.id).first::<Review>(conn))
     .await?;
 
-  let stripe_order_id = review.stripe_order_id.parse::<OrderId>().unwrap();
+  let payment_intent = review.get_payment_intent(&stripe.0 .0).await;
 
-  let order = Order::retrieve(&stripe.0 .0, &stripe_order_id, &["payment.payment_intent"])
-    .await
-    .unwrap();
-
-  let payment_intent = match order.payment.payment_intent.clone() {
-    Some(Expandable::Object(payment_intent)) => payment_intent,
-    _ => panic!("No payment intent found"),
-  };
-
-  Response::success(ReviewView::from(review, Some(*payment_intent)))
+  Response::success(ReviewView::from(review, Some(payment_intent)))
 }
 
 #[derive(Deserialize, JsonSchema)]

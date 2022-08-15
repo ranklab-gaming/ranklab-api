@@ -52,6 +52,7 @@ rusoto_s3 = "0.48.0"
 rusoto_sesv2 = "0.48.0"
 rusoto_signature = "0.48.0"
 rusoto_sqs = "0.48.0"
+rusoto_stepfunctions = "0.48.0"
 schemars = { version = "0.8.10", features = ["chrono"] }
 sentry = "0.27.0"
 serde = "1.0.143"

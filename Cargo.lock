@@ -1818,6 +1818,7 @@ dependencies = [
  "rusoto_sesv2",
  "rusoto_signature",
  "rusoto_sqs",
+ "rusoto_stepfunctions",
  "schemars",
  "sentry",
  "serde",
@@ -2197,6 +2198,20 @@ dependencies = [
  "rusoto_core",
  "serde_urlencoded",
  "xml-rs",
+]
+
+[[package]]
+name = "rusoto_stepfunctions"
+version = "0.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e425a982f55c49e5969ea9b5f06564aaa044bbfacc399f7f4877e9f0ccbc23e6"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "rusoto_core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

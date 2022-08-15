@@ -16,5 +16,6 @@ pub struct Config {
   pub stripe_product_id: String,
   pub auth0_client_id: String,
   pub auth0_client_secret: String,
-  pub scheduled_tasks_queue: String,
+  pub scheduled_tasks_queue: Option<String>,
+  pub scheduled_tasks_state_machine_arn: Option<String>,
 }
