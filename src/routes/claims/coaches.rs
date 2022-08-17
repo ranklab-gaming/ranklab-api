@@ -103,6 +103,8 @@ pub async fn create(
       tax_reporting_us_1099_k: None,
       tax_reporting_us_1099_misc: None,
       konbini_payments: None,
+      blik_payments: None,
+      promptpay_payments: None,
     }
     .into(),
   );
