@@ -57,8 +57,7 @@ impl QueueHandler for ScheduledTasksHandler {
           .find(&message_body.review_id)
           .get_result::<Review>(conn)
       })
-      .await
-      .map_err(anyhow::Error::from)?;
+      .await?;
 
     if review.state == ReviewState::AwaitingReview {
       let payment_intent = review.get_payment_intent(&self.client.0).await;

@@ -103,6 +103,8 @@ impl SqsFairing {
           Err(QueueHandlerError::Ignorable(e)) => {
             if profile == rocket::config::Config::RELEASE_PROFILE {
               return Err(e.into());
+            } else {
+              return Ok(());
             }
           }
           Err(e) => return Err(e.into()),
