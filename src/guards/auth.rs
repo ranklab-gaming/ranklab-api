@@ -19,6 +19,8 @@ pub enum AuthError {
   Missing,
   #[error("invalid token: {0}")]
   Invalid(String),
+  #[error("not found: {0}")]
+  NotFound(String),
 }
 
 impl From<AuthError> for (Status, AuthError) {
@@ -26,6 +28,7 @@ impl From<AuthError> for (Status, AuthError) {
     match error {
       AuthError::Missing => (Status::Unauthorized, error),
       AuthError::Invalid(_) => (Status::BadRequest, error),
+      AuthError::NotFound(_) => (Status::NotFound, error),
     }
   }
 }
@@ -118,9 +121,7 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
     .ok_or(AuthError::Invalid("jwt not found in header".to_string()))?
     .as_str();
 
-  let header =
-    decode_header(jwt).map_err(|_| AuthError::Invalid("invalid jwt header".to_string()))?;
-
+  let header = decode_header(jwt).map_err(|e| AuthError::Invalid(e.to_string()))?;
   let kid = header.kid.unwrap();
   let jwk = jwks.keys.iter().find(|jwk| jwk.kid == kid).unwrap();
   let validation = Validation::new(Algorithm::RS256);
@@ -130,7 +131,7 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
     &DecodingKey::from_rsa_components(&jwk.n, &jwk.e).unwrap(),
     &validation,
   )
-  .map_err(|_| AuthError::Invalid("invalid jwt".to_string()))
+  .map_err(|e| AuthError::Invalid(e.to_string()))
   .map(|data| data.claims)
 }
 
@@ -139,7 +140,7 @@ impl Auth<Coach> {
     let coach = db_conn
       .run(|conn| Coach::find_by_auth0_id(jwt.sub).first(conn))
       .await
-      .map_err(|_| AuthError::Invalid("coach not found".to_string()))?;
+      .map_err(|_| AuthError::NotFound("coach".to_string()))?;
 
     Ok(Auth(coach))
   }
@@ -150,7 +151,7 @@ impl Auth<Player> {
     let player = db_conn
       .run(|conn| Player::find_by_auth0_id(jwt.sub).first(conn))
       .await
-      .map_err(|_| AuthError::Invalid("player not found".to_string()))?;
+      .map_err(|_| AuthError::NotFound("player".to_string()))?;
 
     Ok(Auth(player))
   }
