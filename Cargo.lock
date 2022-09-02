@@ -120,7 +120,7 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "serde_qs 0.10.1",
- "sha2 0.10.3",
+ "sha2 0.10.4",
  "smart-default",
  "smol_str",
  "thiserror",
@@ -1825,7 +1825,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_path_to_error",
- "sha2 0.10.3",
+ "sha2 0.10.4",
  "smol_str",
  "thiserror",
  "uuid 1.1.2",
@@ -2510,9 +2510,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.3"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "899bf02746a2c92bf1053d9327dadb252b01af1f81f90cdb902411f518bc7215"
+checksum = "774e4e60efdce3075f9c44d7028b20a6a1d765d0ed642e4c19a4831edc8d576b"
 dependencies = [
  "cfg-if",
  "cpufeatures",
