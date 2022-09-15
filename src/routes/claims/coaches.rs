@@ -1,4 +1,3 @@
-use crate::data_types::UserGame;
 use crate::guards::auth::Claims;
 use crate::guards::{Auth, DbConn, Stripe};
 use crate::models::{Coach, CoachChangeset};
@@ -26,8 +25,8 @@ pub struct CreateCoachRequest {
   name: String,
   #[validate(length(min = 30))]
   bio: String,
-  #[validate(length(min = 1))]
-  games: Vec<UserGame>,
+  #[validate(length(min = 1), custom = "crate::games::validate_ids")]
+  game_ids: Vec<String>,
   #[validate(length(min = 1))]
   country: String,
 }
@@ -52,7 +51,14 @@ pub async fn create(
             .email(auth.0.email.clone())
             .name(coach.name.clone())
             .bio(coach.bio.clone())
-            .games(coach.games.clone().into_iter().map(|g| Some(g)).collect())
+            .game_ids(
+              coach
+                .game_ids
+                .clone()
+                .into_iter()
+                .map(|id| Some(id))
+                .collect(),
+            )
             .auth0_id(auth.0.sub.clone())
             .country(coach.country.clone()),
         )

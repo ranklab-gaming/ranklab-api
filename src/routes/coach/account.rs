@@ -1,4 +1,3 @@
-use crate::data_types::UserGame;
 use crate::guards::{Auth, Auth0Management, DbConn};
 use crate::models::{Coach, CoachChangeset};
 use crate::response::{MutationResponse, Response};
@@ -17,8 +16,8 @@ pub struct UpdateAccountRequest {
   name: String,
   #[validate(email)]
   email: String,
-  #[validate(length(min = 1))]
-  games: Vec<UserGame>,
+  #[validate(length(min = 1), custom = "crate::games::validate_ids")]
+  game_ids: Vec<String>,
   #[validate(length(min = 1))]
   bio: String,
 }
@@ -41,7 +40,14 @@ pub async fn update(
             .email(account.email.clone())
             .name(account.name.clone())
             .bio(account.bio.clone())
-            .games(account.games.clone().into_iter().map(|g| Some(g)).collect()),
+            .game_ids(
+              account
+                .game_ids
+                .clone()
+                .into_iter()
+                .map(|id| Some(id))
+                .collect(),
+            ),
         )
         .get_result::<Coach>(conn)
         .unwrap()

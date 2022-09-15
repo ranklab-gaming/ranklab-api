@@ -1,4 +1,3 @@
-use crate::data_types::UserGame;
 use crate::models::Coach;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -11,7 +10,7 @@ pub struct CoachView {
   pub name: String,
   pub email: String,
   pub bio: String,
-  pub games: Vec<UserGame>,
+  pub game_ids: Vec<String>,
   pub country: String,
   pub can_review: bool,
   pub stripe_details_submitted: bool,
@@ -24,7 +23,7 @@ impl From<Coach> for CoachView {
       name: coach.name,
       email: coach.email,
       bio: coach.bio,
-      games: coach.games.into_iter().map(|game| game.unwrap()).collect(),
+      game_ids: coach.game_ids.into_iter().map(|id| id.unwrap()).collect(),
       country: coach.country,
       can_review: coach.stripe_payouts_enabled,
       stripe_details_submitted: coach.stripe_details_submitted,

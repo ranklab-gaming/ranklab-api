@@ -2,7 +2,7 @@ use crate::data_types::ReviewState;
 use crate::models::{Coach, Recording};
 use crate::schema::reviews;
 use derive_builder::Builder;
-use diesel::dsl::{sql, And, Eq, EqAny, Filter, FindBy, Or, Order};
+use diesel::dsl::{And, Eq, EqAny, Filter, FindBy, Or, Order};
 use diesel::expression::SqlLiteral;
 use diesel::pg::Pg;
 use diesel::prelude::*;
@@ -35,8 +35,6 @@ pub struct Review {
 
 type NullableBoxedExpression =
   Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Nullable<Bool>>>;
-
-type BoxedExpression = Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Bool>>;
 
 impl Review {
   pub fn find_by_order_id<T: ToString>(
@@ -91,20 +89,6 @@ impl Review {
   }
 
   pub fn filter_for_coach(coach: &Coach, archived: bool) -> reviews::BoxedQuery<'_, Pg> {
-    let mut games_expression: BoxedExpression = Box::new(sql("false"));
-
-    for game_option in coach.games.clone().into_iter() {
-      let game = game_option.unwrap().clone();
-
-      games_expression = Box::new(
-        games_expression.or(
-          reviews::game_id
-            .eq(game.game_id)
-            .and(reviews::skill_level.lt(game.skill_level as i16)),
-        ),
-      );
-    }
-
     let mut filter_expression: NullableBoxedExpression = Box::new(reviews::coach_id.eq(coach.id));
 
     filter_expression = if archived {
@@ -125,7 +109,18 @@ impl Review {
     };
 
     reviews::table
-      .filter(filter_expression.and(games_expression))
+      .filter(
+        filter_expression.and(
+          reviews::game_id.eq_any(
+            coach
+              .game_ids
+              .clone()
+              .into_iter()
+              .map(|id| id.unwrap())
+              .collect::<Vec<String>>(),
+          ),
+        ),
+      )
       .order(diesel::dsl::sql::<Bool>(
         "case \"state\"
           when 'awaiting_review' then 3

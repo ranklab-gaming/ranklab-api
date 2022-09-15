@@ -24,10 +24,6 @@ impl Game for Valorant {
     &self.skill_levels
   }
 
-  fn min_coach_skill_level(&self) -> &SkillLevel {
-    &self.skill_levels[4]
-  }
-
   fn name(&self) -> &str {
     &self.name
   }

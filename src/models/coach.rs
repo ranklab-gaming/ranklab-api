@@ -1,4 +1,3 @@
-use crate::data_types::UserGame;
 use crate::schema::coaches;
 use derive_builder::Builder;
 use diesel::helper_types::FindBy;
@@ -18,7 +17,7 @@ pub struct Coach {
   pub bio: String,
   pub country: String,
   pub email: String,
-  pub games: Vec<Option<UserGame>>,
+  pub game_ids: Vec<Option<String>>,
   pub id: Uuid,
   pub name: String,
   pub stripe_account_id: Option<String>,

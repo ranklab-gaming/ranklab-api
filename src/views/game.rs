@@ -9,7 +9,6 @@ pub struct GameView {
   name: String,
   id: String,
   skill_levels: Vec<SkillLevel>,
-  min_coach_skill_level: SkillLevel,
 }
 
 impl From<&Box<dyn Game>> for GameView {
@@ -18,7 +17,6 @@ impl From<&Box<dyn Game>> for GameView {
       name: game.name().to_owned(),
       id: game.id().to_owned(),
       skill_levels: game.skill_levels().to_owned(),
-      min_coach_skill_level: game.min_coach_skill_level().to_owned(),
     }
   }
 }

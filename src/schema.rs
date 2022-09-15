@@ -12,7 +12,7 @@ diesel::table! {
         bio -> Text,
         country -> Text,
         email -> Text,
-        games -> Array<Nullable<Jsonb>>,
+        game_ids -> Array<Nullable<Text>>,
         id -> Uuid,
         name -> Text,
         stripe_account_id -> Nullable<Text>,

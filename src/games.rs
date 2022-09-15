@@ -26,3 +26,11 @@ pub fn validate_id(id: &str) -> Result<(), ValidationError> {
     None => Err(ValidationError::new("Invalid game ID")),
   }
 }
+
+pub fn validate_ids(ids: &Vec<String>) -> Result<(), ValidationError> {
+  for id in ids {
+    validate_id(id)?;
+  }
+
+  Ok(())
+}

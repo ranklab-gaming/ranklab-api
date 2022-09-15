@@ -3,7 +3,7 @@ CREATE TABLE coaches (
     bio text NOT NULL DEFAULT '',
     country text NOT NULL DEFAULT '',
     email text UNIQUE NOT NULL DEFAULT '',
-    games jsonb[] NOT NULL DEFAULT '{}',
+    game_ids text[] NOT NULL DEFAULT array[]::text[],
     id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL DEFAULT '',
     stripe_account_id text,
