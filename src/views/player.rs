@@ -1,4 +1,4 @@
-use crate::data_types::UserGame;
+use crate::data_types::PlayerGame;
 use crate::models::Player;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -10,7 +10,7 @@ pub struct PlayerView {
   pub id: Uuid,
   pub name: String,
   pub email: String,
-  pub games: Vec<UserGame>,
+  pub games: Vec<PlayerGame>,
 }
 
 impl From<Player> for PlayerView {

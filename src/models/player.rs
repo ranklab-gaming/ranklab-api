@@ -1,4 +1,4 @@
-use crate::data_types::UserGame;
+use crate::data_types::PlayerGame;
 use crate::schema::players;
 use derive_builder::Builder;
 use diesel::dsl::FindBy;
@@ -15,7 +15,7 @@ use uuid::Uuid;
 pub struct Player {
   pub auth0_id: String,
   pub email: String,
-  pub games: Vec<Option<UserGame>>,
+  pub games: Vec<Option<PlayerGame>>,
   pub id: Uuid,
   pub name: String,
   pub stripe_customer_id: Option<String>,

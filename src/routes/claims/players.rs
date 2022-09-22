@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use crate::data_types::UserGame;
+use crate::data_types::PlayerGame;
 use crate::guards::auth::Claims;
 use crate::guards::{Auth, DbConn, Stripe};
 use crate::models::{Player, PlayerChangeset};
@@ -19,7 +19,7 @@ pub struct CreatePlayerRequest {
   #[validate(length(min = 2))]
   name: String,
   #[validate(length(min = 1))]
-  games: Vec<UserGame>,
+  games: Vec<PlayerGame>,
 }
 
 #[openapi(tag = "Ranklab")]

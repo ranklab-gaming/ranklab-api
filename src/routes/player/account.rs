@@ -1,4 +1,4 @@
-use crate::data_types::UserGame;
+use crate::data_types::PlayerGame;
 use crate::guards::{Auth, Auth0Management, DbConn};
 use crate::models::{Player, PlayerChangeset};
 use crate::response::{MutationResponse, Response};
@@ -18,7 +18,7 @@ pub struct UpdateAccountRequest {
   #[validate(email)]
   email: String,
   #[validate(length(min = 1))]
-  games: Vec<UserGame>,
+  games: Vec<PlayerGame>,
 }
 
 #[openapi(tag = "Ranklab")]
