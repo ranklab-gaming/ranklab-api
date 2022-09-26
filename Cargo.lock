@@ -506,7 +506,7 @@ name = "diesel-derive-enum"
 version = "2.0.0-pre"
 source = "git+https://github.com/adwhit/diesel-derive-enum?rev=e6aa69#e6aa69856245f083645a0087527236a6bff42c18"
 dependencies = [
- "heck 0.4.0",
+ "heck",
  "proc-macro2",
  "quote",
  "syn",
@@ -514,10 +514,11 @@ dependencies = [
 
 [[package]]
 name = "diesel_as_jsonb"
-version = "0.1.3"
-source = "git+https://github.com/ranklab-gaming/diesel_as_jsonb#3a8d1b6097196115223a1f8a8bf693c7e65aec47"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc25acd76bc20f38d0384f77a3d6ce768f95c76f433a5bea16c825d194158f64"
 dependencies = [
- "heck 0.3.3",
+ "heck",
  "proc-macro2",
  "quote",
  "syn",
@@ -869,15 +870,6 @@ name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
-
-[[package]]
-name = "heck"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
-dependencies = [
- "unicode-segmentation",
-]
 
 [[package]]
 name = "heck"
@@ -1412,6 +1404,17 @@ dependencies = [
 [[package]]
 name = "okapi"
 version = "0.7.0-rc.1"
+source = "git+https://github.com/ranklab-gaming/okapi?rev=ee5ac58#ee5ac583f9cf2418d2d440d324fb207376498bc1"
+dependencies = [
+ "log",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "okapi"
+version = "0.7.0-rc.1"
 source = "git+https://github.com/ranklab-gaming/okapi#a1759c17193aba0c4ac0e130a82c3a24e8ee61ce"
 dependencies = [
  "log",
@@ -1805,11 +1808,11 @@ dependencies = [
  "jsonwebtoken",
  "lazy_static",
  "mime_guess",
- "okapi",
+ "okapi 0.7.0-rc.1 (git+https://github.com/ranklab-gaming/okapi?rev=ee5ac58)",
  "regex",
  "reqwest",
- "rocket",
- "rocket_http",
+ "rocket 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e)",
+ "rocket_http 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e)",
  "rocket_okapi",
  "rocket_sync_db_pools",
  "rocket_sync_db_pools_codegen",
@@ -1962,6 +1965,45 @@ dependencies = [
 [[package]]
 name = "rocket"
 version = "0.5.0-rc.2"
+source = "git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e#6c3d35e7e5bceaf11c329623d48f81c276407030"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "atomic",
+ "atty",
+ "binascii",
+ "bytes",
+ "either",
+ "figment",
+ "futures",
+ "indexmap",
+ "log",
+ "memchr",
+ "multer",
+ "num_cpus",
+ "parking_lot 0.12.1",
+ "pin-project-lite",
+ "rand 0.8.5",
+ "ref-cast",
+ "rocket_codegen 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e)",
+ "rocket_http 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e)",
+ "serde",
+ "serde_json",
+ "state",
+ "tempfile",
+ "time 0.3.9",
+ "tokio",
+ "tokio-stream",
+ "tokio-util 0.7.3",
+ "ubyte",
+ "uuid 1.1.2",
+ "version_check",
+ "yansi",
+]
+
+[[package]]
+name = "rocket"
+version = "0.5.0-rc.2"
 source = "git+https://github.com/ranklab-gaming/Rocket#a211c05036081833f850ba98908b1089b2eaaf7e"
 dependencies = [
  "async-stream",
@@ -1982,8 +2024,8 @@ dependencies = [
  "pin-project-lite",
  "rand 0.8.5",
  "ref-cast",
- "rocket_codegen",
- "rocket_http",
+ "rocket_codegen 0.5.0-rc.2 (git+https://github.com/ranklab-gaming/Rocket)",
+ "rocket_http 0.5.0-rc.2 (git+https://github.com/ranklab-gaming/Rocket)",
  "serde",
  "serde_json",
  "state",
@@ -2001,6 +2043,21 @@ dependencies = [
 [[package]]
 name = "rocket_codegen"
 version = "0.5.0-rc.2"
+source = "git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e#6c3d35e7e5bceaf11c329623d48f81c276407030"
+dependencies = [
+ "devise",
+ "glob",
+ "indexmap",
+ "proc-macro2",
+ "quote",
+ "rocket_http 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e)",
+ "syn",
+ "unicode-xid",
+]
+
+[[package]]
+name = "rocket_codegen"
+version = "0.5.0-rc.2"
 source = "git+https://github.com/ranklab-gaming/Rocket#a211c05036081833f850ba98908b1089b2eaaf7e"
 dependencies = [
  "devise",
@@ -2008,9 +2065,36 @@ dependencies = [
  "indexmap",
  "proc-macro2",
  "quote",
- "rocket_http",
+ "rocket_http 0.5.0-rc.2 (git+https://github.com/ranklab-gaming/Rocket)",
  "syn",
  "unicode-xid",
+]
+
+[[package]]
+name = "rocket_http"
+version = "0.5.0-rc.2"
+source = "git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e#6c3d35e7e5bceaf11c329623d48f81c276407030"
+dependencies = [
+ "cookie",
+ "either",
+ "futures",
+ "http",
+ "hyper",
+ "indexmap",
+ "log",
+ "memchr",
+ "pear",
+ "percent-encoding",
+ "pin-project-lite",
+ "ref-cast",
+ "serde",
+ "smallvec",
+ "stable-pattern",
+ "state",
+ "time 0.3.9",
+ "tokio",
+ "uncased",
+ "uuid 1.1.2",
 ]
 
 [[package]]
@@ -2047,8 +2131,8 @@ source = "git+https://github.com/ranklab-gaming/okapi#a1759c17193aba0c4ac0e130a8
 dependencies = [
  "either",
  "log",
- "okapi",
- "rocket",
+ "okapi 0.7.0-rc.1 (git+https://github.com/ranklab-gaming/okapi)",
+ "rocket 0.5.0-rc.2 (git+https://github.com/ranklab-gaming/Rocket)",
  "rocket_okapi_codegen",
  "schemars",
  "serde",
@@ -2063,18 +2147,18 @@ dependencies = [
  "darling 0.13.4",
  "proc-macro2",
  "quote",
- "rocket_http",
+ "rocket_http 0.5.0-rc.2 (git+https://github.com/ranklab-gaming/Rocket)",
  "syn",
 ]
 
 [[package]]
 name = "rocket_sync_db_pools"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/ranklab-gaming/Rocket#a211c05036081833f850ba98908b1089b2eaaf7e"
+source = "git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e#6c3d35e7e5bceaf11c329623d48f81c276407030"
 dependencies = [
  "diesel",
  "r2d2",
- "rocket",
+ "rocket 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e)",
  "rocket_sync_db_pools_codegen",
  "serde",
  "tokio",
@@ -2084,7 +2168,7 @@ dependencies = [
 [[package]]
 name = "rocket_sync_db_pools_codegen"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/ranklab-gaming/Rocket#a211c05036081833f850ba98908b1089b2eaaf7e"
+source = "git+https://github.com/SergioBenitez/Rocket?rev=6c3d35e#6c3d35e7e5bceaf11c329623d48f81c276407030"
 dependencies = [
  "devise",
  "quote",
@@ -3005,12 +3089,6 @@ checksum = "d54590932941a9e9266f0832deed84ebe1bf2e4c9e4a3554d393d18f5e854bf9"
 dependencies = [
  "tinyvec",
 ]
-
-[[package]]
-name = "unicode-segmentation"
-version = "1.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e8820f5d777f6224dc4be3632222971ac30164d4a258d595640799554ebfd99"
 
 [[package]]
 name = "unicode-xid"
