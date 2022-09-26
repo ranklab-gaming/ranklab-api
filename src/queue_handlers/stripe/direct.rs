@@ -34,6 +34,8 @@ impl Direct {
       .run(move |conn| Review::find_by_order_id(&order_id).get_result::<Review>(conn))
       .await?;
 
+    let coach_id = review.coach_id.clone();
+
     if let Some(state_machine_arn) = &self.config.scheduled_tasks_state_machine_arn {
       rusoto_stepfunctions::StepFunctions::start_execution(
         &self.step_functions,
@@ -60,35 +62,33 @@ impl Direct {
       .await
       .map_err(QueueHandlerError::from)?;
 
-    let coaches: Vec<Coach> = self
-      .db_conn
-      .run(move |conn| coaches::table.select(coaches::all_columns).load(conn))
-      .await?;
+    // only email the coach if he has been specifcally requested
+    if let Some(coach_id) = coach_id {
+      let coach: Coach = self
+        .db_conn
+        .run(move |conn| coaches::table.find(coach_id).first(conn))
+        .await?;
 
-    let email = Email::new(
-      &self.config,
-      "notification".to_owned(),
-      json!({
+      let email = Email::new(
+        &self.config,
+        "notification".to_owned(),
+        json!({
           "subject": "New VODs are available",
           "title": "There are new VODs available for review!",
           "body": "Go to your dashboard to start analyzing them.",
           "cta" : "View Available VODs",
           "cta_url" : "https://ranklab.gg/dashboard"
-      }),
-      coaches
-        .iter()
-        .map(|coach| {
-          Recipient::new(
-            coach.email.clone(),
-            json!({
-              "name": coach.name.clone(),
-            }),
-          )
-        })
-        .collect(),
-    );
+        }),
+        vec![Recipient::new(
+          coach.email.clone(),
+          json!({
+            "name": coach.name.clone(),
+          }),
+        )],
+      );
 
-    email.deliver();
+      email.deliver();
+    }
 
     Ok(())
   }
