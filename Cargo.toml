@@ -19,7 +19,7 @@ derive_builder = "0.11.2"
 diesel-derive-enum = { git = "https://github.com/adwhit/diesel-derive-enum", rev = "e6aa69", features = [
   "postgres",
 ] }
-diesel = { version = "=2.0.1", features = ["uuid", "chrono", "postgres"] }
+diesel = { version = "=2.0.2", features = ["uuid", "chrono", "postgres"] }
 diesel_migrations = "=2.0.0"
 diesel_as_jsonb = { git = "https://github.com/ranklab-gaming/diesel_as_jsonb" }
 dotenv = "0.15.0"
