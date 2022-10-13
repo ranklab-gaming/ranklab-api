@@ -34,6 +34,7 @@ impl From<AuthError> for (Status, AuthError) {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum UserType {
   Coach,
   Player,
