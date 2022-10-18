@@ -8,13 +8,12 @@ pub mod sql_types {
 
 diesel::table! {
     coaches (id) {
-        auth0_id -> Text,
+        email -> Text,
+        name -> Text,
         bio -> Text,
         country -> Text,
-        email -> Text,
         game_ids -> Array<Nullable<Text>>,
         id -> Uuid,
-        name -> Text,
         stripe_account_id -> Nullable<Text>,
         stripe_details_submitted -> Bool,
         stripe_payouts_enabled -> Bool,
@@ -38,11 +37,10 @@ diesel::table! {
 
 diesel::table! {
     players (id) {
-        auth0_id -> Text,
         email -> Text,
+        name -> Text,
         games -> Array<Nullable<Jsonb>>,
         id -> Uuid,
-        name -> Text,
         stripe_customer_id -> Nullable<Text>,
         updated_at -> Timestamp,
         created_at -> Timestamp,

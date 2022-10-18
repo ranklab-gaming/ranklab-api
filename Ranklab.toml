@@ -1,2 +1,5 @@
+[debug]
+web_host = "http://ranklab-development:3000"
+
 [test]
-auth0_issuer_base_url = "http://ranklab-test:3000/oidc/"
+web_host = "http://ranklab-test:3000"

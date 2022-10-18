@@ -7,7 +7,6 @@ use crate::emails::{Email, Recipient};
 use crate::fairings::sqs::QueueHandlerError;
 use crate::guards::DbConn;
 use crate::models::{Coach, Review, ReviewChangeset};
-use crate::schema::coaches;
 use anyhow::anyhow;
 use diesel::prelude::*;
 use rusoto_core::{HttpClient, Region};
@@ -66,7 +65,7 @@ impl Direct {
     if let Some(coach_id) = coach_id {
       let coach: Coach = self
         .db_conn
-        .run(move |conn| coaches::table.find(coach_id).first(conn))
+        .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
         .await?;
 
       let email = Email::new(

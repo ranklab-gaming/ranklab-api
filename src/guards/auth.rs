@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::guards::DbConn;
-use crate::models::{Coach, Player, User};
+use crate::models::{Coach, Player};
 use crate::try_result;
 use diesel::prelude::*;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
@@ -12,6 +12,7 @@ use rocket_okapi::gen::OpenApiGenerator;
 use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Error, Debug)]
 pub enum AuthError {
@@ -41,7 +42,7 @@ pub enum UserType {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Claims {
-  pub sub: String,
+  pub sub: Uuid,
   #[serde(rename = "https://ranklab.gg/email")]
   pub email: String,
   #[serde(rename = "https://ranklab.gg/user_type")]
@@ -84,12 +85,9 @@ pub struct Auth<T>(pub T);
 async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
   let jwt_regexp = Regex::new(r"Bearer (?P<jwt>.+)").unwrap();
   let config = req.guard::<&State<Config>>().await;
-  let auth0_issuer_base_url = config.as_ref().unwrap().auth0_issuer_base_url.clone();
+  let web_host = config.as_ref().unwrap().web_host.clone();
 
-  let oidc_configuration_url = format!(
-    "{}{}",
-    auth0_issuer_base_url, ".well-known/openid-configuration"
-  );
+  let oidc_configuration_url = format!("{}{}", web_host, "/auth/.well-known/openid-configuration");
 
   let oidc_configuration = reqwest::get(&oidc_configuration_url)
     .await
@@ -137,8 +135,12 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
 
 impl Auth<Coach> {
   async fn from_jwt(db_conn: DbConn, jwt: Claims) -> Result<Self, AuthError> {
+    if jwt.user_type != UserType::Coach {
+      return Err(AuthError::Invalid("not a coach".to_string()));
+    }
+
     let coach = db_conn
-      .run(|conn| Coach::find_by_auth0_id(jwt.sub).first(conn))
+      .run(move |conn| Coach::find_by_id(&jwt.sub).first(conn))
       .await
       .map_err(|_| AuthError::NotFound("coach".to_string()))?;
 
@@ -148,8 +150,12 @@ impl Auth<Coach> {
 
 impl Auth<Player> {
   async fn from_jwt(db_conn: DbConn, jwt: Claims) -> Result<Self, AuthError> {
+    if jwt.user_type != UserType::Player {
+      return Err(AuthError::Invalid("not a player".to_string()));
+    }
+
     let player = db_conn
-      .run(|conn| Player::find_by_auth0_id(jwt.sub).first(conn))
+      .run(move |conn| Player::find_by_id(&jwt.sub).first(conn))
       .await
       .map_err(|_| AuthError::NotFound("player".to_string()))?;
 
@@ -181,39 +187,6 @@ impl<'r> FromRequest<'r> for Auth<Coach> {
   }
 }
 
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for Auth<Claims> {
-  type Error = AuthError;
-
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    let decoded_jwt = try_result!(decode_jwt(req).await);
-    Outcome::Success(Auth(decoded_jwt))
-  }
-}
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for Auth<User> {
-  type Error = AuthError;
-
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    let db_conn = req.guard::<DbConn>().await.unwrap();
-    let decoded_jwt = try_result!(decode_jwt(req).await);
-
-    let user: User = match decoded_jwt.user_type {
-      UserType::Player => {
-        let player = try_result!(Auth::<Player>::from_jwt(db_conn, decoded_jwt).await);
-        User::Player(player.0)
-      }
-      UserType::Coach => {
-        let coach = try_result!(Auth::<Coach>::from_jwt(db_conn, decoded_jwt).await);
-        User::Coach(coach.0)
-      }
-    };
-
-    Outcome::Success(Auth(user))
-  }
-}
-
 impl<'a> OpenApiFromRequest<'a> for Auth<Player> {
   fn from_request_input(
     _gen: &mut OpenApiGenerator,
@@ -225,26 +198,6 @@ impl<'a> OpenApiFromRequest<'a> for Auth<Player> {
 }
 
 impl<'a> OpenApiFromRequest<'a> for Auth<Coach> {
-  fn from_request_input(
-    _gen: &mut OpenApiGenerator,
-    _name: String,
-    _required: bool,
-  ) -> rocket_okapi::Result<RequestHeaderInput> {
-    Ok(RequestHeaderInput::None)
-  }
-}
-
-impl<'a> OpenApiFromRequest<'a> for Auth<Claims> {
-  fn from_request_input(
-    _gen: &mut OpenApiGenerator,
-    _name: String,
-    _required: bool,
-  ) -> rocket_okapi::Result<RequestHeaderInput> {
-    Ok(RequestHeaderInput::None)
-  }
-}
-
-impl<'a> OpenApiFromRequest<'a> for Auth<User> {
   fn from_request_input(
     _gen: &mut OpenApiGenerator,
     _name: String,
