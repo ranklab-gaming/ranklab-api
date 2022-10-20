@@ -14,6 +14,7 @@ diesel::table! {
         country -> Text,
         game_ids -> Array<Nullable<Text>>,
         id -> Uuid,
+        password -> Text,
         stripe_account_id -> Nullable<Text>,
         stripe_details_submitted -> Bool,
         stripe_payouts_enabled -> Bool,
@@ -42,6 +43,7 @@ diesel::table! {
         games -> Array<Nullable<Jsonb>>,
         id -> Uuid,
         stripe_customer_id -> Nullable<Text>,
+        password -> Text,
         updated_at -> Timestamp,
         created_at -> Timestamp,
     }

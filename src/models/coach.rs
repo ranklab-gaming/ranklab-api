@@ -19,6 +19,7 @@ pub struct Coach {
   pub country: String,
   pub game_ids: Vec<Option<String>>,
   pub id: Uuid,
+  pub password: String,
   pub stripe_account_id: Option<String>,
   pub stripe_details_submitted: bool,
   pub stripe_payouts_enabled: bool,
@@ -35,5 +36,9 @@ impl Coach {
 
   pub fn find_by_id(id: &Uuid) -> Find<coaches::table, Uuid> {
     coaches::table.find(*id)
+  }
+
+  pub fn find_by_email<T: ToString>(email: &T) -> FindBy<coaches::table, coaches::email, String> {
+    coaches::table.filter(coaches::email.eq(email.to_string()))
   }
 }

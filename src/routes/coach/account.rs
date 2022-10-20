@@ -3,6 +3,7 @@ use crate::models::{Coach, CoachChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::coaches;
 use crate::views::CoachView;
+use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -22,6 +23,8 @@ struct CountrySpecParams {}
 pub struct CreateCoachRequest {
   #[validate(email)]
   email: String,
+  #[validate(length(min = 8))]
+  password: String,
   #[validate(length(min = 2))]
   name: String,
   #[validate(length(min = 30))]
@@ -103,6 +106,7 @@ pub async fn create(
         .values(
           CoachChangeset::default()
             .email(coach.email.clone())
+            .password(hash(coach.password.clone(), DEFAULT_COST).expect("Failed to hash password"))
             .name(coach.name.clone())
             .bio(coach.bio.clone())
             .game_ids(

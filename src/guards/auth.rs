@@ -10,6 +10,7 @@ use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
 use rocket_okapi::gen::OpenApiGenerator;
 use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -34,7 +35,7 @@ impl From<AuthError> for (Status, AuthError) {
   }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum UserType {
   Coach,
   Player,

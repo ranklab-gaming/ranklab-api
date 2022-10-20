@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
+  pub auth_client_secret: String,
   pub web_host: String,
   pub s3_bucket: String,
   pub s3_bucket_queue: String,

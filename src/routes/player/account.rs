@@ -6,6 +6,7 @@ use crate::models::{Player, PlayerChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::players;
 use crate::views::PlayerView;
+use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -31,6 +32,8 @@ pub struct CreatePlayerRequest {
   name: String,
   #[validate(email)]
   email: String,
+  #[validate(length(min = 8))]
+  password: String,
   #[validate(length(min = 1))]
   games: Vec<PlayerGame>,
 }
@@ -58,6 +61,7 @@ pub async fn create(
       diesel::insert_into(players::table)
         .values(
           PlayerChangeset::default()
+            .password(hash(player.password.clone(), DEFAULT_COST).expect("Failed to hash password"))
             .email(player.email.clone())
             .name(player.name.clone())
             .games(player.games.clone().into_iter().map(|g| Some(g)).collect())

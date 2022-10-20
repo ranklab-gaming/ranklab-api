@@ -1,7 +1,7 @@
 use crate::data_types::PlayerGame;
 use crate::schema::players;
 use derive_builder::Builder;
-use diesel::dsl::Find;
+use diesel::dsl::{Find, FindBy};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -18,6 +18,7 @@ pub struct Player {
   pub games: Vec<Option<PlayerGame>>,
   pub id: Uuid,
   pub stripe_customer_id: Option<String>,
+  pub password: String,
   pub updated_at: chrono::NaiveDateTime,
   pub created_at: chrono::NaiveDateTime,
 }
@@ -25,5 +26,9 @@ pub struct Player {
 impl Player {
   pub fn find_by_id(id: &Uuid) -> Find<players::table, Uuid> {
     players::table.find(*id)
+  }
+
+  pub fn find_by_email<T: ToString>(email: &T) -> FindBy<players::table, players::email, String> {
+    players::table.filter(players::email.eq(email.to_string()))
   }
 }

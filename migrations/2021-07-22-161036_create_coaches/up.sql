@@ -5,6 +5,7 @@ CREATE TABLE coaches (
     country text NOT NULL DEFAULT '',
     game_ids text[] NOT NULL DEFAULT array[]::text[],
     id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    password text NOT NULL DEFAULT '',
     stripe_account_id text,
     stripe_details_submitted boolean NOT NULL DEFAULT false,
     stripe_payouts_enabled boolean NOT NULL DEFAULT false,
