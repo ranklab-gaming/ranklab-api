@@ -1,9 +1,9 @@
 use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::guards::auth::UserType;
-use crate::guards::DbConn;
+use crate::guards::{Auth, DbConn};
 use crate::models::{Coach, Player};
-use crate::response::{MutationError, MutationResponse, Response};
+use crate::response::{MutationError, MutationResponse, Response, StatusResponse};
 use bcrypt::verify;
 use chrono::prelude::*;
 use chrono::Duration;
@@ -41,9 +41,9 @@ pub struct ResetPasswordRequest {
   user_type: UserType,
 }
 
-#[derive(Debug, Serialize, JsonSchema)]
-pub struct ResetPasswordResponse {
-  status: String,
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct UpdatePasswordRequest {
+  password: String,
 }
 
 enum Account {
@@ -99,22 +99,19 @@ pub async fn create(
 }
 
 #[openapi(tag = "Ranklab")]
-#[post("/sessions/reset-password", data = "<session>")]
+#[post("/sessions/reset-password", data = "<reset_password>")]
 pub async fn reset_password(
-  session: Json<ResetPasswordRequest>,
+  reset_password: Json<ResetPasswordRequest>,
   config: &State<Config>,
   db_conn: DbConn,
-) -> MutationResponse<ResetPasswordResponse> {
-  let email = session.email.clone();
+) -> MutationResponse<StatusResponse> {
+  let email = reset_password.email.clone();
+  let response = Response::status(Status::Ok);
 
-  let response = Response::success(ResetPasswordResponse {
-    status: "ok".into(),
-  });
-
-  let account = match session.user_type {
+  let account = match reset_password.user_type {
     UserType::Coach => Account::Coach(
       match db_conn
-        .run(move |conn| Coach::find_by_email(&session.email).get_result::<Coach>(conn))
+        .run(move |conn| Coach::find_by_email(&reset_password.email).get_result::<Coach>(conn))
         .await
       {
         Ok(coach) => coach,
@@ -123,7 +120,7 @@ pub async fn reset_password(
     ),
     UserType::Player => Account::Player(
       match db_conn
-        .run(move |conn| Player::find_by_email(&session.email).get_result::<Player>(conn))
+        .run(move |conn| Player::find_by_email(&reset_password.email).get_result::<Player>(conn))
         .await
       {
         Ok(player) => player,
@@ -160,4 +157,15 @@ pub async fn reset_password(
   email.deliver();
 
   response
+}
+
+#[openapi(tag = "Ranklab")]
+#[put("/sessions/password", data = "<password>")]
+pub async fn update_password(
+  password: Json<UpdatePasswordRequest>,
+  config: &State<Config>,
+  db_conn: DbConn,
+  auth: Auth<OneTimeToken>,
+) -> MutationResponse<StatusResponse> {
+  Response::status(Status::Ok)
 }

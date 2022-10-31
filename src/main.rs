@@ -14,8 +14,6 @@ use rocket::figment::Profile;
 use rocket::http::Accept;
 use rocket::{Build, Rocket};
 use rocket_okapi::openapi_get_routes;
-use schemars::JsonSchema;
-use serde::Serialize;
 use std::env;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
@@ -25,11 +23,6 @@ const DEFAULT_PROFILE: &str = if cfg!(debug_assertions) {
 } else {
   "release"
 };
-
-#[derive(Serialize, JsonSchema)]
-pub struct Health {
-  status: String,
-}
 
 pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
   let database_url: String = rocket
