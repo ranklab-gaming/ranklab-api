@@ -32,6 +32,7 @@ jsonwebtoken = "8.1.1"
 lazy_static = "1.4.0"
 mime_guess = "2.0.4"
 okapi = { git = "https://github.com/ranklab-gaming/okapi" }
+rand = "0.8.5"
 regex = "1.6.0"
 reqwest = { version = "0.11.12", features = ["json"] }
 rocket = { git = "https://github.com/ranklab-gaming/Rocket", features = [

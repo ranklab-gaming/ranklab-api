@@ -37,6 +37,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    one_time_tokens (id) {
+        id -> Uuid,
+        value -> Text,
+        player_id -> Nullable<Uuid>,
+        coach_id -> Nullable<Uuid>,
+        scope -> Text,
+        used_at -> Nullable<Timestamp>,
+        updated_at -> Timestamp,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     players (id) {
         email -> Text,
         name -> Text,
@@ -84,6 +97,8 @@ diesel::table! {
 
 diesel::joinable!(comments -> coaches (coach_id));
 diesel::joinable!(comments -> reviews (review_id));
+diesel::joinable!(one_time_tokens -> coaches (coach_id));
+diesel::joinable!(one_time_tokens -> players (player_id));
 diesel::joinable!(recordings -> players (player_id));
 diesel::joinable!(reviews -> coaches (coach_id));
 diesel::joinable!(reviews -> players (player_id));
@@ -92,6 +107,7 @@ diesel::joinable!(reviews -> recordings (recording_id));
 diesel::allow_tables_to_appear_in_same_query!(
     coaches,
     comments,
+    one_time_tokens,
     players,
     recordings,
     reviews,

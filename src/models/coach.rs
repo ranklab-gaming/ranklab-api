@@ -38,7 +38,7 @@ impl Coach {
     coaches::table.find(*id)
   }
 
-  pub fn find_by_email<T: ToString>(email: &T) -> FindBy<coaches::table, coaches::email, String> {
+  pub fn find_by_email(email: &str) -> FindBy<coaches::table, coaches::email, String> {
     coaches::table.filter(coaches::email.eq(email.to_string()))
   }
 }

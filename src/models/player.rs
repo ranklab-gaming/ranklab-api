@@ -28,7 +28,7 @@ impl Player {
     players::table.find(*id)
   }
 
-  pub fn find_by_email<T: ToString>(email: &T) -> FindBy<players::table, players::email, String> {
+  pub fn find_by_email(email: &str) -> FindBy<players::table, players::email, String> {
     players::table.filter(players::email.eq(email.to_string()))
   }
 }

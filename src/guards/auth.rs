@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::guards::DbConn;
-use crate::models::{Coach, Player};
+use crate::models::{Coach, Player, OneTimeToken};
 use crate::try_result;
 use diesel::prelude::*;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
@@ -164,6 +164,29 @@ impl Auth<Player> {
   }
 }
 
+impl Auth<OneTimeToken> {
+  async fn from_req<'r>(req: &'r Request<'_>) -> Result<Self, AuthError> {
+    let db_conn = req.guard::<DbConn>().await.unwrap();
+
+    let value = match req.query_value::<String>("token") {
+      Some(Ok(token)) => token,
+      _ => return Err(AuthError::Missing),
+    };
+
+    let user_type: UserType = match req.query_value::<String>("user_type") {
+      Some(Ok(user_type)) => serde_json::from_str(&user_type).unwrap(),
+      _ => return Err(AuthError::Missing),
+    };
+
+    let token = db_conn
+      .run(move |conn| OneTimeToken::find_by_value(&value, user_type, "reset-password").first(conn))
+      .await
+      .map_err(|_| AuthError::NotFound("token".to_string()))?;
+
+    Ok(Auth(token))
+  }
+}
+
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Auth<Player> {
   type Error = AuthError;
@@ -187,6 +210,16 @@ impl<'r> FromRequest<'r> for Auth<Coach> {
     Outcome::Success(auth)
   }
 }
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for Auth<OneTimeToken> {
+  type Error = AuthError;
+
+  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    let auth = try_result!(Auth::<OneTimeToken>::from_req(req).await);
+    Outcome::Success(auth)
+  }
+
 
 impl<'a> OpenApiFromRequest<'a> for Auth<Player> {
   fn from_request_input(

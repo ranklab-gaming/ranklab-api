@@ -2,13 +2,15 @@ use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::guards::auth::UserType;
 use crate::guards::{Auth, DbConn};
-use crate::models::{Coach, Player};
+use crate::models::{Coach, OneTimeToken, OneTimeTokenChangeset, Player};
 use crate::response::{MutationError, MutationResponse, Response, StatusResponse};
+use crate::schema::one_time_tokens;
 use bcrypt::verify;
 use chrono::prelude::*;
 use chrono::Duration;
 use diesel::prelude::*;
 use jsonwebtoken::{encode, EncodingKey, Header};
+use rand::distributions::{Alphanumeric, DistString};
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_http::Status;
@@ -134,7 +136,28 @@ pub async fn reset_password(
     Account::Player(player) => player.name.clone(),
   };
 
-  let token = generate_token(&account, config);
+  let token: OneTimeToken = db_conn
+    .run(move |conn| {
+      let value = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+
+      diesel::insert_into(one_time_tokens::table)
+        .values(
+          OneTimeTokenChangeset::default()
+            .value(value)
+            .scope("reset-password".to_owned())
+            .player_id(match &account {
+              Account::Coach(_) => None,
+              Account::Player(player) => Some(player.id),
+            })
+            .coach_id(match &account {
+              Account::Coach(coach) => Some(coach.id),
+              Account::Player(_) => None,
+            }),
+        )
+        .get_result::<OneTimeToken>(conn)
+        .unwrap()
+    })
+    .await;
 
   let email = Email::new(
     &config,
@@ -144,7 +167,7 @@ pub async fn reset_password(
       "title": "Hello {{name}}, you requested to reset your password",
       "body": "Click the button below to reset it",
       "cta" : "Reset Password",
-      "cta_url" : format!("{}/auth/reset-password?token={}", config.web_host, token),
+      "cta_url" : format!("{}/auth/reset-password?token={}", config.web_host, token.value),
     }),
     vec![Recipient::new(
       email,
