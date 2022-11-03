@@ -1,11 +1,14 @@
 use crate::guards::auth::UserType;
+use crate::guards::DbConn;
 use crate::schema::one_time_tokens;
 use derive_builder::Builder;
-use diesel::dsl::{Find, FindBy};
+use diesel::dsl::{And, Eq, Filter};
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use uuid::Uuid;
+
+use super::{Account, Coach, Player};
 
 #[derive(Builder, Queryable, Identifiable, Clone)]
 #[builder(
@@ -33,11 +36,11 @@ impl OneTimeToken {
   ) -> Filter<
     one_time_tokens::table,
     And<
-      Or<
-        Eq<one_time_tokens::coach_id, Option<Uuid>>,
-        Eq<one_time_tokens::state, one_time_tokenstate>,
+      And<
+        Eq<one_time_tokens::value, String>,
+        Box<dyn BoxableExpression<one_time_tokens::table, Pg, SqlType = Bool>>,
       >,
-      Eq<one_time_tokens::recording_id, Uuid>,
+      Eq<one_time_tokens::scope, String>,
     >,
   > {
     let user_type_expr: Box<dyn BoxableExpression<one_time_tokens::table, Pg, SqlType = Bool>> =
@@ -52,5 +55,21 @@ impl OneTimeToken {
         .and(user_type_expr)
         .and(one_time_tokens::scope.eq(scope.to_string())),
     )
+  }
+
+  pub async fn account(&self, db_conn: &DbConn) -> Result<Account, diesel::result::Error> {
+    match (self.player_id, self.coach_id) {
+      (Some(player_id), None) => Ok(Account::Player(
+        db_conn
+          .run(move |conn| Player::find_by_id(&player_id).first(conn))
+          .await?,
+      )),
+      (None, Some(coach_id)) => Ok(Account::Coach(
+        db_conn
+          .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
+          .await?,
+      )),
+      _ => Err(diesel::result::Error::NotFound),
+    }
   }
 }

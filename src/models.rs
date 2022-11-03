@@ -1,3 +1,4 @@
+mod account;
 mod coach;
 mod comment;
 mod game;
@@ -6,6 +7,7 @@ mod player;
 mod recording;
 mod review;
 
+pub use account::Account;
 pub use coach::{Coach, CoachChangeset};
 pub use comment::{Comment, CommentChangeset};
 pub use game::Game;

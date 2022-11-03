@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::guards::DbConn;
-use crate::models::{Coach, Player, OneTimeToken};
+use crate::models::{Coach, OneTimeToken, Player};
 use crate::try_result;
 use diesel::prelude::*;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
@@ -179,7 +179,9 @@ impl Auth<OneTimeToken> {
     };
 
     let token = db_conn
-      .run(move |conn| OneTimeToken::find_by_value(&value, user_type, "reset-password").first(conn))
+      .run(move |conn| {
+        OneTimeToken::find_by_value(&value, user_type, "reset-password").first::<OneTimeToken>(conn)
+      })
       .await
       .map_err(|_| AuthError::NotFound("token".to_string()))?;
 
@@ -219,7 +221,7 @@ impl<'r> FromRequest<'r> for Auth<OneTimeToken> {
     let auth = try_result!(Auth::<OneTimeToken>::from_req(req).await);
     Outcome::Success(auth)
   }
-
+}
 
 impl<'a> OpenApiFromRequest<'a> for Auth<Player> {
   fn from_request_input(
@@ -232,6 +234,16 @@ impl<'a> OpenApiFromRequest<'a> for Auth<Player> {
 }
 
 impl<'a> OpenApiFromRequest<'a> for Auth<Coach> {
+  fn from_request_input(
+    _gen: &mut OpenApiGenerator,
+    _name: String,
+    _required: bool,
+  ) -> rocket_okapi::Result<RequestHeaderInput> {
+    Ok(RequestHeaderInput::None)
+  }
+}
+
+impl<'a> OpenApiFromRequest<'a> for Auth<OneTimeToken> {
   fn from_request_input(
     _gen: &mut OpenApiGenerator,
     _name: String,

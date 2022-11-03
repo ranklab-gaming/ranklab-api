@@ -2,10 +2,12 @@ use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::guards::auth::UserType;
 use crate::guards::{Auth, DbConn};
-use crate::models::{Coach, OneTimeToken, OneTimeTokenChangeset, Player};
+use crate::models::{
+  Account, Coach, CoachChangeset, OneTimeToken, OneTimeTokenChangeset, Player, PlayerChangeset,
+};
 use crate::response::{MutationError, MutationResponse, Response, StatusResponse};
 use crate::schema::one_time_tokens;
-use bcrypt::verify;
+use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::prelude::*;
 use chrono::Duration;
 use diesel::prelude::*;
@@ -46,11 +48,6 @@ pub struct ResetPasswordRequest {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct UpdatePasswordRequest {
   password: String,
-}
-
-enum Account {
-  Coach(Coach),
-  Player(Player),
 }
 
 fn generate_token(account: &Account, config: &Config) -> String {
@@ -186,9 +183,34 @@ pub async fn reset_password(
 #[put("/sessions/password", data = "<password>")]
 pub async fn update_password(
   password: Json<UpdatePasswordRequest>,
-  config: &State<Config>,
   db_conn: DbConn,
   auth: Auth<OneTimeToken>,
 ) -> MutationResponse<StatusResponse> {
+  let account = auth.0.account(&db_conn).await?;
+  let password_hash = hash(&password.password, DEFAULT_COST).unwrap();
+
+  match account {
+    Account::Coach(coach) => {
+      db_conn
+        .run(move |conn| {
+          diesel::update(&coach)
+            .set(CoachChangeset::default().password(password_hash))
+            .get_result::<Coach>(conn)
+            .unwrap()
+        })
+        .await;
+    }
+    Account::Player(player) => {
+      db_conn
+        .run(move |conn| {
+          diesel::update(&player)
+            .set(PlayerChangeset::default().password(password_hash))
+            .get_result::<Player>(conn)
+            .unwrap()
+        })
+        .await;
+    }
+  }
+
   Response::status(Status::Ok)
 }

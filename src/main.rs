@@ -105,6 +105,8 @@ fn rocket() -> Rocket<Build> {
         player::stripe_billing_portal_sessions::create,
         player::stripe_payment_methods::list,
         session::create,
+        session::reset_password,
+        session::update_password
       ],
     )
 }
