@@ -6,7 +6,7 @@ version = "0.1.0"
 
 [dependencies]
 ammonia = "3.2.1"
-anyhow = "1.0.65"
+anyhow = "1.0.66"
 async-mutex = "1.4.0"
 async-stripe = { git = "https://github.com/ranklab-gaming/async-stripe", features = [
   "runtime-tokio-hyper",
@@ -26,7 +26,7 @@ diesel_as_jsonb = { git = "https://github.com/ranklab-gaming/diesel_as_jsonb" }
 dotenv = "0.15.0"
 hex = "0.4.3"
 hmac = "0.12.1"
-hyper = "0.14.20"
+hyper = "0.14.22"
 hyper-tls = "0.5.0"
 jsonwebtoken = "8.1.1"
 lazy_static = "1.4.0"
@@ -57,8 +57,8 @@ rusoto_sqs = "0.48.0"
 rusoto_stepfunctions = "0.48.0"
 schemars = { version = "0.8.11", features = ["chrono"] }
 sentry = "0.27.0"
-serde = "1.0.145"
-serde_json = "1.0.86"
+serde = "1.0.147"
+serde_json = "1.0.87"
 serde_path_to_error = "0.1.8"
 sha2 = "0.10.6"
 smol_str = "0.1.23"
