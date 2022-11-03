@@ -1,2 +1,7 @@
+[debug]
+web_host = "http://ranklab-development:3000"
+auth_client_secret = "bc2167c9b26d0f0c8d59c2b5cb879070cc852df37bab9270ae89118c625522db6c5a59196c1323ffb607c975265518db8cf2a9664ebc661c86f6ec9ec130a6fc"
+
 [test]
-auth0_issuer_base_url = "http://ranklab-test:3000/oidc/"
+web_host = "http://ranklab-test:3000"
+auth_client_secret = "43066425dede74fd274af4d6eaf03b88e7582ebe961ec1b244d1b3e25be0d634231711e7caab16f09353f3b026170c3eff73c65ae12c5e9cf438aeb126555d44"

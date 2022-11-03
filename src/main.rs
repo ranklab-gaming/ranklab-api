@@ -14,8 +14,6 @@ use rocket::figment::Profile;
 use rocket::http::Accept;
 use rocket::{Build, Rocket};
 use rocket_okapi::openapi_get_routes;
-use schemars::JsonSchema;
-use serde::Serialize;
 use std::env;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
@@ -25,11 +23,6 @@ const DEFAULT_PROFILE: &str = if cfg!(debug_assertions) {
 } else {
   "release"
 };
-
-#[derive(Serialize, JsonSchema)]
-pub struct Health {
-  status: String,
-}
 
 pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
   let database_url: String = rocket
@@ -83,10 +76,9 @@ fn rocket() -> Rocket<Build> {
     .mount(
       "/",
       openapi_get_routes![
-        index::get_health,
-        claims::coaches::create,
-        claims::players::create,
-        claims::coaches::available_countries,
+        coach::account::create,
+        coach::account::get_countries,
+        coach::account::get,
         coach::account::update,
         coach::comments::create,
         coach::comments::list,
@@ -97,19 +89,24 @@ fn rocket() -> Rocket<Build> {
         coach::reviews::update,
         coach::stripe_account_links::create,
         coach::stripe_login_links::create,
+        game::list,
+        index::get_health,
+        player::account::create,
+        player::account::get,
         player::account::update,
         player::comments::list,
         player::recordings::create,
         player::recordings::get,
         player::recordings::list,
+        player::reviews::create,
         player::reviews::get,
         player::reviews::list,
-        player::reviews::create,
         player::reviews::update,
         player::stripe_billing_portal_sessions::create,
         player::stripe_payment_methods::list,
-        public::games::list,
-        user::me::get_me
+        session::create,
+        session::reset_password,
+        session::update_password
       ],
     )
 }

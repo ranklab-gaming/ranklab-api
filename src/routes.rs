@@ -1,6 +1,5 @@
-pub mod claims;
 pub mod coach;
+pub mod game;
 pub mod index;
 pub mod player;
-pub mod public;
-pub mod user;
+pub mod session;

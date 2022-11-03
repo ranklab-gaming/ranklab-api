@@ -7,8 +7,15 @@ use rocket::{response, Request};
 use rocket_okapi::gen::OpenApiGenerator;
 use rocket_okapi::response::OpenApiResponderInner;
 use rocket_okapi::Result as OpenApiResult;
+use schemars::JsonSchema;
+use serde::Serialize;
 use std::error::Error;
 use validator::ValidationErrors;
+
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct StatusResponse {
+  status: String,
+}
 
 fn add_400_error(responses: &mut Responses) {
   responses
@@ -103,6 +110,12 @@ pub struct Response;
 impl Response {
   pub fn success<T, E>(response: T) -> Result<Json<T>, E> {
     Ok(Json(response))
+  }
+
+  pub fn status<E>(status: Status) -> Result<Json<StatusResponse>, E> {
+    Ok(Json(StatusResponse {
+      status: status.reason().unwrap().to_owned(),
+    }))
   }
 
   pub fn query_error<T>(status: Status) -> Result<Json<T>, QueryError> {

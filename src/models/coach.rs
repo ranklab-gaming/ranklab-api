@@ -1,6 +1,6 @@
 use crate::schema::coaches;
 use derive_builder::Builder;
-use diesel::helper_types::FindBy;
+use diesel::helper_types::{Find, FindBy};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -13,13 +13,13 @@ use uuid::Uuid;
 )]
 #[builder_struct_attr(diesel(table_name = coaches))]
 pub struct Coach {
-  pub auth0_id: String,
+  pub email: String,
+  pub name: String,
   pub bio: String,
   pub country: String,
-  pub email: String,
   pub game_ids: Vec<Option<String>>,
   pub id: Uuid,
-  pub name: String,
+  pub password: String,
   pub stripe_account_id: Option<String>,
   pub stripe_details_submitted: bool,
   pub stripe_payouts_enabled: bool,
@@ -34,7 +34,11 @@ impl Coach {
     coaches::table.filter(coaches::stripe_account_id.eq(Some(stripe_account_id.to_string())))
   }
 
-  pub fn find_by_auth0_id(auth0_id: String) -> FindBy<coaches::table, coaches::auth0_id, String> {
-    coaches::table.filter(coaches::auth0_id.eq(auth0_id))
+  pub fn find_by_id(id: &Uuid) -> Find<coaches::table, Uuid> {
+    coaches::table.find(*id)
+  }
+
+  pub fn find_by_email(email: &str) -> FindBy<coaches::table, coaches::email, String> {
+    coaches::table.filter(coaches::email.eq(email.to_string()))
   }
 }

@@ -8,13 +8,13 @@ pub mod sql_types {
 
 diesel::table! {
     coaches (id) {
-        auth0_id -> Text,
+        email -> Text,
+        name -> Text,
         bio -> Text,
         country -> Text,
-        email -> Text,
         game_ids -> Array<Nullable<Text>>,
         id -> Uuid,
-        name -> Text,
+        password -> Text,
         stripe_account_id -> Nullable<Text>,
         stripe_details_submitted -> Bool,
         stripe_payouts_enabled -> Bool,
@@ -37,13 +37,26 @@ diesel::table! {
 }
 
 diesel::table! {
+    one_time_tokens (id) {
+        id -> Uuid,
+        value -> Text,
+        player_id -> Nullable<Uuid>,
+        coach_id -> Nullable<Uuid>,
+        scope -> Text,
+        used_at -> Nullable<Timestamp>,
+        updated_at -> Timestamp,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     players (id) {
-        auth0_id -> Text,
         email -> Text,
+        name -> Text,
         games -> Array<Nullable<Jsonb>>,
         id -> Uuid,
-        name -> Text,
         stripe_customer_id -> Nullable<Text>,
+        password -> Text,
         updated_at -> Timestamp,
         created_at -> Timestamp,
     }
@@ -84,6 +97,8 @@ diesel::table! {
 
 diesel::joinable!(comments -> coaches (coach_id));
 diesel::joinable!(comments -> reviews (review_id));
+diesel::joinable!(one_time_tokens -> coaches (coach_id));
+diesel::joinable!(one_time_tokens -> players (player_id));
 diesel::joinable!(recordings -> players (player_id));
 diesel::joinable!(reviews -> coaches (coach_id));
 diesel::joinable!(reviews -> players (player_id));
@@ -92,6 +107,7 @@ diesel::joinable!(reviews -> recordings (recording_id));
 diesel::allow_tables_to_appear_in_same_query!(
     coaches,
     comments,
+    one_time_tokens,
     players,
     recordings,
     reviews,
