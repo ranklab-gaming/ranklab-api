@@ -4,6 +4,7 @@ use crate::models::{Coach, OneTimeToken, Player};
 use crate::try_result;
 use diesel::prelude::*;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use okapi::openapi3::*;
 use regex::Regex;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome, Request};
@@ -244,12 +245,36 @@ impl<'a> OpenApiFromRequest<'a> for Auth<Coach> {
   }
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Deserialize, JsonSchema)]
+struct AuthQuery {
+  token: String,
+  user_type: UserType,
+}
+
 impl<'a> OpenApiFromRequest<'a> for Auth<OneTimeToken> {
   fn from_request_input(
-    _gen: &mut OpenApiGenerator,
-    _name: String,
-    _required: bool,
+    gen: &mut OpenApiGenerator,
+    name: String,
+    required: bool,
   ) -> rocket_okapi::Result<RequestHeaderInput> {
-    Ok(RequestHeaderInput::None)
+    let schema = gen.json_schema::<AuthQuery>();
+    Ok(RequestHeaderInput::Parameter(Parameter {
+      name,
+      location: "query".to_owned(),
+      description: None,
+      required,
+      deprecated: false,
+      allow_empty_value: false,
+      value: ParameterValue::Schema {
+        style: None,
+        explode: None,
+        allow_reserved: false,
+        schema,
+        example: None,
+        examples: None,
+      },
+      extensions: Object::default(),
+    }))
   }
 }
