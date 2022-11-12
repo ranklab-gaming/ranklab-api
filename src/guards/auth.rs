@@ -170,12 +170,12 @@ impl Auth<OneTimeToken> {
   async fn from_req<'r>(req: &'r Request<'_>) -> Result<Self, AuthError> {
     let db_conn = req.guard::<DbConn>().await.unwrap();
 
-    let value = match req.query_value::<String>("token") {
+    let value = match req.query_value::<String>("auth[token]") {
       Some(Ok(token)) => token,
       _ => return Err(AuthError::Missing),
     };
 
-    let user_type: UserType = match req.query_value::<String>("user_type") {
+    let user_type: UserType = match req.query_value::<String>("auth[user_type]") {
       Some(Ok(user_type)) => serde_json::from_str(&user_type).unwrap(),
       _ => return Err(AuthError::Missing),
     };
