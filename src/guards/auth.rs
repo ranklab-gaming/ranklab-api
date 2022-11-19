@@ -46,9 +46,6 @@ pub enum UserType {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Claims {
   pub sub: Uuid,
-  #[serde(rename = "https://ranklab.gg/email")]
-  pub email: String,
-  #[serde(rename = "https://ranklab.gg/user_type")]
   pub user_type: UserType,
 }
 
@@ -84,8 +81,6 @@ pub struct Jwks {
 }
 
 pub struct Auth<T>(pub T);
-
-pub struct ClientSecret;
 
 async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
   let jwt_regexp = Regex::new(r"Bearer (?P<jwt>.+)").unwrap();
@@ -136,18 +131,6 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
   )
   .map_err(|e| AuthError::Invalid(e.to_string()))
   .map(|data| data.claims)
-}
-
-impl Auth<ClientSecret> {
-  async fn from_req<'r>(req: &'r Request<'_>) -> Result<Self, AuthError> {
-    let config = req.guard::<&State<Config>>().await;
-    let client_secret = config.as_ref().unwrap().auth_client_secret.clone();
-
-    match req.query_value::<String>("client_secret") {
-      Some(Ok(value)) if client_secret == value => Ok(Auth(ClientSecret)),
-      _ => Err(AuthError::Missing),
-    }
-  }
 }
 
 impl Auth<Coach> {
@@ -202,16 +185,6 @@ impl Auth<OneTimeToken> {
       .map_err(|_| AuthError::NotFound("token".to_string()))?;
 
     Ok(Auth(token))
-  }
-}
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for Auth<ClientSecret> {
-  type Error = AuthError;
-
-  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-    let auth = try_result!(Auth::<ClientSecret>::from_req(req).await);
-    Outcome::Success(auth)
   }
 }
 
@@ -285,33 +258,6 @@ impl<'a> OpenApiFromRequest<'a> for Auth<OneTimeToken> {
     let schema = gen.json_schema::<AuthQuery>();
     Ok(RequestHeaderInput::Parameter(Parameter {
       name: "auth".to_owned(),
-      location: "query".to_owned(),
-      description: None,
-      required,
-      deprecated: false,
-      allow_empty_value: false,
-      value: ParameterValue::Schema {
-        style: None,
-        explode: None,
-        allow_reserved: false,
-        schema,
-        example: None,
-        examples: None,
-      },
-      extensions: Object::default(),
-    }))
-  }
-}
-
-impl<'a> OpenApiFromRequest<'a> for Auth<ClientSecret> {
-  fn from_request_input(
-    gen: &mut OpenApiGenerator,
-    _name: String,
-    required: bool,
-  ) -> rocket_okapi::Result<RequestHeaderInput> {
-    let schema = gen.json_schema::<String>();
-    Ok(RequestHeaderInput::Parameter(Parameter {
-      name: "client_secret".to_owned(),
       location: "query".to_owned(),
       description: None,
       required,
