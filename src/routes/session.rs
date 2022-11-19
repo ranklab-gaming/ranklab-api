@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::emails::{Email, Recipient};
-use crate::guards::auth::UserType;
+use crate::guards::auth::{ClientSecret, UserType};
 use crate::guards::{Auth, DbConn};
 use crate::models::{
   Account, Coach, CoachChangeset, OneTimeToken, OneTimeTokenChangeset, Player, PlayerChangeset,
@@ -8,10 +8,7 @@ use crate::models::{
 use crate::response::{MutationError, MutationResponse, Response, StatusResponse};
 use crate::schema::one_time_tokens;
 use bcrypt::{hash, verify, DEFAULT_COST};
-use chrono::prelude::*;
-use chrono::Duration;
 use diesel::prelude::*;
-use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::distributions::{Alphanumeric, DistString};
 use rocket::serde::json::Json;
 use rocket::State;
@@ -20,6 +17,7 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use uuid::Uuid;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct CreateSessionRequest {
@@ -28,15 +26,10 @@ pub struct CreateSessionRequest {
   user_type: UserType,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-  sub: String,
-  exp: usize,
-}
-
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct CreateSessionResponse {
-  token: String,
+  user_id: Uuid,
+  user_type: UserType,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -50,26 +43,15 @@ pub struct UpdatePasswordRequest {
   password: String,
 }
 
-fn generate_token(account: &Account, config: &Config) -> String {
-  let now = Utc::now();
-  let exp = (now + Duration::days(1)).timestamp() as usize;
-  let sub = match account {
-    Account::Coach(coach) => coach.id.to_string(),
-    Account::Player(player) => player.id.to_string(),
-  };
-  let claims = Claims { sub, exp };
-  let key = EncodingKey::from_secret(config.auth_client_secret.as_ref());
-  encode(&Header::default(), &claims, &key).expect("failed to encode token")
-}
-
 #[openapi(tag = "Ranklab")]
 #[post("/sessions", data = "<session>")]
 pub async fn create(
   session: Json<CreateSessionRequest>,
-  config: &State<Config>,
   db_conn: DbConn,
+  _auth: Auth<ClientSecret>,
 ) -> MutationResponse<CreateSessionResponse> {
   let session_password = session.password.clone();
+  let user_type = session.user_type.clone();
 
   let account = match session.user_type {
     UserType::Coach => Account::Coach(
@@ -89,12 +71,15 @@ pub async fn create(
     Account::Player(player) => player.password.clone(),
   };
 
+  let user_id = match &account {
+    Account::Coach(coach) => coach.id,
+    Account::Player(player) => player.id,
+  };
+
   verify(session_password, &password)
     .map_err(|_| MutationError::Status(Status::UnprocessableEntity))?;
 
-  let token = generate_token(&account, config);
-
-  Response::success(CreateSessionResponse { token })
+  Response::success(CreateSessionResponse { user_id, user_type })
 }
 
 #[openapi(tag = "Ranklab")]
