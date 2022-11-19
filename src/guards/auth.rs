@@ -73,6 +73,7 @@ pub struct Jwk {
 #[derive(Debug, Clone, Deserialize)]
 pub struct OidcConfiguration {
   jwks_uri: String,
+  issuer_url: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -122,7 +123,9 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
   let header = decode_header(jwt).map_err(|e| AuthError::Invalid(e.to_string()))?;
   let kid = header.kid.unwrap();
   let jwk = jwks.keys.iter().find(|jwk| jwk.kid == kid).unwrap();
-  let validation = Validation::new(Algorithm::RS256);
+  let mut validation = Validation::new(Algorithm::RS256);
+
+  validation.set_issuer(&[oidc_configuration.issuer_url]);
 
   decode::<Claims>(
     &jwt,
