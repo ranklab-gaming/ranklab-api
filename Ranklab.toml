@@ -1,6 +1,6 @@
 [debug]
 host = "http://ranklab-api:8000"
-web_host = "http://ranklab-development:3000"
+web_host = "http://ranklab-web:3000"
 auth_client_secret = "276b920ca3cb252d071150c66e779dc227d9dc18cb93823df720be0736ad64871060f614b61a59900eab480fb1353983fecaa626c246afa4f0c4d6c35aab237a"
 
 [test]

@@ -73,7 +73,7 @@ pub struct Jwk {
 #[derive(Debug, Clone, Deserialize)]
 pub struct OidcConfiguration {
   jwks_uri: String,
-  issuer_url: String,
+  issuer: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -88,7 +88,10 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
   let config = req.guard::<&State<Config>>().await;
   let web_host = config.as_ref().unwrap().web_host.clone();
 
-  let oidc_configuration_url = format!("{}{}", web_host, "/auth/.well-known/openid-configuration");
+  let oidc_configuration_url = format!(
+    "{}{}",
+    web_host, "/api/oidc/.well-known/openid-configuration"
+  );
 
   let oidc_configuration = reqwest::get(&oidc_configuration_url)
     .await
@@ -125,7 +128,7 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
   let jwk = jwks.keys.iter().find(|jwk| jwk.kid == kid).unwrap();
   let mut validation = Validation::new(Algorithm::RS256);
 
-  validation.set_issuer(&[oidc_configuration.issuer_url]);
+  validation.set_issuer(&[oidc_configuration.issuer]);
 
   decode::<Claims>(
     &jwt,

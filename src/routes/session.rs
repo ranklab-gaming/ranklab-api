@@ -38,7 +38,7 @@ struct Claims {
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct CreateSessionResponse {
-  token: String,
+  pub token: String,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -52,7 +52,7 @@ pub struct UpdatePasswordRequest {
   password: String,
 }
 
-fn generate_token(account: &Account, config: &Config) -> String {
+pub fn generate_token(account: &Account, config: &Config) -> String {
   let now = Utc::now();
   let exp = (now + Duration::minutes(1)).timestamp() as usize;
   let sub = match account {

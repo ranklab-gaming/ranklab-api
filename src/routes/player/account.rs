@@ -1,14 +1,17 @@
 use std::net::SocketAddr;
 
+use crate::config::Config;
 use crate::data_types::PlayerGame;
 use crate::guards::{Auth, DbConn, Stripe};
-use crate::models::{Player, PlayerChangeset};
+use crate::models::{Account, Player, PlayerChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::routes::session::{generate_token, CreateSessionResponse};
 use crate::schema::players;
 use crate::views::PlayerView;
 use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
+use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
@@ -45,14 +48,15 @@ pub async fn get(auth: Auth<Player>) -> QueryResponse<PlayerView> {
 }
 
 #[openapi(tag = "Ranklab")]
-#[post("/player/account", data = "<player>")]
+#[post("/player/account", data = "<request>")]
 pub async fn create(
-  player: Json<CreatePlayerRequest>,
+  request: Json<CreatePlayerRequest>,
   db_conn: DbConn,
   stripe: Stripe,
   ip_address: SocketAddr,
-) -> MutationResponse<PlayerView> {
-  if let Err(errors) = player.validate() {
+  config: &State<Config>,
+) -> MutationResponse<CreateSessionResponse> {
+  if let Err(errors) = request.validate() {
     return Response::validation_error(errors);
   }
 
@@ -61,10 +65,12 @@ pub async fn create(
       diesel::insert_into(players::table)
         .values(
           PlayerChangeset::default()
-            .password(hash(player.password.clone(), DEFAULT_COST).expect("Failed to hash password"))
-            .email(player.email.clone())
-            .name(player.name.clone())
-            .games(player.games.clone().into_iter().map(|g| Some(g)).collect())
+            .password(
+              hash(request.password.clone(), DEFAULT_COST).expect("Failed to hash password"),
+            )
+            .email(request.email.clone())
+            .name(request.name.clone())
+            .games(request.games.clone().into_iter().map(|g| Some(g)).collect())
             .stripe_customer_id(None),
         )
         .get_result(conn)
@@ -90,17 +96,19 @@ pub async fn create(
     .await
     .unwrap();
 
-  let player: PlayerView = db_conn
+  let player = db_conn
     .run(move |conn| {
       diesel::update(&player)
         .set(PlayerChangeset::default().stripe_customer_id(Some(customer.id.to_string())))
         .get_result::<Player>(conn)
         .unwrap()
     })
-    .await
-    .into();
+    .await;
 
-  Response::success(player)
+  let account = Account::Player(player);
+  let token = generate_token(&account, config);
+
+  Response::success(CreateSessionResponse { token })
 }
 
 #[openapi(tag = "Ranklab")]
