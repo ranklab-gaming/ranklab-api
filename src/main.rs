@@ -76,6 +76,7 @@ fn rocket() -> Rocket<Build> {
     .mount(
       "/",
       openapi_get_routes![
+        coach::account::create,
         coach::account::get_countries,
         coach::account::get,
         coach::account::update,
