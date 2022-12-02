@@ -31,7 +31,6 @@ pub struct CreateSessionRequest {
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
   sub: String,
-  user_type: UserType,
   exp: usize,
   iss: String,
 }
@@ -55,20 +54,15 @@ pub struct UpdatePasswordRequest {
 pub fn generate_token(account: &Account, config: &Config) -> String {
   let now = Utc::now();
   let exp = (now + Duration::minutes(1)).timestamp() as usize;
-  let sub = match account {
-    Account::Coach(coach) => coach.id.to_string(),
-    Account::Player(player) => player.id.to_string(),
-  };
 
-  let user_type = match account {
-    Account::Coach(_) => UserType::Coach,
-    Account::Player(_) => UserType::Player,
+  let sub = match account {
+    Account::Coach(coach) => format!("coach:{}", coach.id.to_string()),
+    Account::Player(player) => format!("player:{}", player.id.to_string()),
   };
 
   let claims = Claims {
     sub,
     exp,
-    user_type,
     iss: config.host.clone(),
   };
 

@@ -45,8 +45,19 @@ pub enum UserType {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Claims {
-  pub sub: Uuid,
-  pub user_type: UserType,
+  pub sub: String,
+}
+
+impl Claims {
+  pub fn user_type(&self) -> UserType {
+    if self.sub.to_string().starts_with("coach:") {
+      UserType::Coach
+    } else if self.sub.to_string().starts_with("player:") {
+      UserType::Player
+    } else {
+      panic!("invalid sub: {}", self.sub.to_string())
+    }
+  }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -141,12 +152,15 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
 
 impl Auth<Coach> {
   async fn from_jwt(db_conn: DbConn, jwt: Claims) -> Result<Self, AuthError> {
-    if jwt.user_type != UserType::Coach {
+    if jwt.user_type() != UserType::Coach {
       return Err(AuthError::Invalid("not a coach".to_string()));
     }
 
+    let uuid_str = jwt.sub.replace("coach:", "");
+    let uuid = Uuid::parse_str(&uuid_str).map_err(|e| AuthError::Invalid(e.to_string()))?;
+
     let coach = db_conn
-      .run(move |conn| Coach::find_by_id(&jwt.sub).first(conn))
+      .run(move |conn| Coach::find_by_id(&uuid).first(conn))
       .await
       .map_err(|_| AuthError::NotFound("coach".to_string()))?;
 
@@ -156,12 +170,15 @@ impl Auth<Coach> {
 
 impl Auth<Player> {
   async fn from_jwt(db_conn: DbConn, jwt: Claims) -> Result<Self, AuthError> {
-    if jwt.user_type != UserType::Player {
+    if jwt.user_type() != UserType::Player {
       return Err(AuthError::Invalid("not a player".to_string()));
     }
 
+    let uuid_str = jwt.sub.replace("player:", "");
+    let uuid = Uuid::parse_str(&uuid_str).map_err(|e| AuthError::Invalid(e.to_string()))?;
+
     let player = db_conn
-      .run(move |conn| Player::find_by_id(&jwt.sub).first(conn))
+      .run(move |conn| Player::find_by_id(&uuid).first(conn))
       .await
       .map_err(|_| AuthError::NotFound("player".to_string()))?;
 
