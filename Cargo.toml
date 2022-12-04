@@ -28,7 +28,7 @@ hex = "0.4.3"
 hmac = "0.12.1"
 hyper = "0.14.23"
 hyper-tls = "0.5.0"
-jsonwebtoken = "8.1.1"
+jsonwebtoken = "8.2.0"
 lazy_static = "1.4.0"
 mime_guess = "2.0.4"
 okapi = { git = "https://github.com/ranklab-gaming/okapi" }
