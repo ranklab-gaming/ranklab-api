@@ -67,6 +67,7 @@ enum KeyAlgorithm {
 
 #[derive(Debug, Clone, Deserialize)]
 enum KeyType {
+  #[serde(rename = "RSA")]
   Rsa,
 }
 
