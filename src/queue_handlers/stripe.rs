@@ -56,7 +56,7 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
     let body = message
       .body
       .clone()
-      .ok_or(anyhow!("No body found in sqs message"))?;
+      .ok_or_else(|| anyhow!("No body found in sqs message"))?;
 
     let message_body: SqsMessageBody = serde_json::from_str(&body).map_err(anyhow::Error::from)?;
 

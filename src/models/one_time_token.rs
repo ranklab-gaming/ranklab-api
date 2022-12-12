@@ -28,6 +28,7 @@ pub struct OneTimeToken {
   pub created_at: chrono::NaiveDateTime,
 }
 
+#[allow(clippy::type_complexity)]
 impl OneTimeToken {
   pub fn find_by_value(
     value: &str,

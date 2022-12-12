@@ -19,6 +19,12 @@ impl Valorant {
   }
 }
 
+impl Default for Valorant {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl Game for Valorant {
   fn skill_levels(&self) -> &Vec<SkillLevel> {
     &self.skill_levels

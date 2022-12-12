@@ -56,7 +56,7 @@ impl Email {
   }
 
   pub fn deliver(self) {
-    if self.recipients.len() == 0 {
+    if self.recipients.is_empty() {
       return;
     }
 

@@ -36,6 +36,7 @@ pub struct Review {
 type NullableBoxedExpression =
   Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Nullable<Bool>>>;
 
+#[allow(clippy::type_complexity)]
 impl Review {
   pub fn find_by_order_id<T: ToString>(
     order_id: &T,
@@ -193,7 +194,7 @@ impl Review {
       .await
       .unwrap();
 
-    match order.payment.payment_intent.clone() {
+    match order.payment.payment_intent {
       Some(Expandable::Object(payment_intent)) => *payment_intent,
       _ => panic!("No payment intent found"),
     }

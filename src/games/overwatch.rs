@@ -25,6 +25,12 @@ impl Overwatch {
   }
 }
 
+impl Default for Overwatch {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl Game for Overwatch {
   fn skill_levels(&self) -> &Vec<SkillLevel> {
     &self.skill_levels

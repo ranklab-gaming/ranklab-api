@@ -56,8 +56,8 @@ pub fn generate_token(account: &Account, config: &Config) -> String {
   let exp = (now + Duration::minutes(1)).timestamp() as usize;
 
   let sub = match account {
-    Account::Coach(coach) => format!("coach:{}", coach.id.to_string()),
-    Account::Player(player) => format!("player:{}", player.id.to_string()),
+    Account::Coach(coach) => format!("coach:{}", coach.id),
+    Account::Player(player) => format!("player:{}", player.id),
   };
 
   let claims = Claims {
@@ -165,7 +165,7 @@ pub async fn reset_password(
     .await;
 
   let email = Email::new(
-    &config,
+    config,
     "notification".to_owned(),
     json!({
       "subject": "Reset Your Password",

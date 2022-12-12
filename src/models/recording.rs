@@ -29,6 +29,7 @@ impl Recording {
     recordings::table.filter(recordings::video_key.eq(video_key.to_string()))
   }
 
+  #[allow(clippy::type_complexity)]
   pub fn find_for_player(
     id: &Uuid,
     player_id: &Uuid,

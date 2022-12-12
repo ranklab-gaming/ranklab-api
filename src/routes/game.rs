@@ -5,5 +5,5 @@ use rocket_okapi::openapi;
 #[openapi(tag = "Ranklab")]
 #[get("/games")]
 pub async fn list() -> QueryResponse<Vec<GameView>> {
-  Response::success(crate::games::all().into_iter().map(Into::into).collect())
+  Response::success(crate::games::all().iter().map(Into::into).collect())
 }

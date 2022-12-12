@@ -6,7 +6,7 @@ ENV PATH="${PATH}:/home/vscode/.cargo/bin"
 
 RUN sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 RUN sudo apt-get install -y libssl-dev libpq-dev clang jq
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2022-09-22
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2022-12-05
 
 RUN version=$(wget -q -O- https://api.github.com/repos/rui314/mold/releases/latest | jq -r .tag_name | sed 's/^v//'); \
   wget -q -O- https://github.com/rui314/mold/releases/download/v$version/mold-$version-$(uname -m)-linux.tar.gz | \

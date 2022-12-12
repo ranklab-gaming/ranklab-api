@@ -85,12 +85,9 @@ pub async fn create(
 
   let mut params = stripe::CreateCustomer::new();
   params.email = Some(&player.email);
-  params.tax = Some(
-    stripe::CreateCustomerTax {
-      ip_address: Some(ip_address.into()),
-    }
-    .into(),
-  );
+  params.tax = Some(stripe::CreateCustomerTax {
+    ip_address: Some(ip_address.into()),
+  });
 
   let customer = stripe::Customer::create(&stripe.0 .0, params)
     .await
@@ -127,7 +124,7 @@ pub async fn update(
           PlayerChangeset::default()
             .email(account.email.clone())
             .name(account.name.clone())
-            .games(account.games.clone().into_iter().map(|g| Some(g)).collect()),
+            .games(account.games.clone().into_iter().map(Some).collect()),
         )
         .get_result::<Player>(conn)
         .unwrap()

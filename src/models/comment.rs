@@ -22,6 +22,7 @@ pub struct Comment {
   pub created_at: chrono::NaiveDateTime,
 }
 
+#[allow(clippy::type_complexity)]
 impl Comment {
   pub fn find_for_coach(
     id: &Uuid,

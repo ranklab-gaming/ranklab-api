@@ -33,7 +33,7 @@ impl Direct {
       .run(move |conn| Review::find_by_order_id(&order_id).get_result::<Review>(conn))
       .await?;
 
-    let coach_id = review.coach_id.clone();
+    let coach_id = review.coach_id;
 
     if let Some(state_machine_arn) = &self.config.scheduled_tasks_state_machine_arn {
       rusoto_stepfunctions::StepFunctions::start_execution(
@@ -81,7 +81,7 @@ impl Direct {
         vec![Recipient::new(
           coach.email.clone(),
           json!({
-            "name": coach.name.clone(),
+            "name": coach.name,
           }),
         )],
       );
@@ -107,14 +107,14 @@ impl Direct {
       _ => return Err(anyhow!("No payment intent id found in charge").into()),
     };
 
-    let payment_intent = stripe::PaymentIntent::retrieve(&self.client.0, &payment_intent_id, &[])
+    let payment_intent = stripe::PaymentIntent::retrieve(&self.client.0, payment_intent_id, &[])
       .await
       .map_err(anyhow::Error::from)?;
 
     let order_id = payment_intent
       .metadata
       .get("order_id")
-      .ok_or(anyhow!("No order id found in payment intent metadata"))?
+      .ok_or_else(|| anyhow!("No order id found in payment intent metadata"))?
       .clone();
 
     self

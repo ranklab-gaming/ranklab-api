@@ -16,6 +16,7 @@ pub fn all() -> &'static Vec<Box<dyn Game>> {
   &GAMES
 }
 
+#[allow(clippy::borrowed_box)]
 pub fn find(id: &str) -> Option<&'static Box<dyn Game>> {
   all().iter().find(|g| g.id() == id)
 }

@@ -36,14 +36,14 @@ impl From<AuthError> for (Status, AuthError) {
   }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, JsonSchema, Copy, Clone)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, JsonSchema, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum UserType {
   Coach,
   Player,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Claims {
   pub sub: String,
 }
@@ -55,7 +55,7 @@ impl Claims {
     } else if self.sub.to_string().starts_with("player:") {
       UserType::Player
     } else {
-      panic!("invalid sub: {}", self.sub.to_string())
+      panic!("invalid sub: {}", self.sub)
     }
   }
 }

@@ -35,14 +35,8 @@ impl RecordingView {
       mime_type: recording.mime_type,
       created_at: recording.created_at,
       updated_at: recording.updated_at,
-      review_title: match review {
-        Some(review) => Some(review.title.clone()),
-        None => None,
-      },
-      review_id: match review {
-        Some(review) => Some(review.id),
-        None => None,
-      },
+      review_title: review.map(|review| review.title.clone()),
+      review_id: review.map(|review| review.id),
     }
   }
 }

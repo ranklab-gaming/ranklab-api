@@ -76,7 +76,7 @@ pub async fn create(
     .ok_or(MutationError::Status(Status::UnprocessableEntity))?;
 
   let extension = extensions.first().unwrap();
-  let key = format!("{}.{}", Uuid::new_v4().to_string(), extension);
+  let key = format!("{}.{}", Uuid::new_v4(), extension);
 
   let req = PutObjectRequest {
     bucket: config.s3_bucket.to_owned(),
@@ -101,7 +101,7 @@ pub async fn create(
       diesel::insert_into(recordings::table)
         .values(
           RecordingChangeset::default()
-            .player_id(auth.0.id.clone())
+            .player_id(auth.0.id)
             .upload_url(url)
             .video_key(key)
             .mime_type(recording.mime_type.clone()),

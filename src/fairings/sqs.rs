@@ -102,7 +102,7 @@ impl SqsFairing {
         match handler.handle(&message, profile).await {
           Err(QueueHandlerError::Ignorable(e)) => {
             if profile == rocket::config::Config::RELEASE_PROFILE {
-              return Err(e.into());
+              return Err(e);
             } else {
               return Ok(());
             }
@@ -116,7 +116,7 @@ impl SqsFairing {
           receipt_handle: message
             .receipt_handle
             .clone()
-            .ok_or(anyhow!("Receipt handle missing from message"))?,
+            .ok_or_else(|| anyhow!("Receipt handle missing from message"))?,
         };
 
         client.delete_message(delete_request).await?;

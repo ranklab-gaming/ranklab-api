@@ -92,8 +92,8 @@ pub async fn create(
   config: &State<Config>,
   ip_address: SocketAddr,
 ) -> MutationResponse<ReviewView> {
-  let body_recording_id = body.recording_id.clone();
-  let auth_player_id = auth.0.id.clone();
+  let body_recording_id = body.recording_id;
+  let auth_player_id = auth.0.id;
 
   let review = db_conn
     .run(move |conn| {
@@ -128,24 +128,24 @@ pub async fn create(
     std::net::IpAddr::V6(ip) => ip.to_ipv4().unwrap().to_string(),
   };
 
-  let mut price_data = CreateOrderLineItemsPriceData {
+  let price_data = CreateOrderLineItemsPriceData {
     currency: Some(stripe::Currency::USD),
     product: Some(product_id.to_string()),
+    unit_amount: Some(10_00),
     ..Default::default()
   };
-  price_data.unit_amount = Some(10_00);
 
-  let mut line_item = CreateOrderLineItems::default();
-  line_item.quantity = Some(1);
-  line_item.price_data = Some(price_data);
+  let line_item = CreateOrderLineItems {
+    quantity: Some(1),
+    price_data: Some(price_data),
+    ..Default::default()
+  };
 
   let line_items = vec![line_item];
 
-  let mut payment_settings = CreateOrderPaymentSettings::default();
-  payment_settings.payment_method_types =
-    Some(vec![CreateOrderPaymentSettingsPaymentMethodTypes::Card]);
-  payment_settings.payment_method_options =
-    Some(stripe::CreateOrderPaymentSettingsPaymentMethodOptions {
+  let payment_settings = CreateOrderPaymentSettings {
+    payment_method_types: Some(vec![CreateOrderPaymentSettingsPaymentMethodTypes::Card]),
+    payment_method_options: Some(stripe::CreateOrderPaymentSettingsPaymentMethodOptions {
       card: Some(stripe::CreateOrderPaymentSettingsPaymentMethodOptionsCard {
         capture_method: None,
         setup_future_usage: Some(
@@ -153,7 +153,9 @@ pub async fn create(
         ),
       }),
       ..Default::default()
-    });
+    }),
+    ..Default::default()
+  };
 
   let mut params = CreateOrder::new(stripe::Currency::USD, line_items);
 
@@ -221,7 +223,7 @@ pub async fn update(
   db_conn: DbConn,
   stripe: Stripe,
 ) -> MutationResponse<ReviewView> {
-  let auth_id = auth.0.id.clone();
+  let auth_id = auth.0.id;
 
   let existing_review: Review = db_conn
     .run(move |conn| Review::find_for_player(&id, &auth_id).first(conn))
@@ -240,7 +242,7 @@ pub async fn update(
     })
     .await;
 
-  let review_coach_id = updated_review.coach_id.unwrap().clone();
+  let review_coach_id = updated_review.coach_id.unwrap();
 
   let coach: Coach = db_conn
     .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
