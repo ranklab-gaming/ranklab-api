@@ -67,7 +67,7 @@ enum KeyAlgorithm {
 
 #[derive(Debug, Clone, Deserialize)]
 enum KeyType {
-  RSA,
+  Rsa,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -125,13 +125,11 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
 
   let captures = jwt_regexp
     .captures(authorization)
-    .ok_or(AuthError::Invalid(
-      "malformed authorization header".to_string(),
-    ))?;
+    .ok_or_else(|| AuthError::Invalid("malformed authorization header".to_string()))?;
 
   let jwt = captures
     .name("jwt")
-    .ok_or(AuthError::Invalid("jwt not found in header".to_string()))?
+    .ok_or_else(|| AuthError::Invalid("jwt not found in header".to_string()))?
     .as_str();
 
   let header = decode_header(jwt).map_err(|e| AuthError::Invalid(e.to_string()))?;
@@ -142,7 +140,7 @@ async fn decode_jwt<'r>(req: &'r Request<'_>) -> Result<Claims, AuthError> {
   validation.set_issuer(&[oidc_configuration.issuer]);
 
   decode::<Claims>(
-    &jwt,
+    jwt,
     &DecodingKey::from_rsa_components(&jwk.n, &jwk.e).unwrap(),
     &validation,
   )

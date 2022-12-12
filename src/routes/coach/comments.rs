@@ -34,8 +34,8 @@ pub async fn create(
   auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> MutationResponse<CommentView> {
-  let review_id = comment.review_id.clone();
-  let coach_id = auth.0.id.clone();
+  let review_id = comment.review_id;
+  let coach_id = auth.0.id;
 
   let review: Review = db_conn
     .run(move |conn| Review::find_draft_for_coach(&review_id, &coach_id).first(conn))
@@ -73,7 +73,7 @@ pub async fn update(
   auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> MutationResponse<CommentView> {
-  let coach_id = auth.0.id.clone();
+  let coach_id = auth.0.id;
 
   let existing_comment = db_conn
     .run(move |conn| Comment::find_for_coach(&id, &coach_id).first::<Comment>(conn))

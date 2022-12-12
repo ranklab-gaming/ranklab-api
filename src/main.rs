@@ -41,7 +41,7 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 fn rocket() -> Rocket<Build> {
-  let profile_name = env::var("ROCKET_PROFILE").unwrap_or(DEFAULT_PROFILE.to_string());
+  let profile_name = env::var("ROCKET_PROFILE").unwrap_or_else(|_| DEFAULT_PROFILE.to_string());
   let profile = Profile::new(&profile_name);
 
   let env_suffix = if profile == rocket::config::Config::DEBUG_PROFILE {

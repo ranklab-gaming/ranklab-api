@@ -70,7 +70,7 @@ pub async fn create(
             )
             .email(request.email.clone())
             .name(request.name.clone())
-            .games(request.games.clone().into_iter().map(|g| Some(g)).collect())
+            .games(request.games.clone().into_iter().map(Some).collect())
             .stripe_customer_id(None),
         )
         .get_result(conn)
@@ -86,7 +86,7 @@ pub async fn create(
   let mut params = stripe::CreateCustomer::new();
   params.email = Some(&player.email);
   params.tax = Some(stripe::CreateCustomerTax {
-    ip_address: Some(ip_address.into()),
+    ip_address: Some(ip_address),
   });
 
   let customer = stripe::Customer::create(&stripe.0 .0, params)

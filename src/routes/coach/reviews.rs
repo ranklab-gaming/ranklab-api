@@ -69,7 +69,7 @@ pub async fn update(
   auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> MutationResponse<ReviewView> {
-  let auth_id = auth.0.id.clone();
+  let auth_id = auth.0.id;
 
   let existing_review = db_conn
     .run(move |conn| Review::find_for_coach(&id, &auth.0.id).first::<Review>(conn))
