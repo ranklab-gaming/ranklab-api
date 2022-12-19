@@ -136,6 +136,11 @@ pub async fn reset_password(
     ),
   };
 
+  let user_type = match &account {
+    Account::Coach(_) => "coach",
+    Account::Player(_) => "player",
+  };
+
   let name = match &account {
     Account::Coach(coach) => coach.name.clone(),
     Account::Player(player) => player.name.clone(),
@@ -169,10 +174,10 @@ pub async fn reset_password(
     "notification".to_owned(),
     json!({
       "subject": "Reset Your Password",
-      "title": "Hello {{name}}, you requested to reset your password",
+      "title": "You requested to reset your password",
       "body": "Click the button below to reset it",
       "cta" : "Reset Password",
-      "cta_url" : format!("{}/auth/reset-password?token={}", config.web_host, token.value),
+      "cta_url" : format!("{}/auth/update-password?token={}&user_type={}", config.web_host, token.value, user_type),
     }),
     vec![Recipient::new(
       email,
