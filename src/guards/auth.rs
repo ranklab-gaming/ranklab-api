@@ -36,7 +36,7 @@ impl From<AuthError> for (Status, AuthError) {
   }
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, JsonSchema, Copy, Clone)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, JsonSchema, Copy, Clone, FromFormField)]
 #[serde(rename_all = "snake_case")]
 pub enum UserType {
   Coach,
@@ -189,19 +189,15 @@ impl Auth<OneTimeToken> {
   async fn from_req<'r>(req: &'r Request<'_>) -> Result<Self, AuthError> {
     let db_conn = req.guard::<DbConn>().await.unwrap();
 
-    let value = match req.query_value::<String>("auth[token]") {
-      Some(Ok(token)) => token,
-      _ => return Err(AuthError::Missing),
-    };
-
-    let user_type: UserType = match req.query_value::<String>("auth[user_type]") {
-      Some(Ok(user_type)) => serde_json::from_str(&user_type).unwrap(),
+    let query = match req.query_value::<AuthQuery>("auth") {
+      Some(Ok(query)) => query,
       _ => return Err(AuthError::Missing),
     };
 
     let token = db_conn
       .run(move |conn| {
-        OneTimeToken::find_by_value(&value, user_type, "reset-password").first::<OneTimeToken>(conn)
+        OneTimeToken::find_by_value(&query.token, query.user_type, "reset-password")
+          .first::<OneTimeToken>(conn)
       })
       .await
       .map_err(|_| AuthError::NotFound("token".to_string()))?;
@@ -264,8 +260,7 @@ impl<'a> OpenApiFromRequest<'a> for Auth<Coach> {
   }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, FromForm)]
 struct AuthQuery {
   token: String,
   user_type: UserType,
