@@ -145,15 +145,6 @@ pub async fn create(
 
   let payment_settings = CreateOrderPaymentSettings {
     payment_method_types: Some(vec![CreateOrderPaymentSettingsPaymentMethodTypes::Card]),
-    payment_method_options: Some(stripe::CreateOrderPaymentSettingsPaymentMethodOptions {
-      card: Some(stripe::CreateOrderPaymentSettingsPaymentMethodOptionsCard {
-        capture_method: None,
-        setup_future_usage: Some(
-          stripe::CreateOrderPaymentSettingsPaymentMethodOptionsCardSetupFutureUsage::OnSession,
-        ),
-      }),
-      ..Default::default()
-    }),
     ..Default::default()
   };
 
