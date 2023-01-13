@@ -9,7 +9,7 @@ use uuid::Uuid;
 pub struct ReviewView {
   pub id: Uuid,
   pub player_id: Uuid,
-  pub coach_id: Option<Uuid>,
+  pub coach_id: Uuid,
   pub title: String,
   pub recording_id: Uuid,
   pub game_id: String,

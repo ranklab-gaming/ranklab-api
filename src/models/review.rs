@@ -4,9 +4,8 @@ use crate::schema::reviews;
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, EqAny, Filter, FindBy, Or, Order};
 use diesel::expression::SqlLiteral;
-use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::sql_types::{Bool, Nullable};
+use diesel::sql_types::Bool;
 use stripe::{Expandable, OrderId, PaymentIntent};
 use uuid::Uuid;
 
@@ -19,7 +18,7 @@ use uuid::Uuid;
 )]
 #[builder_struct_attr(diesel(table_name = reviews))]
 pub struct Review {
-  pub coach_id: Option<Uuid>,
+  pub coach_id: Uuid,
   pub game_id: String,
   pub id: Uuid,
   pub notes: String,
@@ -32,9 +31,6 @@ pub struct Review {
   pub updated_at: chrono::NaiveDateTime,
   pub created_at: chrono::NaiveDateTime,
 }
-
-type NullableBoxedExpression =
-  Box<dyn BoxableExpression<reviews::table, Pg, SqlType = Nullable<Bool>>>;
 
 #[allow(clippy::type_complexity)]
 impl Review {
@@ -89,38 +85,27 @@ impl Review {
       ))
   }
 
-  pub fn filter_for_coach(coach: &Coach, archived: bool) -> reviews::BoxedQuery<'_, Pg> {
-    let mut filter_expression: NullableBoxedExpression = Box::new(reviews::coach_id.eq(coach.id));
-
-    filter_expression = if archived {
-      Box::new(
-        filter_expression
-          .and(reviews::state.eq_any(vec![ReviewState::Accepted, ReviewState::Refunded])),
-      )
+  pub fn filter_for_coach(
+    coach: &Coach,
+    archived: bool,
+  ) -> Order<
+    Filter<
+      reviews::table,
+      And<Eq<reviews::coach_id, Uuid>, EqAny<reviews::state, Vec<ReviewState>>>,
+    >,
+    SqlLiteral<Bool>,
+  > {
+    let states = if archived {
+      vec![ReviewState::Accepted, ReviewState::Refunded]
     } else {
-      Box::new(
-        filter_expression
-          .and(reviews::state.eq_any(vec![ReviewState::Draft, ReviewState::Published]))
-          .or(
-            reviews::state
-              .eq(ReviewState::AwaitingReview)
-              .and(reviews::coach_id.is_null()),
-          ),
-      )
+      vec![ReviewState::Draft, ReviewState::Published]
     };
 
     reviews::table
       .filter(
-        filter_expression.and(
-          reviews::game_id.eq_any(
-            coach
-              .game_ids
-              .clone()
-              .into_iter()
-              .map(|id| id.unwrap())
-              .collect::<Vec<String>>(),
-          ),
-        ),
+        reviews::coach_id
+          .eq(coach.id)
+          .and(reviews::state.eq_any(states)),
       )
       .order(diesel::dsl::sql::<Bool>(
         "case \"state\"
@@ -130,7 +115,6 @@ impl Review {
         end,
         created_at desc",
       ))
-      .into_boxed()
   }
 
   pub fn find_by_recording_for_coach(
@@ -139,13 +123,13 @@ impl Review {
   ) -> Filter<
     reviews::table,
     And<
-      Or<Eq<reviews::coach_id, Option<Uuid>>, Eq<reviews::state, ReviewState>>,
+      Or<Eq<reviews::coach_id, Uuid>, Eq<reviews::state, ReviewState>>,
       Eq<reviews::recording_id, Uuid>,
     >,
   > {
     reviews::table.filter(
       reviews::coach_id
-        .eq(Some(*coach_id))
+        .eq(*coach_id)
         .or(reviews::state.eq(ReviewState::AwaitingReview))
         .and(reviews::recording_id.eq(*recording_id)),
     )
@@ -156,14 +140,11 @@ impl Review {
     coach_id: &Uuid,
   ) -> Filter<
     reviews::table,
-    And<
-      And<Eq<reviews::coach_id, Option<Uuid>>, Eq<reviews::state, ReviewState>>,
-      Eq<reviews::id, Uuid>,
-    >,
+    And<And<Eq<reviews::coach_id, Uuid>, Eq<reviews::state, ReviewState>>, Eq<reviews::id, Uuid>>,
   > {
     reviews::table.filter(
       reviews::coach_id
-        .eq(Some(*coach_id))
+        .eq(*coach_id)
         .and(reviews::state.eq(ReviewState::Draft))
         .and(reviews::id.eq(*id)),
     )
@@ -174,14 +155,11 @@ impl Review {
     coach_id: &Uuid,
   ) -> Filter<
     reviews::table,
-    And<
-      Or<Eq<reviews::coach_id, Option<Uuid>>, Eq<reviews::state, ReviewState>>,
-      Eq<reviews::id, Uuid>,
-    >,
+    And<Or<Eq<reviews::coach_id, Uuid>, Eq<reviews::state, ReviewState>>, Eq<reviews::id, Uuid>>,
   > {
     reviews::table.filter(
       reviews::coach_id
-        .eq(Some(*coach_id))
+        .eq(*coach_id)
         .or(reviews::state.eq(ReviewState::AwaitingReview))
         .and(reviews::id.eq(*id)),
     )

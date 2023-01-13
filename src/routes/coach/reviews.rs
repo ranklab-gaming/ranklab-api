@@ -69,8 +69,6 @@ pub async fn update(
   auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> MutationResponse<ReviewView> {
-  let auth_id = auth.0.id;
-
   let existing_review = db_conn
     .run(move |conn| Review::find_for_coach(&id, &auth.0.id).first::<Review>(conn))
     .await?;
@@ -99,11 +97,7 @@ pub async fn update(
       let updated_review = db_conn
         .run(move |conn| {
           diesel::update(&existing_review)
-            .set(
-              ReviewChangeset::default()
-                .coach_id(Some(auth_id))
-                .state(ReviewState::Draft),
-            )
+            .set(ReviewChangeset::default().state(ReviewState::Draft))
             .get_result::<Review>(conn)
             .unwrap()
         })

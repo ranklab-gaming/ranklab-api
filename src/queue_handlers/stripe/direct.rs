@@ -61,33 +61,30 @@ impl Direct {
       .await
       .map_err(QueueHandlerError::from)?;
 
-    // only email the coach if he has been specifcally requested
-    if let Some(coach_id) = coach_id {
-      let coach: Coach = self
-        .db_conn
-        .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
-        .await?;
+    let coach: Coach = self
+      .db_conn
+      .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
+      .await?;
 
-      let email = Email::new(
-        &self.config,
-        "notification".to_owned(),
+    let email = Email::new(
+      &self.config,
+      "notification".to_owned(),
+      json!({
+        "subject": "New VODs are available",
+        "title": "There are new VODs available for review!",
+        "body": "Go to your dashboard to start analyzing them.",
+        "cta" : "View Available VODs",
+        "cta_url" : "https://ranklab.gg/dashboard"
+      }),
+      vec![Recipient::new(
+        coach.email.clone(),
         json!({
-          "subject": "New VODs are available",
-          "title": "There are new VODs available for review!",
-          "body": "Go to your dashboard to start analyzing them.",
-          "cta" : "View Available VODs",
-          "cta_url" : "https://ranklab.gg/dashboard"
+          "name": coach.name,
         }),
-        vec![Recipient::new(
-          coach.email.clone(),
-          json!({
-            "name": coach.name,
-          }),
-        )],
-      );
+      )],
+    );
 
-      email.deliver();
-    }
+    email.deliver();
 
     Ok(())
   }

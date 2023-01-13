@@ -1,7 +1,7 @@
 CREATE TYPE review_state AS ENUM ('awaiting_payment', 'awaiting_review', 'draft', 'published', 'accepted', 'refunded');
 
 CREATE TABLE reviews (
-    coach_id uuid REFERENCES coaches(id),
+    coach_id uuid NOT NULL REFERENCES coaches(id),
     game_id text NOT NULL DEFAULT '',
     id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
     notes text NOT NULL DEFAULT '',

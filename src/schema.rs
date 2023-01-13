@@ -80,7 +80,7 @@ diesel::table! {
     use super::sql_types::ReviewState;
 
     reviews (id) {
-        coach_id -> Nullable<Uuid>,
+        coach_id -> Uuid,
         game_id -> Text,
         id -> Uuid,
         notes -> Text,

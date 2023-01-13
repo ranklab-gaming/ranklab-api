@@ -10,6 +10,7 @@ use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::{coaches, reviews};
 use crate::views::ReviewView;
 use diesel::prelude::*;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -80,6 +81,7 @@ pub struct CreateReviewMutation {
   notes: String,
   #[validate(custom = "crate::games::validate_id")]
   game_id: String,
+  coach_id: Uuid,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -94,6 +96,21 @@ pub async fn create(
 ) -> MutationResponse<ReviewView> {
   let body_recording_id = body.recording_id;
   let auth_player_id = auth.0.id;
+  let coach_id = body.coach_id;
+
+  let coach = db_conn
+    .run(move |conn| coaches::table.find(coach_id).first::<Coach>(conn))
+    .await?;
+
+  let coach_games_ids = coach
+    .game_ids
+    .into_iter()
+    .map(|id| id.unwrap())
+    .collect::<Vec<String>>();
+
+  if !coach_games_ids.contains(&body.game_id) {
+    return Response::mutation_error(Status::UnprocessableEntity);
+  }
 
   let review = db_conn
     .run(move |conn| {
@@ -104,7 +121,8 @@ pub async fn create(
             .player_id(auth_player_id)
             .title(body.title.clone())
             .notes(ammonia::clean(&body.notes))
-            .game_id(body.game_id.clone()),
+            .game_id(body.game_id.clone())
+            .coach_id(body.coach_id),
         )
         .get_result::<Review>(conn)
         .unwrap()
@@ -233,7 +251,7 @@ pub async fn update(
     })
     .await;
 
-  let review_coach_id = updated_review.coach_id.unwrap();
+  let review_coach_id = updated_review.coach_id;
 
   let coach: Coach = db_conn
     .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
