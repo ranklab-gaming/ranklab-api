@@ -69,13 +69,13 @@ pub async fn update(
   auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> MutationResponse<ReviewView> {
-  let existing_review = db_conn
-    .run(move |conn| Review::find_for_coach(&id, &auth.0.id).first::<Review>(conn))
-    .await?;
-
   if let Err(errors) = review.validate() {
     return Response::validation_error(errors);
   }
+
+  let existing_review = db_conn
+    .run(move |conn| Review::find_for_coach(&id, &auth.0.id).first::<Review>(conn))
+    .await?;
 
   if let Some(true) = review.published {
     if existing_review.state == ReviewState::Draft {

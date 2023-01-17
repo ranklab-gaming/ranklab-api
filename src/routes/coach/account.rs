@@ -35,7 +35,7 @@ pub struct CreateCoachRequest {
   country: String,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Deserialize, JsonSchema, Validate)]
 #[schemars(rename = "CoachUpdateAccountRequest")]
 pub struct UpdateAccountRequest {
   #[validate(length(min = 2))]
@@ -61,6 +61,10 @@ pub async fn update(
   auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> MutationResponse<CoachView> {
+  if let Err(errors) = account.validate() {
+    return Response::validation_error(errors);
+  }
+
   let coach = auth.0.clone();
 
   let coach: CoachView = db_conn

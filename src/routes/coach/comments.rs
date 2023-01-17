@@ -34,6 +34,10 @@ pub async fn create(
   auth: Auth<Coach>,
   db_conn: DbConn,
 ) -> MutationResponse<CommentView> {
+  if let Err(errors) = comment.validate() {
+    return Response::validation_error(errors);
+  }
+
   let review_id = comment.review_id;
   let coach_id = auth.0.id;
 

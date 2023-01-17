@@ -18,7 +18,7 @@ use serde;
 use serde::Deserialize;
 use validator::Validate;
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Deserialize, JsonSchema, Validate)]
 #[schemars(rename = "PlayerUpdateAccountRequest")]
 pub struct UpdateAccountRequest {
   #[validate(length(min = 2))]
@@ -115,6 +115,10 @@ pub async fn update(
   auth: Auth<Player>,
   db_conn: DbConn,
 ) -> MutationResponse<PlayerView> {
+  if let Err(errors) = account.validate() {
+    return Response::validation_error(errors);
+  }
+
   let player = auth.0.clone();
 
   let player: PlayerView = db_conn
