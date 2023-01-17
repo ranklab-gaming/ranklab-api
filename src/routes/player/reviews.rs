@@ -102,13 +102,11 @@ pub async fn create(
     .run(move |conn| coaches::table.find(coach_id).first::<Coach>(conn))
     .await?;
 
-  let coach_games_ids = coach
+  if !coach
     .game_ids
     .into_iter()
-    .map(|id| id.unwrap())
-    .collect::<Vec<String>>();
-
-  if !coach_games_ids.contains(&body.game_id) {
+    .any(|id| id.unwrap() == body.game_id)
+  {
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 

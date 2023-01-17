@@ -1,4 +1,5 @@
 pub mod account;
+pub mod coaches;
 pub mod comments;
 pub mod recordings;
 pub mod reviews;
