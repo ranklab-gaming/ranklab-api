@@ -3,6 +3,7 @@ use crate::guards::DbConn;
 use crate::schema::one_time_tokens;
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, Filter};
+use diesel::helper_types::IsNull;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
@@ -22,7 +23,6 @@ pub struct OneTimeToken {
   pub value: String,
   pub player_id: Option<Uuid>,
   pub coach_id: Option<Uuid>,
-  pub scope: String,
   pub used_at: Option<chrono::NaiveDateTime>,
   pub updated_at: chrono::NaiveDateTime,
   pub created_at: chrono::NaiveDateTime,
@@ -33,7 +33,6 @@ impl OneTimeToken {
   pub fn find_by_value(
     value: &str,
     user_type: UserType,
-    scope: &str,
   ) -> Filter<
     one_time_tokens::table,
     And<
@@ -41,7 +40,7 @@ impl OneTimeToken {
         Eq<one_time_tokens::value, String>,
         Box<dyn BoxableExpression<one_time_tokens::table, Pg, SqlType = Bool>>,
       >,
-      Eq<one_time_tokens::scope, String>,
+      IsNull<one_time_tokens::used_at>,
     >,
   > {
     let user_type_expr: Box<dyn BoxableExpression<one_time_tokens::table, Pg, SqlType = Bool>> =
@@ -54,7 +53,7 @@ impl OneTimeToken {
       one_time_tokens::value
         .eq(value.to_string())
         .and(user_type_expr)
-        .and(one_time_tokens::scope.eq(scope.to_string())),
+        .and(one_time_tokens::used_at.is_null()),
     )
   }
 

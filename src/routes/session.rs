@@ -154,7 +154,6 @@ pub async fn reset_password(
         .values(
           OneTimeTokenChangeset::default()
             .value(value)
-            .scope("reset-password".to_owned())
             .player_id(match &account {
               Account::Coach(_) => None,
               Account::Player(player) => Some(player.id),

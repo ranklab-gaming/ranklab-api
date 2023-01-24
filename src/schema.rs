@@ -7,6 +7,16 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    coach_invitations (id) {
+        id -> Uuid,
+        value -> Text,
+        used_at -> Nullable<Timestamp>,
+        updated_at -> Timestamp,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     coaches (id) {
         email -> Text,
         name -> Text,
@@ -42,7 +52,6 @@ diesel::table! {
         value -> Text,
         player_id -> Nullable<Uuid>,
         coach_id -> Nullable<Uuid>,
-        scope -> Text,
         used_at -> Nullable<Timestamp>,
         updated_at -> Timestamp,
         created_at -> Timestamp,
@@ -105,6 +114,7 @@ diesel::joinable!(reviews -> players (player_id));
 diesel::joinable!(reviews -> recordings (recording_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    coach_invitations,
     coaches,
     comments,
     one_time_tokens,

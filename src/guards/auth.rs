@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::guards::DbConn;
-use crate::models::{Coach, OneTimeToken, Player};
+use crate::models::{Coach, CoachInvitation, OneTimeToken, Player};
 use crate::try_result;
 use diesel::prelude::*;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
@@ -189,16 +189,33 @@ impl Auth<OneTimeToken> {
   async fn from_req<'r>(req: &'r Request<'_>) -> Result<Self, AuthError> {
     let db_conn = req.guard::<DbConn>().await.unwrap();
 
-    let query = match req.query_value::<AuthQuery>("auth") {
+    let query = match req.query_value::<OneTimeTokenAuthQuery>("auth") {
       Some(Ok(query)) => query,
       _ => return Err(AuthError::Missing),
     };
 
     let token = db_conn
       .run(move |conn| {
-        OneTimeToken::find_by_value(&query.token, query.user_type, "reset-password")
-          .first::<OneTimeToken>(conn)
+        OneTimeToken::find_by_value(&query.token, query.user_type).first::<OneTimeToken>(conn)
       })
+      .await
+      .map_err(|_| AuthError::NotFound("token".to_string()))?;
+
+    Ok(Auth(token))
+  }
+}
+
+impl Auth<CoachInvitation> {
+  async fn from_req<'r>(req: &'r Request<'_>) -> Result<Self, AuthError> {
+    let db_conn = req.guard::<DbConn>().await.unwrap();
+
+    let query = match req.query_value::<CoachInvitationAuthQuery>("auth") {
+      Some(Ok(query)) => query,
+      _ => return Err(AuthError::Missing),
+    };
+
+    let token = db_conn
+      .run(move |conn| CoachInvitation::find_by_value(&query.token).first::<CoachInvitation>(conn))
       .await
       .map_err(|_| AuthError::NotFound("token".to_string()))?;
 
@@ -240,6 +257,16 @@ impl<'r> FromRequest<'r> for Auth<OneTimeToken> {
   }
 }
 
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for Auth<CoachInvitation> {
+  type Error = AuthError;
+
+  async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    let auth = try_result!(Auth::<CoachInvitation>::from_req(req).await);
+    Outcome::Success(auth)
+  }
+}
+
 impl<'a> OpenApiFromRequest<'a> for Auth<Player> {
   fn from_request_input(
     _gen: &mut OpenApiGenerator,
@@ -261,9 +288,14 @@ impl<'a> OpenApiFromRequest<'a> for Auth<Coach> {
 }
 
 #[derive(Debug, Deserialize, JsonSchema, FromForm)]
-struct AuthQuery {
+struct OneTimeTokenAuthQuery {
   token: String,
   user_type: UserType,
+}
+
+#[derive(Debug, Deserialize, JsonSchema, FromForm)]
+struct CoachInvitationAuthQuery {
+  token: String,
 }
 
 impl<'a> OpenApiFromRequest<'a> for Auth<OneTimeToken> {
@@ -272,7 +304,34 @@ impl<'a> OpenApiFromRequest<'a> for Auth<OneTimeToken> {
     _name: String,
     required: bool,
   ) -> rocket_okapi::Result<RequestHeaderInput> {
-    let schema = gen.json_schema::<AuthQuery>();
+    let schema = gen.json_schema::<OneTimeTokenAuthQuery>();
+    Ok(RequestHeaderInput::Parameter(Parameter {
+      name: "auth".to_owned(),
+      location: "query".to_owned(),
+      description: None,
+      required,
+      deprecated: false,
+      allow_empty_value: false,
+      value: ParameterValue::Schema {
+        style: None,
+        explode: None,
+        allow_reserved: false,
+        schema,
+        example: None,
+        examples: None,
+      },
+      extensions: Object::default(),
+    }))
+  }
+}
+
+impl<'a> OpenApiFromRequest<'a> for Auth<CoachInvitation> {
+  fn from_request_input(
+    gen: &mut OpenApiGenerator,
+    _name: String,
+    required: bool,
+  ) -> rocket_okapi::Result<RequestHeaderInput> {
+    let schema = gen.json_schema::<CoachInvitationAuthQuery>();
     Ok(RequestHeaderInput::Parameter(Parameter {
       name: "auth".to_owned(),
       location: "query".to_owned(),
