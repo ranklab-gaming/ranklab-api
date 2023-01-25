@@ -1,9 +1,10 @@
 use crate::guards::{Auth, DbConn, Stripe};
-use crate::models::{Coach, CoachChangeset};
+use crate::models::{Coach, CoachChangeset, CoachInvitation, CoachInvitationChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::coaches;
 use crate::views::CoachView;
 use bcrypt::{hash, DEFAULT_COST};
+use chrono::Utc;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -89,6 +90,7 @@ pub async fn update(
 #[openapi(tag = "Ranklab")]
 #[post("/coach/account", data = "<coach>")]
 pub async fn create(
+  auth: Auth<CoachInvitation>,
   coach: Json<CreateCoachRequest>,
   db_conn: DbConn,
   stripe: Stripe,
@@ -199,6 +201,15 @@ pub async fn create(
     })
     .await
     .into();
+
+  db_conn
+    .run(move |conn| {
+      diesel::update(&auth.0)
+        .set(CoachInvitationChangeset::default().used_at(Some(Utc::now().naive_utc())))
+        .get_result::<CoachInvitation>(conn)
+        .unwrap()
+    })
+    .await;
 
   Response::success(coach)
 }

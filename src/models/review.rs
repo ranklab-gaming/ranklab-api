@@ -98,7 +98,11 @@ impl Review {
     let states = if archived {
       vec![ReviewState::Accepted, ReviewState::Refunded]
     } else {
-      vec![ReviewState::Draft, ReviewState::Published]
+      vec![
+        ReviewState::Draft,
+        ReviewState::Published,
+        ReviewState::AwaitingReview,
+      ]
     };
 
     reviews::table

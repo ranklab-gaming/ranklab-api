@@ -224,5 +224,14 @@ pub async fn update_password(
     }
   }
 
+  db_conn
+    .run(move |conn| {
+      diesel::update(&auth.0)
+        .set(OneTimeTokenChangeset::default().used_at(Some(Utc::now().naive_utc())))
+        .get_result::<OneTimeToken>(conn)
+        .unwrap()
+    })
+    .await;
+
   Response::status(Status::Ok)
 }
