@@ -463,7 +463,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef552e6f588e446098f6ba40d89ac146c8c7b64aade83c051ee00bb5d2bc18d"
 dependencies = [
  "serde",
- "uuid 1.1.2",
+ "uuid 1.3.0",
 ]
 
 [[package]]
@@ -543,7 +543,7 @@ dependencies = [
  "itoa",
  "pq-sys",
  "r2d2",
- "uuid 1.1.2",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -1907,7 +1907,7 @@ dependencies = [
  "sha2 0.10.6",
  "smol_str",
  "thiserror",
- "uuid 1.1.2",
+ "uuid 1.3.0",
  "validator",
 ]
 
@@ -2072,7 +2072,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util 0.7.3",
  "ubyte",
- "uuid 1.1.2",
+ "uuid 1.3.0",
  "version_check",
  "yansi",
 ]
@@ -2116,7 +2116,7 @@ dependencies = [
  "time 0.3.9",
  "tokio",
  "uncased",
- "uuid 1.1.2",
+ "uuid 1.3.0",
 ]
 
 [[package]]
@@ -2353,7 +2353,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid 0.8.2",
- "uuid 1.1.2",
+ "uuid 1.3.0",
 ]
 
 [[package]]
@@ -2501,7 +2501,7 @@ dependencies = [
  "thiserror",
  "time 0.3.9",
  "url",
- "uuid 1.1.2",
+ "uuid 1.3.0",
 ]
 
 [[package]]
@@ -3159,9 +3159,9 @@ checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 
 [[package]]
 name = "uuid"
-version = "1.1.2"
+version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd6469f4314d5f1ffec476e05f17cc9a78bc7a27a6a857842170bdf8d6f98d2f"
+checksum = "1674845326ee10d37ca60470760d4288a6f80f304007d92e5c53bab78c9cfd79"
 dependencies = [
  "getrandom 0.2.7",
  "serde",
