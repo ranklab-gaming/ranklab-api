@@ -11,7 +11,7 @@ jobs:
       - name: Install mold
         uses: rui314/setup-mold@v1
       - name: Set up Rust cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: incremental
       - name: Run Cargo build
