@@ -15,8 +15,9 @@ pub struct PaymentMethod {
 #[openapi(tag = "Ranklab")]
 #[get("/player/stripe-payment-methods")]
 pub async fn list(auth: Auth<Player>, stripe: Stripe) -> QueryResponse<Vec<PaymentMethod>> {
-  let mut payment_method_params =
-    stripe::ListPaymentMethods::new(stripe::PaymentMethodTypeFilter::Card);
+  let mut payment_method_params = stripe::ListPaymentMethods::new();
+
+  payment_method_params.type_ = Some(stripe::PaymentMethodTypeFilter::Card);
 
   payment_method_params.customer = Some(
     auth

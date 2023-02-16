@@ -156,6 +156,7 @@ pub async fn create(
     konbini_payments: None,
     blik_payments: None,
     promptpay_payments: None,
+    india_international_payments: None,
   });
 
   let service_agreement = match coach.country.as_str() {
