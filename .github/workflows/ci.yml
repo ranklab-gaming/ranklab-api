@@ -65,6 +65,7 @@ jobs:
       - name: Download task definition
         run: |
           aws ecs describe-task-definition --task-definition ${{ secrets.ECS_TASK_DEFINITION_FAMILY }} --query taskDefinition > task-definition.json
+          echo "::set-output name=revision::$(($(cat task-definition.json | jq .revision) - 1))"
       - name: Render Amazon ECS task definition
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         id: render-task-definition
@@ -79,3 +80,8 @@ jobs:
           service: ${{ env.service-name }}
           cluster: ${{ env.cluster-name }}
           wait-for-service-stability: true
+      - name: De-register (latest-1) revision
+        if: ${{ steps.download-task.outputs.revision > 0 }}
+        run: |
+          aws ecs deregister-task-definition \
+            --task-definition ${{ secrets.ECS_TASK_DEFINITION_FAMILY }}:${{ steps.download-task.outputs.revision }}
