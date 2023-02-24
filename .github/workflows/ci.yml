@@ -62,19 +62,14 @@ jobs:
             ${{ steps.ecr-login.outputs.registry }}/${{ env.app-name }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}
             ghcr.io/${{ github.repository }}:latest
-      - name: Download task definition
+      - name: Download ECS task definition
+        id: download-task
         run: |
-          aws ecs describe-task-definition --task-definition ${{ secrets.ECS_TASK_DEFINITION_FAMILY }} --query taskDefinition > task-definition.json
-          echo "::set-output name=revision::$(($(cat task-definition.json | jq .revision) - 1))"
-      - name: Deploy Amazon ECS task definition
+          aws ecs describe-task-definition --task-definition ${{ secrets.ECS_TASK_DEFINITION_FAMILY }} --query 'taskDefinition' --output json > task-definition.json
+      - name: Deploy ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: task-definition.json
           service: ${{ env.service-name }}
           cluster: ${{ env.cluster-name }}
           wait-for-service-stability: true
-      - name: De-register (latest-1) revision
-        if: ${{ steps.download-task.outputs.revision > 0 }}
-        run: |
-          aws ecs deregister-task-definition \
-            --task-definition ${{ secrets.ECS_TASK_DEFINITION_FAMILY }}:${{ steps.download-task.outputs.revision }}
