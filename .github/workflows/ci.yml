@@ -66,17 +66,10 @@ jobs:
         run: |
           aws ecs describe-task-definition --task-definition ${{ secrets.ECS_TASK_DEFINITION_FAMILY }} --query taskDefinition > task-definition.json
           echo "::set-output name=revision::$(($(cat task-definition.json | jq .revision) - 1))"
-      - name: Render Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        id: render-task-definition
-        with:
-          task-definition: task-definition.json
-          container-name: ${{ env.container-name }}
-          image: ${{ steps.ecr-login.outputs.registry }}/${{ env.app-name }}:${{ github.sha }}
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
+          task-definition: task-definition.json
           service: ${{ env.service-name }}
           cluster: ${{ env.cluster-name }}
           wait-for-service-stability: true
