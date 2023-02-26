@@ -37,7 +37,7 @@ pub async fn create(
 ) -> MutationResponse<BillingPortalLink> {
   let billing_portal_session_params = BillingPortalSessionParams {
     return_url: body.return_url.clone(),
-    customer: auth.0.stripe_customer_id.unwrap(),
+    customer: auth.0.stripe_customer_id,
   };
 
   let billing_portal_session: BillingPortalSession = stripe

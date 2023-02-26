@@ -26,9 +26,10 @@ diesel::table! {
         id -> Uuid,
         name -> Text,
         password -> Text,
-        stripe_account_id -> Nullable<Text>,
+        stripe_account_id -> Text,
         stripe_details_submitted -> Bool,
         stripe_payouts_enabled -> Bool,
+        stripe_product_id -> Text,
         updated_at -> Timestamp,
     }
 }
@@ -66,7 +67,7 @@ diesel::table! {
         id -> Uuid,
         name -> Text,
         password -> Text,
-        stripe_customer_id -> Nullable<Text>,
+        stripe_customer_id -> Text,
         updated_at -> Timestamp,
     }
 }

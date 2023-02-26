@@ -71,7 +71,7 @@ pub async fn create(
             .email(request.email.clone())
             .name(request.name.clone())
             .games(request.games.clone().into_iter().map(Some).collect())
-            .stripe_customer_id(None),
+            .stripe_customer_id("".to_string()),
         )
         .get_result(conn)
         .unwrap()
@@ -96,7 +96,7 @@ pub async fn create(
   let player = db_conn
     .run(move |conn| {
       diesel::update(&player)
-        .set(PlayerChangeset::default().stripe_customer_id(Some(customer.id.to_string())))
+        .set(PlayerChangeset::default().stripe_customer_id(customer.id.to_string()))
         .get_result::<Player>(conn)
         .unwrap()
     })

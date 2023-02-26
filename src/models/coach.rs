@@ -21,17 +21,18 @@ pub struct Coach {
   pub id: Uuid,
   pub name: String,
   pub password: String,
-  pub stripe_account_id: Option<String>,
+  pub stripe_account_id: String,
   pub stripe_details_submitted: bool,
   pub stripe_payouts_enabled: bool,
+  pub stripe_product_id: String,
   pub updated_at: chrono::NaiveDateTime,
 }
 
 impl Coach {
   pub fn find_by_stripe_account_id<T: ToString>(
     stripe_account_id: &T,
-  ) -> FindBy<coaches::table, coaches::stripe_account_id, Option<String>> {
-    coaches::table.filter(coaches::stripe_account_id.eq(Some(stripe_account_id.to_string())))
+  ) -> FindBy<coaches::table, coaches::stripe_account_id, String> {
+    coaches::table.filter(coaches::stripe_account_id.eq(stripe_account_id.to_string()))
   }
 
   pub fn find_by_id(id: &Uuid) -> Find<coaches::table, Uuid> {

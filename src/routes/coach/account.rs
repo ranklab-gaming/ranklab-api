@@ -108,6 +108,7 @@ pub async fn create(
             .password(hash(coach.password.clone(), DEFAULT_COST).expect("Failed to hash password"))
             .name(coach.name.clone())
             .bio(coach.bio.clone())
+            .stripe_product_id(uuid::Uuid::new_v4().to_string())
             .game_ids(coach.game_ids.clone().into_iter().map(Some).collect())
             .country(coach.country.clone()),
         )
@@ -198,7 +199,7 @@ pub async fn create(
   let coach: CoachView = db_conn
     .run(move |conn| {
       diesel::update(&coach)
-        .set(CoachChangeset::default().stripe_account_id(Some(account.id.to_string())))
+        .set(CoachChangeset::default().stripe_account_id(account.id.to_string()))
         .get_result::<Coach>(conn)
         .unwrap()
     })

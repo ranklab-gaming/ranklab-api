@@ -93,7 +93,7 @@ pub async fn create(
     })
     .await;
 
-  let url = create_upload_url(&config, &recording.video_key);
+  let url = create_upload_url(config, &recording.video_key);
 
   Response::success(RecordingView::new(recording, None, Some(url)))
 }
@@ -108,10 +108,9 @@ pub async fn get(
 ) -> QueryResponse<RecordingView> {
   let recording: Recording = db_conn
     .run(move |conn| Recording::find_for_player(&id, &auth.0.id).first::<Recording>(conn))
-    .await?
-    .into();
+    .await?;
 
-  let url = create_upload_url(&config, &recording.video_key);
+  let url = create_upload_url(config, &recording.video_key);
 
   Response::success(RecordingView::new(recording, None, Some(url)))
 }

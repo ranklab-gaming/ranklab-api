@@ -23,7 +23,6 @@ pub async fn list(auth: Auth<Player>, stripe: Stripe) -> QueryResponse<Vec<Payme
     auth
       .0
       .stripe_customer_id
-      .unwrap()
       .parse::<stripe::CustomerId>()
       .unwrap(),
   );

@@ -130,7 +130,6 @@ pub async fn create(
   let customer_id = auth
     .0
     .stripe_customer_id
-    .unwrap()
     .parse::<stripe::CustomerId>()
     .unwrap();
 
@@ -267,7 +266,7 @@ pub async fn update(
   // };
 
   let mut transfer_params =
-    stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id.unwrap());
+    stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id);
   transfer_params.amount = Some((order.amount_total as f64 * 0.8) as i64);
   // transfer_params.source_transaction = Some(payment_intent);
 

@@ -12,8 +12,8 @@ pub struct CoachView {
   pub bio: String,
   pub game_ids: Vec<String>,
   pub country: String,
-  pub can_review: bool,
-  pub stripe_details_submitted: bool,
+  pub reviews_enabled: bool,
+  pub payouts_enabled: bool,
 }
 
 impl From<Coach> for CoachView {
@@ -25,8 +25,8 @@ impl From<Coach> for CoachView {
       bio: coach.bio,
       game_ids: coach.game_ids.into_iter().map(|id| id.unwrap()).collect(),
       country: coach.country,
-      can_review: coach.stripe_payouts_enabled,
-      stripe_details_submitted: coach.stripe_details_submitted,
+      payouts_enabled: coach.stripe_payouts_enabled,
+      reviews_enabled: coach.stripe_details_submitted,
     }
   }
 }

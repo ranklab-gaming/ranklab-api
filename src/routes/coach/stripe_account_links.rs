@@ -29,7 +29,6 @@ pub async fn create(
     auth
       .0
       .stripe_account_id
-      .unwrap()
       .parse::<stripe::AccountId>()
       .unwrap(),
     stripe::AccountLinkType::AccountOnboarding,

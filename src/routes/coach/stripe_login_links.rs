@@ -27,7 +27,6 @@ pub async fn create(
   let account_id = auth
     .0
     .stripe_account_id
-    .unwrap()
     .parse::<stripe::AccountId>()
     .unwrap();
 
