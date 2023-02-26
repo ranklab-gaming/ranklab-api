@@ -14,14 +14,15 @@ pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<
     .run(move |conn| Review::find_by_recording_for_coach(&id, &auth.0.id).first(conn))
     .await?;
 
-  let recording: RecordingView = db_conn
+  let recording_id = review.recording_id;
+
+  let recording: Recording = db_conn
     .run(move |conn| {
       recordings::table
-        .find(&review.recording_id)
+        .find(&recording_id)
         .get_result::<Recording>(conn)
     })
-    .await?
-    .into();
+    .await?;
 
-  Response::success(recording)
+  Response::success(RecordingView::new(recording, Some(&review), None))
 }

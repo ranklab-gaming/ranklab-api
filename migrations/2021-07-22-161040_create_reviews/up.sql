@@ -2,18 +2,17 @@ CREATE TYPE review_state AS ENUM ('awaiting_payment', 'awaiting_review', 'draft'
 
 CREATE TABLE reviews (
     coach_id uuid NOT NULL REFERENCES coaches(id),
-    game_id text NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    game_id text NOT NULL,
     id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
     notes text NOT NULL DEFAULT '',
     player_id uuid NOT NULL REFERENCES players(id),
     recording_id uuid NOT NULL REFERENCES recordings(id),
-    skill_level smallint NOT NULL DEFAULT 0,
-    title text NOT NULL DEFAULT '',
+    skill_level smallint NOT NULL,
     state review_state NOT NULL DEFAULT 'awaiting_payment',
-    stripe_order_id text NOT NULL DEFAULT '',
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    stripe_order_id text NOT NULL,
+    title text NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 SELECT diesel_manage_updated_at('reviews');
-CREATE INDEX reviews_recording_id_idx ON reviews (recording_id);

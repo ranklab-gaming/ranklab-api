@@ -8,28 +8,28 @@ pub mod sql_types {
 
 diesel::table! {
     coach_invitations (id) {
-        id -> Uuid,
-        value -> Text,
-        used_at -> Nullable<Timestamp>,
-        updated_at -> Timestamp,
         created_at -> Timestamp,
+        id -> Uuid,
+        updated_at -> Timestamp,
+        used_at -> Nullable<Timestamp>,
+        value -> Text,
     }
 }
 
 diesel::table! {
     coaches (id) {
-        email -> Text,
-        name -> Text,
         bio -> Text,
         country -> Text,
+        created_at -> Timestamp,
+        email -> Text,
         game_ids -> Array<Nullable<Text>>,
         id -> Uuid,
+        name -> Text,
         password -> Text,
         stripe_account_id -> Nullable<Text>,
         stripe_details_submitted -> Bool,
         stripe_payouts_enabled -> Bool,
         updated_at -> Timestamp,
-        created_at -> Timestamp,
     }
 }
 
@@ -37,50 +37,49 @@ diesel::table! {
     comments (id) {
         body -> Text,
         coach_id -> Uuid,
+        created_at -> Timestamp,
         drawing -> Text,
         id -> Uuid,
         review_id -> Uuid,
-        video_timestamp -> Int4,
         updated_at -> Timestamp,
-        created_at -> Timestamp,
+        video_timestamp -> Int4,
     }
 }
 
 diesel::table! {
     one_time_tokens (id) {
-        id -> Uuid,
-        value -> Text,
-        player_id -> Nullable<Uuid>,
         coach_id -> Nullable<Uuid>,
-        used_at -> Nullable<Timestamp>,
-        updated_at -> Timestamp,
         created_at -> Timestamp,
+        id -> Uuid,
+        player_id -> Nullable<Uuid>,
+        updated_at -> Timestamp,
+        used_at -> Nullable<Timestamp>,
+        value -> Text,
     }
 }
 
 diesel::table! {
     players (id) {
+        created_at -> Timestamp,
         email -> Text,
-        name -> Text,
         games -> Array<Nullable<Jsonb>>,
         id -> Uuid,
-        stripe_customer_id -> Nullable<Text>,
+        name -> Text,
         password -> Text,
+        stripe_customer_id -> Nullable<Text>,
         updated_at -> Timestamp,
-        created_at -> Timestamp,
     }
 }
 
 diesel::table! {
     recordings (id) {
+        created_at -> Timestamp,
         id -> Uuid,
         mime_type -> Text,
         player_id -> Uuid,
-        upload_url -> Text,
+        updated_at -> Timestamp,
         uploaded -> Bool,
         video_key -> Text,
-        updated_at -> Timestamp,
-        created_at -> Timestamp,
     }
 }
 
@@ -90,17 +89,17 @@ diesel::table! {
 
     reviews (id) {
         coach_id -> Uuid,
+        created_at -> Timestamp,
         game_id -> Text,
         id -> Uuid,
         notes -> Text,
         player_id -> Uuid,
         recording_id -> Uuid,
         skill_level -> Int2,
-        title -> Text,
         state -> ReviewState,
         stripe_order_id -> Text,
+        title -> Text,
         updated_at -> Timestamp,
-        created_at -> Timestamp,
     }
 }
 

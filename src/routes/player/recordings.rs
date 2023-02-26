@@ -53,6 +53,7 @@ pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<Reco
         reviews
           .iter()
           .find(|review| review.recording_id == recording.id),
+        None,
       )
     })
     .collect();
@@ -78,14 +79,52 @@ pub async fn create(
   let extension = extensions.first().unwrap();
   let key = format!("{}.{}", Uuid::new_v4(), extension);
 
+  let recording: Recording = db_conn
+    .run(move |conn| {
+      diesel::insert_into(recordings::table)
+        .values(
+          RecordingChangeset::default()
+            .player_id(auth.0.id)
+            .video_key(key)
+            .mime_type(recording.mime_type.clone()),
+        )
+        .get_result::<Recording>(conn)
+        .unwrap()
+    })
+    .await;
+
+  let url = create_upload_url(&config, &recording.video_key);
+
+  Response::success(RecordingView::new(recording, None, Some(url)))
+}
+
+#[openapi(tag = "Ranklab")]
+#[get("/player/recordings/<id>")]
+pub async fn get(
+  id: Uuid,
+  auth: Auth<Player>,
+  db_conn: DbConn,
+  config: &State<Config>,
+) -> QueryResponse<RecordingView> {
+  let recording: Recording = db_conn
+    .run(move |conn| Recording::find_for_player(&id, &auth.0.id).first::<Recording>(conn))
+    .await?
+    .into();
+
+  let url = create_upload_url(&config, &recording.video_key);
+
+  Response::success(RecordingView::new(recording, None, Some(url)))
+}
+
+fn create_upload_url(config: &Config, key: &str) -> String {
   let req = PutObjectRequest {
     bucket: config.s3_bucket.to_owned(),
-    key: key.clone(),
+    key: key.to_owned(),
     acl: Some("public-read".to_string()),
     ..Default::default()
   };
 
-  let url = req.get_presigned_url(
+  req.get_presigned_url(
     &Region::EuWest2,
     &AwsCredentials::new(
       &config.aws_access_key_id,
@@ -94,34 +133,5 @@ pub async fn create(
       None,
     ),
     &Default::default(),
-  );
-
-  let recording: RecordingView = db_conn
-    .run(move |conn| {
-      diesel::insert_into(recordings::table)
-        .values(
-          RecordingChangeset::default()
-            .player_id(auth.0.id)
-            .upload_url(url)
-            .video_key(key)
-            .mime_type(recording.mime_type.clone()),
-        )
-        .get_result::<Recording>(conn)
-        .unwrap()
-    })
-    .await
-    .into();
-
-  Response::success(recording)
-}
-
-#[openapi(tag = "Ranklab")]
-#[get("/player/recordings/<id>")]
-pub async fn get(id: Uuid, auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<RecordingView> {
-  let recording: RecordingView = db_conn
-    .run(move |conn| Recording::find_for_player(&id, &auth.0.id).first::<Recording>(conn))
-    .await?
-    .into();
-
-  Response::success(recording)
+  )
 }

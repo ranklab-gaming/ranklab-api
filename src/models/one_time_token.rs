@@ -19,13 +19,13 @@ use super::{Account, Coach, Player};
 )]
 #[builder_struct_attr(diesel(table_name = one_time_tokens))]
 pub struct OneTimeToken {
-  pub id: Uuid,
-  pub value: String,
-  pub player_id: Option<Uuid>,
   pub coach_id: Option<Uuid>,
-  pub used_at: Option<chrono::NaiveDateTime>,
-  pub updated_at: chrono::NaiveDateTime,
   pub created_at: chrono::NaiveDateTime,
+  pub id: Uuid,
+  pub player_id: Option<Uuid>,
+  pub updated_at: chrono::NaiveDateTime,
+  pub used_at: Option<chrono::NaiveDateTime>,
+  pub value: String,
 }
 
 #[allow(clippy::type_complexity)]

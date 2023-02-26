@@ -14,12 +14,12 @@ use uuid::Uuid;
 pub struct Comment {
   pub body: String,
   pub coach_id: Uuid,
+  pub created_at: chrono::NaiveDateTime,
   pub drawing: String,
   pub id: Uuid,
   pub review_id: Uuid,
-  pub video_timestamp: i32,
   pub updated_at: chrono::NaiveDateTime,
-  pub created_at: chrono::NaiveDateTime,
+  pub video_timestamp: i32,
 }
 
 #[allow(clippy::type_complexity)]

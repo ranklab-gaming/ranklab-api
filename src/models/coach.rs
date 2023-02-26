@@ -13,18 +13,18 @@ use uuid::Uuid;
 )]
 #[builder_struct_attr(diesel(table_name = coaches))]
 pub struct Coach {
-  pub email: String,
-  pub name: String,
   pub bio: String,
   pub country: String,
+  pub created_at: chrono::NaiveDateTime,
+  pub email: String,
   pub game_ids: Vec<Option<String>>,
   pub id: Uuid,
+  pub name: String,
   pub password: String,
   pub stripe_account_id: Option<String>,
   pub stripe_details_submitted: bool,
   pub stripe_payouts_enabled: bool,
   pub updated_at: chrono::NaiveDateTime,
-  pub created_at: chrono::NaiveDateTime,
 }
 
 impl Coach {

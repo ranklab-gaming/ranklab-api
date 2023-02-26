@@ -19,17 +19,17 @@ use uuid::Uuid;
 #[builder_struct_attr(diesel(table_name = reviews))]
 pub struct Review {
   pub coach_id: Uuid,
+  pub created_at: chrono::NaiveDateTime,
   pub game_id: String,
   pub id: Uuid,
   pub notes: String,
   pub player_id: Uuid,
   pub recording_id: Uuid,
   pub skill_level: i16,
-  pub title: String,
   pub state: ReviewState,
   pub stripe_order_id: String,
+  pub title: String,
   pub updated_at: chrono::NaiveDateTime,
-  pub created_at: chrono::NaiveDateTime,
 }
 
 #[allow(clippy::type_complexity)]

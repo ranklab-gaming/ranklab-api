@@ -12,14 +12,13 @@ use uuid::Uuid;
 )]
 #[builder_struct_attr(diesel(table_name = recordings))]
 pub struct Recording {
+  pub created_at: chrono::NaiveDateTime,
   pub id: Uuid,
   pub mime_type: String,
   pub player_id: Uuid,
-  pub upload_url: String,
+  pub updated_at: chrono::NaiveDateTime,
   pub uploaded: bool,
   pub video_key: String,
-  pub updated_at: chrono::NaiveDateTime,
-  pub created_at: chrono::NaiveDateTime,
 }
 
 impl Recording {
