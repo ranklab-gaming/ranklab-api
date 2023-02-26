@@ -1,3 +1,4 @@
+use diesel::{AsExpression, FromSqlRow};
 use diesel_as_jsonb::AsJsonb;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

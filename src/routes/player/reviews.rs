@@ -20,7 +20,7 @@ use serde::Deserialize;
 use stripe::{
   CreateOrder, CreateOrderLineItems, CreateOrderLineItemsPriceData, CreateOrderPayment,
   CreateOrderPaymentSettings, CreateOrderPaymentSettingsPaymentMethodTypes, Expandable, Order,
-  OrderId, SubmitOrder,
+  OrderId, SubmitOrderParams,
 };
 use uuid::Uuid;
 
@@ -175,13 +175,13 @@ pub async fn create(
   // TODO: enable when we add a valid address in test mode
   // params.automatic_tax = Some(CreateOrderAutomaticTax { enabled: true });
 
-  let submit_params = SubmitOrder {
+  let submit_params = SubmitOrderParams {
     expected_total: 10_00,
     expand: &["payment.payment_intent"],
   };
 
   let order = Order::create(&stripe.0 .0, params).await.unwrap();
-  let order = Order::submit(&stripe.0 .0, &order.id, submit_params)
+  let order = Order::submit(&stripe.0 .0, &order.id, &submit_params)
     .await
     .unwrap();
 

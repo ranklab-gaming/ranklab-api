@@ -127,6 +127,8 @@ pub async fn create(
     affirm_payments: None,
     bank_transfer_payments: None,
     link_payments: None,
+    cashapp_payments: None,
+    zip_payments: None,
     paynow_payments: None,
     treasury: None,
     us_bank_account_ach_payments: None,

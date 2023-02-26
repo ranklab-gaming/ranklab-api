@@ -17,12 +17,12 @@ async-stripe = { git = "https://github.com/ranklab-gaming/async-stripe", feature
 ], default_features = false }
 bcrypt = "0.14.0"
 derive_builder = "0.12.0"
-diesel-derive-enum = { git = "https://github.com/adwhit/diesel-derive-enum", rev = "e6aa69", features = [
+diesel-derive-enum = { version = "2.0.1", features = [
   "postgres",
 ] }
 diesel = { version = "=2.0.3", features = ["uuid", "chrono", "postgres"] }
 diesel_migrations = "=2.0.0"
-diesel_as_jsonb = { git = "https://github.com/ranklab-gaming/diesel_as_jsonb" }
+diesel_as_jsonb = "1.0.0"
 dotenv = "0.15.0"
 hex = "0.4.3"
 hmac = "0.12.1"
@@ -40,7 +40,6 @@ rocket = { git = "https://github.com/ranklab-gaming/Rocket", features = [
   "serde_json",
   "uuid",
 ] }
-rocket_http = { git = "https://github.com/ranklab-gaming/Rocket" }
 rocket_okapi = { git = "https://github.com/ranklab-gaming/okapi", features = [
   "uuid",
 ] }
@@ -56,7 +55,7 @@ rusoto_signature = "0.48.0"
 rusoto_sqs = "0.48.0"
 rusoto_stepfunctions = "0.48.0"
 schemars = { version = "0.8.11", features = ["chrono"] }
-sentry = "0.29.3"
+sentry = "0.30.0"
 serde = "1.0.152"
 serde_json = "1.0.93"
 serde_path_to_error = "0.1.9"
