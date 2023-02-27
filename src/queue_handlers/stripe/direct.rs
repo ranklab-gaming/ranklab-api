@@ -105,7 +105,7 @@ impl Direct {
 
     let payment_intent_id = match charge.payment_intent {
       Some(Expandable::Id(payment_intent_id)) => payment_intent_id,
-      _ => return Err(anyhow!("No payment intent id found in refund").into()),
+      _ => return Err(anyhow!("No payment intent id found in charge").into()),
     };
 
     self
