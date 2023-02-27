@@ -10,7 +10,7 @@ CREATE TABLE reviews (
     recording_id uuid NOT NULL REFERENCES recordings(id),
     skill_level smallint NOT NULL,
     state review_state NOT NULL DEFAULT 'awaiting_payment',
-    stripe_order_id text NOT NULL,
+    stripe_payment_intent_id text NOT NULL,
     title text NOT NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

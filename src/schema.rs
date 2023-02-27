@@ -22,14 +22,14 @@ diesel::table! {
         country -> Text,
         created_at -> Timestamp,
         email -> Text,
-        game_ids -> Array<Nullable<Text>>,
+        game_id -> Text,
         id -> Uuid,
         name -> Text,
         password -> Text,
+        price -> Int4,
         stripe_account_id -> Text,
         stripe_details_submitted -> Bool,
         stripe_payouts_enabled -> Bool,
-        stripe_product_id -> Text,
         updated_at -> Timestamp,
     }
 }
@@ -98,7 +98,7 @@ diesel::table! {
         recording_id -> Uuid,
         skill_level -> Int2,
         state -> ReviewState,
-        stripe_order_id -> Text,
+        stripe_payment_intent_id -> Text,
         title -> Text,
         updated_at -> Timestamp,
     }

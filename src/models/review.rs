@@ -6,7 +6,7 @@ use diesel::dsl::{And, Eq, EqAny, Filter, FindBy, Or, Order};
 use diesel::expression::SqlLiteral;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
-use stripe::{Expandable, OrderId, PaymentIntent};
+use stripe::{PaymentIntent, PaymentIntentId};
 use uuid::Uuid;
 
 #[derive(Builder, Queryable, Identifiable, Associations, Clone)]
@@ -27,17 +27,17 @@ pub struct Review {
   pub recording_id: Uuid,
   pub skill_level: i16,
   pub state: ReviewState,
-  pub stripe_order_id: String,
+  pub stripe_payment_intent_id: String,
   pub title: String,
   pub updated_at: chrono::NaiveDateTime,
 }
 
 #[allow(clippy::type_complexity)]
 impl Review {
-  pub fn find_by_order_id<T: ToString>(
+  pub fn find_by_payment_intent_id<T: ToString>(
     order_id: &T,
-  ) -> FindBy<reviews::table, reviews::stripe_order_id, String> {
-    reviews::table.filter(reviews::stripe_order_id.eq(order_id.to_string()))
+  ) -> FindBy<reviews::table, reviews::stripe_payment_intent_id, String> {
+    reviews::table.filter(reviews::stripe_payment_intent_id.eq(order_id.to_string()))
   }
 
   pub fn find_for_player(
@@ -170,15 +170,13 @@ impl Review {
   }
 
   pub async fn get_payment_intent(&self, client: &stripe::Client) -> PaymentIntent {
-    let stripe_order_id = self.stripe_order_id.parse::<OrderId>().unwrap();
-
-    let order = stripe::Order::retrieve(client, &stripe_order_id, &["payment.payment_intent"])
-      .await
+    let payment_intent_id = self
+      .stripe_payment_intent_id
+      .parse::<PaymentIntentId>()
       .unwrap();
 
-    match order.payment.payment_intent {
-      Some(Expandable::Object(payment_intent)) => *payment_intent,
-      _ => panic!("No payment intent found"),
-    }
+    stripe::PaymentIntent::retrieve(client, &payment_intent_id, &[])
+      .await
+      .unwrap()
   }
 }

@@ -30,10 +30,12 @@ pub struct CreateCoachRequest {
   name: String,
   #[validate(length(min = 30))]
   bio: String,
-  #[validate(length(min = 1), custom = "crate::games::validate_ids")]
-  game_ids: Vec<String>,
+  #[validate(length(min = 1), custom = "crate::games::validate_id")]
+  game_id: String,
   #[validate(length(min = 1))]
   country: String,
+  #[validate(range(min = 1, max = 10000))]
+  price: i32,
 }
 
 #[derive(Deserialize, JsonSchema, Validate)]
@@ -43,10 +45,12 @@ pub struct UpdateAccountRequest {
   name: String,
   #[validate(email)]
   email: String,
-  #[validate(length(min = 1), custom = "crate::games::validate_ids")]
-  game_ids: Vec<String>,
+  #[validate(length(min = 1), custom = "crate::games::validate_id")]
+  game_id: String,
   #[validate(length(min = 1))]
   bio: String,
+  #[validate(range(min = 1, max = 10000))]
+  price: i32,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -76,7 +80,8 @@ pub async fn update(
             .email(account.email.clone())
             .name(account.name.clone())
             .bio(account.bio.clone())
-            .game_ids(account.game_ids.clone().into_iter().map(Some).collect()),
+            .price(account.price)
+            .game_id(account.game_id.clone()),
         )
         .get_result::<Coach>(conn)
         .unwrap()
@@ -108,8 +113,8 @@ pub async fn create(
             .password(hash(coach.password.clone(), DEFAULT_COST).expect("Failed to hash password"))
             .name(coach.name.clone())
             .bio(coach.bio.clone())
-            .stripe_product_id(uuid::Uuid::new_v4().to_string())
-            .game_ids(coach.game_ids.clone().into_iter().map(Some).collect())
+            .price(coach.price)
+            .game_id(coach.game_id.clone())
             .country(coach.country.clone()),
         )
         .get_result(conn)
@@ -128,8 +133,6 @@ pub async fn create(
     affirm_payments: None,
     bank_transfer_payments: None,
     link_payments: None,
-    cashapp_payments: None,
-    zip_payments: None,
     paynow_payments: None,
     treasury: None,
     us_bank_account_ach_payments: None,

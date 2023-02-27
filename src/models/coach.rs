@@ -17,14 +17,14 @@ pub struct Coach {
   pub country: String,
   pub created_at: chrono::NaiveDateTime,
   pub email: String,
-  pub game_ids: Vec<Option<String>>,
+  pub game_id: String,
   pub id: Uuid,
   pub name: String,
   pub password: String,
+  pub price: i32,
   pub stripe_account_id: String,
   pub stripe_details_submitted: bool,
   pub stripe_payouts_enabled: bool,
-  pub stripe_product_id: String,
   pub updated_at: chrono::NaiveDateTime,
 }
 

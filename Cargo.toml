@@ -8,12 +8,11 @@ version = "0.1.0"
 ammonia = "3.3.0"
 anyhow = "1.0.69"
 async-mutex = "1.4.0"
-async-stripe = { git = "https://github.com/ranklab-gaming/async-stripe", features = [
+async-stripe = { version = "0.18.3", features = [
   "runtime-tokio-hyper",
   "checkout",
   "connect",
-  "webhook-events",
-  "orders",
+  "webhook-events"
 ], default_features = false }
 bcrypt = "0.14.0"
 derive_builder = "0.12.0"

@@ -17,20 +17,24 @@ use stripe::{EventObject, EventType, Expandable, WebhookEvent};
 pub struct Direct {
   config: Config,
   db_conn: DbConn,
-  client: StripeClient,
   step_functions: StepFunctionsClient,
 }
 
 impl Direct {
-  async fn handle_order_completed(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
-    let order_id = match &webhook.data.object {
-      EventObject::Order(order) => order.id.clone(),
+  async fn handle_payment_intent_succeeded(
+    &self,
+    webhook: WebhookEvent,
+  ) -> Result<(), QueueHandlerError> {
+    let payment_intent_id = match &webhook.data.object {
+      EventObject::PaymentIntent(payment_intent) => payment_intent.id.clone(),
       _ => return Ok(()),
     };
 
     let review: Review = self
       .db_conn
-      .run(move |conn| Review::find_by_order_id(&order_id).get_result::<Review>(conn))
+      .run(move |conn| {
+        Review::find_by_payment_intent_id(&payment_intent_id).get_result::<Review>(conn)
+      })
       .await?;
 
     let coach_id = review.coach_id;
@@ -90,7 +94,7 @@ impl Direct {
   }
 
   async fn handle_charge_refunded(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
-    let charge = match &webhook.data.object {
+    let charge = match webhook.data.object {
       EventObject::Charge(charge) => charge,
       _ => return Ok(()),
     };
@@ -99,25 +103,15 @@ impl Direct {
       return Ok(());
     }
 
-    let payment_intent_id = match &charge.payment_intent {
+    let payment_intent_id = match charge.payment_intent {
       Some(Expandable::Id(payment_intent_id)) => payment_intent_id,
-      _ => return Err(anyhow!("No payment intent id found in charge").into()),
+      _ => return Err(anyhow!("No payment intent id found in refund").into()),
     };
-
-    let payment_intent = stripe::PaymentIntent::retrieve(&self.client.0, payment_intent_id, &[])
-      .await
-      .map_err(anyhow::Error::from)?;
-
-    let order_id = payment_intent
-      .metadata
-      .get("order_id")
-      .ok_or_else(|| anyhow!("No order id found in payment intent metadata"))?
-      .clone();
 
     self
       .db_conn
       .run(move |conn| {
-        diesel::update(Review::find_by_order_id(&order_id))
+        diesel::update(Review::find_by_payment_intent_id(&payment_intent_id))
           .set(ReviewChangeset::default().state(ReviewState::Refunded))
           .execute(conn)
       })
@@ -130,7 +124,7 @@ impl Direct {
 
 #[async_trait]
 impl StripeEventHandler for Direct {
-  fn new(db_conn: DbConn, config: Config, client: StripeClient) -> Self {
+  fn new(db_conn: DbConn, config: Config, _client: StripeClient) -> Self {
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
     let mut builder = hyper::Client::builder();
@@ -140,7 +134,6 @@ impl StripeEventHandler for Direct {
     Self {
       config,
       db_conn,
-      client,
       step_functions: StepFunctionsClient::new_with(
         HttpClient::from_builder(builder, hyper_tls::HttpsConnector::new()),
         aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
@@ -159,7 +152,7 @@ impl StripeEventHandler for Direct {
 
   async fn handle_event(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
     match webhook.event_type {
-      EventType::OrderCompleted => self.handle_order_completed(webhook).await,
+      EventType::PaymentIntentSucceeded => self.handle_payment_intent_succeeded(webhook).await,
       EventType::ChargeRefunded => self.handle_charge_refunded(webhook).await,
       _ => Ok(()),
     }
