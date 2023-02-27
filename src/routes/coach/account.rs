@@ -1,12 +1,16 @@
+use crate::auth::{generate_token, Account};
+use crate::config::Config;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Coach, CoachChangeset, CoachInvitation, CoachInvitationChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::routes::session::CreateSessionResponse;
 use crate::schema::coaches;
 use crate::views::CoachView;
 use bcrypt::{hash, DEFAULT_COST};
 use chrono::Utc;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
+use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::{self, Deserialize};
@@ -56,14 +60,15 @@ pub async fn update(
   account: Json<UpdateCoachRequest>,
   auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
-) -> MutationResponse<CoachView> {
+  config: &State<Config>,
+) -> MutationResponse<CreateSessionResponse> {
   if let Err(errors) = account.validate() {
     return Response::validation_error(errors);
   }
 
   let coach = auth.into_deep_inner();
 
-  let coach: CoachView = db_conn
+  let coach: Coach = db_conn
     .run(move |conn| {
       diesel::update(&coach)
         .set(
@@ -77,10 +82,12 @@ pub async fn update(
         .get_result::<Coach>(conn)
         .unwrap()
     })
-    .await
-    .into();
+    .await;
 
-  Response::success(coach)
+  let account = Account::Coach(coach);
+  let token = generate_token(&account, config);
+
+  Response::success(CreateSessionResponse { token })
 }
 
 #[openapi(tag = "Ranklab")]
