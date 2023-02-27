@@ -1,5 +1,4 @@
-use crate::data_types::SkillLevel;
-use crate::models::Game;
+use crate::models::{Game, SkillLevel};
 use schemars::JsonSchema;
 use serde::Serialize;
 
@@ -11,12 +10,12 @@ pub struct GameView {
   skill_levels: Vec<SkillLevel>,
 }
 
-impl From<&Box<dyn Game>> for GameView {
-  fn from(game: &Box<dyn Game>) -> Self {
+impl From<&Game> for GameView {
+  fn from(game: &Game) -> Self {
     GameView {
-      name: game.name().to_owned(),
-      id: game.id().to_owned(),
-      skill_levels: game.skill_levels().to_owned(),
+      name: game.name.to_owned(),
+      id: game.id.to_owned(),
+      skill_levels: game.skill_levels.to_owned(),
     }
   }
 }

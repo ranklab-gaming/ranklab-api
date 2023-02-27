@@ -6,19 +6,16 @@ use lazy_static::lazy_static;
 use validator::ValidationError;
 
 lazy_static! {
-  static ref GAMES: Vec<Box<dyn Game>> = vec![
-    Box::new(overwatch::Overwatch::new()),
-    Box::new(valorant::Valorant::new())
-  ];
+  static ref GAMES: Vec<Game> = vec![overwatch::overwatch(), valorant::valorant()];
 }
 
-pub fn all() -> &'static Vec<Box<dyn Game>> {
+pub fn all() -> &'static Vec<Game> {
   &GAMES
 }
 
 #[allow(clippy::borrowed_box)]
-pub fn find(id: &str) -> Option<&'static Box<dyn Game>> {
-  all().iter().find(|g| g.id() == id)
+pub fn find(id: &str) -> Option<&'static Game> {
+  all().iter().find(|g| g.id == id)
 }
 
 pub fn validate_id(id: &str) -> Result<(), ValidationError> {

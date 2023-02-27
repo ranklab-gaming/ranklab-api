@@ -1,7 +1,27 @@
-use crate::data_types::SkillLevel;
+use schemars::JsonSchema;
+use serde::Serialize;
 
-pub trait Game: Send + Sync + 'static {
-  fn skill_levels(&self) -> &Vec<SkillLevel>;
-  fn name(&self) -> &str;
-  fn id(&self) -> &str;
+#[derive(Serialize, JsonSchema, Clone)]
+pub struct SkillLevel {
+  pub name: String,
+  pub value: u8,
+}
+
+impl SkillLevel {
+  pub fn new_vec(skill_levels: Vec<&str>) -> Vec<Self> {
+    skill_levels
+      .iter()
+      .enumerate()
+      .map(|(value, &name)| Self {
+        name: name.to_owned(),
+        value: value as u8,
+      })
+      .collect()
+  }
+}
+
+pub struct Game {
+  pub skill_levels: Vec<SkillLevel>,
+  pub name: String,
+  pub id: String,
 }

@@ -1,40 +1,11 @@
-use crate::data_types::SkillLevel;
-use crate::models::Game;
+use crate::models::{Game, SkillLevel};
 
-pub struct Valorant {
-  skill_levels: Vec<SkillLevel>,
-  name: String,
-  id: String,
-}
-
-impl Valorant {
-  pub fn new() -> Self {
-    Self {
-      skill_levels: SkillLevel::new_vec(vec![
-        "Iron", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Immortal", "Radiant",
-      ]),
-      name: "Valorant".to_string(),
-      id: "valorant".to_string(),
-    }
-  }
-}
-
-impl Default for Valorant {
-  fn default() -> Self {
-    Self::new()
-  }
-}
-
-impl Game for Valorant {
-  fn skill_levels(&self) -> &Vec<SkillLevel> {
-    &self.skill_levels
-  }
-
-  fn name(&self) -> &str {
-    &self.name
-  }
-
-  fn id(&self) -> &str {
-    &self.id
+pub fn valorant() -> Game {
+  Game {
+    skill_levels: SkillLevel::new_vec(vec![
+      "Iron", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Immortal", "Radiant",
+    ]),
+    name: "Valorant".to_string(),
+    id: "valorant".to_string(),
   }
 }

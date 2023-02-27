@@ -12,7 +12,7 @@ pub use account::Account;
 pub use coach::{Coach, CoachChangeset};
 pub use coach_invitations::{CoachInvitation, CoachInvitationChangeset};
 pub use comment::{Comment, CommentChangeset};
-pub use game::Game;
+pub use game::{Game, SkillLevel};
 pub use one_time_token::{OneTimeToken, OneTimeTokenChangeset};
 pub use player::{Player, PlayerChangeset};
 pub use recording::{Recording, RecordingChangeset};
