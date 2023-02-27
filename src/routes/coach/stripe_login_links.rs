@@ -13,7 +13,7 @@ pub struct LoginLink {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct CreateLoginLinkMutation {
+pub struct CreateLoginLink {
   return_url: String,
 }
 
@@ -22,7 +22,7 @@ pub struct CreateLoginLinkMutation {
 pub async fn create(
   auth: Auth<Jwt<Coach>>,
   stripe: Stripe,
-  body: Json<CreateLoginLinkMutation>,
+  body: Json<CreateLoginLink>,
 ) -> MutationResponse<LoginLink> {
   let account_id = auth
     .into_deep_inner()

@@ -9,16 +9,8 @@ use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
-use serde::{self, Deserialize, Serialize};
+use serde::{self, Deserialize};
 use validator::Validate;
-
-#[derive(Deserialize)]
-struct CountrySpec {
-  supported_transfer_countries: Vec<String>,
-}
-
-#[derive(Serialize)]
-struct CountrySpecParams {}
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateCoachRequest {
@@ -39,8 +31,7 @@ pub struct CreateCoachRequest {
 }
 
 #[derive(Deserialize, JsonSchema, Validate)]
-#[schemars(rename = "CoachUpdateAccountRequest")]
-pub struct UpdateAccountRequest {
+pub struct UpdateCoachRequest {
   #[validate(length(min = 2))]
   name: String,
   #[validate(email)]
@@ -62,7 +53,7 @@ pub async fn get(auth: Auth<Jwt<Coach>>) -> QueryResponse<CoachView> {
 #[openapi(tag = "Ranklab")]
 #[put("/coach/account", data = "<account>")]
 pub async fn update(
-  account: Json<UpdateAccountRequest>,
+  account: Json<UpdateCoachRequest>,
   auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
 ) -> MutationResponse<CoachView> {
@@ -104,25 +95,8 @@ pub async fn create(
     return Response::validation_error(errors);
   }
 
-  let coach: Coach = db_conn
-    .run(move |conn| {
-      diesel::insert_into(coaches::table)
-        .values(
-          CoachChangeset::default()
-            .email(coach.email.clone())
-            .password(hash(coach.password.clone(), DEFAULT_COST).expect("Failed to hash password"))
-            .name(coach.name.clone())
-            .bio(coach.bio.clone())
-            .price(coach.price)
-            .game_id(coach.game_id.clone())
-            .country(coach.country.clone()),
-        )
-        .get_result(conn)
-        .unwrap()
-    })
-    .await;
-
   let mut params = stripe::CreateAccount::new();
+
   params.type_ = Some(stripe::AccountType::Express);
   params.country = Some(&coach.country);
 
@@ -201,15 +175,24 @@ pub async fn create(
     .await
     .unwrap();
 
-  let coach: CoachView = db_conn
+  let coach: Coach = db_conn
     .run(move |conn| {
-      diesel::update(&coach)
-        .set(CoachChangeset::default().stripe_account_id(account.id.to_string()))
-        .get_result::<Coach>(conn)
+      diesel::insert_into(coaches::table)
+        .values(
+          CoachChangeset::default()
+            .email(coach.email.clone())
+            .password(hash(coach.password.clone(), DEFAULT_COST).expect("Failed to hash password"))
+            .stripe_account_id(account.id.to_string())
+            .name(coach.name.clone())
+            .bio(coach.bio.clone())
+            .price(coach.price)
+            .game_id(coach.game_id.clone())
+            .country(coach.country.clone()),
+        )
+        .get_result(conn)
         .unwrap()
     })
-    .await
-    .into();
+    .await;
 
   db_conn
     .run(move |conn| {
@@ -220,20 +203,5 @@ pub async fn create(
     })
     .await;
 
-  Response::success(coach)
-}
-
-#[openapi(tag = "Ranklab")]
-#[post("/coach/countries")]
-pub async fn get_countries(stripe: Stripe) -> MutationResponse<Vec<String>> {
-  let country_spec = &stripe
-    .into_inner()
-    .get_query::<CountrySpec, CountrySpecParams>(
-      &format!("/country_specs/{}", "US"),
-      CountrySpecParams {},
-    )
-    .await
-    .unwrap();
-
-  Response::success(country_spec.supported_transfer_countries.clone())
+  Response::success(coach.into())
 }

@@ -98,23 +98,6 @@ pub async fn create(
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 
-  let review = db_conn
-    .run(move |conn| {
-      diesel::insert_into(reviews::table)
-        .values(
-          ReviewChangeset::default()
-            .recording_id(body_recording_id)
-            .player_id(auth_player_id)
-            .title(body.title.clone())
-            .notes(ammonia::clean(&body.notes))
-            .game_id(body.game_id.clone())
-            .coach_id(body.coach_id),
-        )
-        .get_result::<Review>(conn)
-        .unwrap()
-    })
-    .await;
-
   let customer_id = player
     .stripe_customer_id
     .parse::<stripe::CustomerId>()
@@ -136,8 +119,17 @@ pub async fn create(
 
   let review = db_conn
     .run(move |conn| {
-      diesel::update(&review)
-        .set(ReviewChangeset::default().stripe_payment_intent_id(payment_intent.id.to_string()))
+      diesel::insert_into(reviews::table)
+        .values(
+          ReviewChangeset::default()
+            .recording_id(body_recording_id)
+            .player_id(auth_player_id)
+            .title(body.title.clone())
+            .notes(ammonia::clean(&body.notes))
+            .game_id(body.game_id.clone())
+            .coach_id(body.coach_id)
+            .stripe_payment_intent_id(payment_intent.id.to_string()),
+        )
         .get_result::<Review>(conn)
         .unwrap()
     })
@@ -171,23 +163,14 @@ pub async fn update(
     return Response::success(ReviewView::from(existing_review, None));
   }
 
-  let updated_review = db_conn
-    .run(move |conn| {
-      diesel::update(&existing_review)
-        .set(ReviewChangeset::default().state(ReviewState::Accepted))
-        .get_result::<Review>(conn)
-        .unwrap()
-    })
-    .await;
-
-  let review_coach_id = updated_review.coach_id;
+  let review_coach_id = existing_review.coach_id;
   let stripe = stripe.into_inner();
 
   let coach: Coach = db_conn
     .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
     .await;
 
-  let stripe_payment_intent_id = updated_review
+  let stripe_payment_intent_id = existing_review
     .stripe_payment_intent_id
     .parse::<PaymentIntentId>()
     .unwrap();
@@ -212,6 +195,15 @@ pub async fn update(
   stripe::Transfer::create(&stripe, transfer_params)
     .await
     .unwrap();
+
+  let updated_review = db_conn
+    .run(move |conn| {
+      diesel::update(&existing_review)
+        .set(ReviewChangeset::default().state(ReviewState::Accepted))
+        .get_result::<Review>(conn)
+        .unwrap()
+    })
+    .await;
 
   Response::success(ReviewView::from(updated_review, None))
 }

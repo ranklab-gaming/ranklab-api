@@ -45,10 +45,6 @@ pub async fn create(
     .run(move |conn| Review::find_draft_for_coach(&review_id, &coach_id).first(conn))
     .await?;
 
-  if let Err(errors) = comment.validate() {
-    return Response::validation_error(errors);
-  }
-
   let comment: CommentView = db_conn
     .run(move |conn| {
       diesel::insert_into(comments::table)
@@ -77,15 +73,15 @@ pub async fn update(
   auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
 ) -> MutationResponse<CommentView> {
+  if let Err(errors) = comment.validate() {
+    return Response::validation_error(errors);
+  }
+
   let coach_id = auth.into_deep_inner().id;
 
   let existing_comment = db_conn
     .run(move |conn| Comment::find_for_coach(&id, &coach_id).first::<Comment>(conn))
     .await?;
-
-  if let Err(errors) = comment.validate() {
-    return Response::validation_error(errors);
-  }
 
   let updated_comment: CommentView = db_conn
     .run(move |conn| {

@@ -13,7 +13,7 @@ pub struct BillingPortalLink {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct CreateBillingPortalSessionMutation {
+pub struct CreateBillingPortalSession {
   return_url: String,
 }
 
@@ -24,8 +24,8 @@ struct BillingPortalSessionParams {
 }
 
 #[derive(Deserialize)]
-pub struct BillingPortalSession {
-  pub url: String,
+struct BillingPortalSession {
+  url: String,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -33,7 +33,7 @@ pub struct BillingPortalSession {
 pub async fn create(
   auth: Auth<Jwt<Player>>,
   stripe: Stripe,
-  body: Json<CreateBillingPortalSessionMutation>,
+  body: Json<CreateBillingPortalSession>,
 ) -> MutationResponse<BillingPortalLink> {
   let billing_portal_session_params = BillingPortalSessionParams {
     return_url: body.return_url.clone(),
