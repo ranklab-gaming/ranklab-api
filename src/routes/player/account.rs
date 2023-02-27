@@ -89,7 +89,7 @@ pub async fn create(
     ip_address: Some(ip_address),
   });
 
-  let customer = stripe::Customer::create(&stripe.0 .0, params)
+  let customer = stripe::Customer::create(&stripe.into_inner(), params)
     .await
     .unwrap();
 

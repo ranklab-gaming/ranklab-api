@@ -27,7 +27,7 @@ pub async fn list(auth: Auth<Jwt<Player>>, stripe: Stripe) -> QueryResponse<Vec<
       .unwrap(),
   );
 
-  let payment_methods = stripe::PaymentMethod::list(&stripe.0 .0, &payment_method_params)
+  let payment_methods = stripe::PaymentMethod::list(&stripe.into_inner(), &payment_method_params)
     .await
     .unwrap()
     .data

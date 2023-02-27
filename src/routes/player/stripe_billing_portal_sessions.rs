@@ -41,8 +41,7 @@ pub async fn create(
   };
 
   let billing_portal_session: BillingPortalSession = stripe
-    .0
-     .0
+    .into_inner()
     .post_form("/billing_portal/sessions", billing_portal_session_params)
     .await
     .unwrap();

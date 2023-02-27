@@ -3,7 +3,7 @@ use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use rocket_sync_db_pools::database;
 
 #[database("default")]
-pub struct DbConn(pub diesel::PgConnection);
+pub struct DbConn(diesel::PgConnection);
 
 impl<'a> OpenApiFromRequest<'a> for DbConn {
   fn from_request_input(

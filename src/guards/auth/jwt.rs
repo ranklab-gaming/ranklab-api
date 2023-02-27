@@ -53,7 +53,7 @@ pub struct Jwks {
   keys: Vec<Jwk>,
 }
 
-pub struct Jwt<T>(pub T);
+pub struct Jwt<T>(T);
 
 impl<T> Jwt<T> {
   pub fn into_inner(self) -> T {

@@ -61,7 +61,7 @@ pub async fn get(
     .run(move |conn| Review::find_for_player(&id, &auth.into_deep_inner().id).first::<Review>(conn))
     .await?;
 
-  let payment_intent = review.get_payment_intent(&stripe.0 .0).await;
+  let payment_intent = review.get_payment_intent(&stripe.into_inner()).await;
 
   Response::success(ReviewView::from(review, Some(payment_intent)))
 }
@@ -130,7 +130,7 @@ pub async fn create(
     destination: coach.stripe_account_id,
   });
 
-  let payment_intent = stripe::PaymentIntent::create(&stripe.0 .0, payment_intent_params)
+  let payment_intent = stripe::PaymentIntent::create(&stripe.into_inner(), payment_intent_params)
     .await
     .unwrap();
 
@@ -181,6 +181,7 @@ pub async fn update(
     .await;
 
   let review_coach_id = updated_review.coach_id;
+  let stripe = stripe.into_inner();
 
   let coach: Coach = db_conn
     .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
@@ -191,10 +192,9 @@ pub async fn update(
     .parse::<PaymentIntentId>()
     .unwrap();
 
-  let payment_intent =
-    stripe::PaymentIntent::retrieve(&stripe.0 .0, &stripe_payment_intent_id, &[])
-      .await
-      .unwrap();
+  let payment_intent = stripe::PaymentIntent::retrieve(&stripe, &stripe_payment_intent_id, &[])
+    .await
+    .unwrap();
 
   let mut transfer_params =
     stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id);
@@ -209,7 +209,7 @@ pub async fn update(
 
   transfer_params.source_transaction = Some(charge_id);
 
-  stripe::Transfer::create(&stripe.0 .0, transfer_params)
+  stripe::Transfer::create(&stripe, transfer_params)
     .await
     .unwrap();
 

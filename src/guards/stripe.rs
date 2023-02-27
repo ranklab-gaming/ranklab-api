@@ -5,7 +5,7 @@ use rocket::State;
 use rocket_okapi::gen::OpenApiGenerator;
 use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 
-pub struct Stripe(pub crate::clients::StripeClient);
+pub struct Stripe(StripeClient);
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Stripe {
@@ -25,5 +25,11 @@ impl<'a> OpenApiFromRequest<'a> for Stripe {
     _required: bool,
   ) -> rocket_okapi::Result<RequestHeaderInput> {
     Ok(RequestHeaderInput::None)
+  }
+}
+
+impl Stripe {
+  pub fn into_inner(self) -> stripe::Client {
+    self.0.into_inner()
   }
 }
