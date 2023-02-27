@@ -1,4 +1,4 @@
-use crate::guards::{Auth, DbConn};
+use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Comment, Player, Review};
 use crate::response::{QueryResponse, Response};
 use crate::views::CommentView;
@@ -16,11 +16,13 @@ pub struct ListCommentsQuery {
 #[get("/player/comments?<params..>")]
 pub async fn list(
   params: ListCommentsQuery,
-  auth: Auth<Player>,
+  auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
 ) -> QueryResponse<Vec<CommentView>> {
   let review: Review = db_conn
-    .run(move |conn| Review::find_for_player(&params.review_id, &auth.0.id).first(conn))
+    .run(move |conn| {
+      Review::find_for_player(&params.review_id, &auth.into_deep_inner().id).first(conn)
+    })
     .await?;
 
   let comments: Vec<CommentView> = db_conn

@@ -1,5 +1,5 @@
 use crate::data_types::ReviewState;
-use crate::guards::{Auth, DbConn, Stripe};
+use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Coach, Player, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
@@ -27,12 +27,12 @@ pub struct ListReviewsQuery {
 #[get("/player/reviews?<params..>")]
 pub async fn list(
   params: ListReviewsQuery,
-  auth: Auth<Player>,
+  auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
 ) -> QueryResponse<PaginatedResult<ReviewView>> {
   let paginated_reviews: PaginatedResult<Review> = db_conn
     .run(move |conn| {
-      Review::filter_for_player(&auth.0.id, params.archived.unwrap_or(false))
+      Review::filter_for_player(&auth.into_deep_inner().id, params.archived.unwrap_or(false))
         .paginate(params.page.unwrap_or(1))
         .load_and_count_pages::<Review>(conn)
         .unwrap()
@@ -53,12 +53,12 @@ pub async fn list(
 #[get("/player/reviews/<id>")]
 pub async fn get(
   id: Uuid,
-  auth: Auth<Player>,
+  auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
   stripe: Stripe,
 ) -> QueryResponse<ReviewView> {
   let review = db_conn
-    .run(move |conn| Review::find_for_player(&id, &auth.0.id).first::<Review>(conn))
+    .run(move |conn| Review::find_for_player(&id, &auth.into_deep_inner().id).first::<Review>(conn))
     .await?;
 
   let payment_intent = review.get_payment_intent(&stripe.0 .0).await;
@@ -81,12 +81,13 @@ pub struct CreateReviewMutation {
 #[post("/player/reviews", data = "<body>")]
 pub async fn create(
   db_conn: DbConn,
-  auth: Auth<Player>,
+  auth: Auth<Jwt<Player>>,
   stripe: Stripe,
   body: Json<CreateReviewMutation>,
 ) -> MutationResponse<ReviewView> {
   let body_recording_id = body.recording_id;
-  let auth_player_id = auth.0.id;
+  let player = auth.into_deep_inner();
+  let auth_player_id = player.id;
   let coach_id = body.coach_id;
 
   let coach = db_conn
@@ -114,8 +115,7 @@ pub async fn create(
     })
     .await;
 
-  let customer_id = auth
-    .0
+  let customer_id = player
     .stripe_customer_id
     .parse::<stripe::CustomerId>()
     .unwrap();
@@ -157,11 +157,11 @@ pub struct UpdateReviewRequest {
 pub async fn update(
   id: Uuid,
   review: Json<UpdateReviewRequest>,
-  auth: Auth<Player>,
+  auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
   stripe: Stripe,
 ) -> MutationResponse<ReviewView> {
-  let auth_id = auth.0.id;
+  let auth_id = auth.into_deep_inner().id;
 
   let existing_review: Review = db_conn
     .run(move |conn| Review::find_for_player(&id, &auth_id).first(conn))

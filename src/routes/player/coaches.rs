@@ -1,4 +1,4 @@
-use crate::guards::{Auth, DbConn};
+use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Coach, Player};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{QueryResponse, Response};
@@ -18,7 +18,7 @@ pub struct ListCoachesQuery {
 #[get("/player/coaches?<params..>")]
 pub async fn list(
   params: ListCoachesQuery,
-  _auth: Auth<Player>,
+  _auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
 ) -> QueryResponse<PaginatedResult<CoachView>> {
   let paginated_coaches: PaginatedResult<Coach> = db_conn
@@ -42,7 +42,11 @@ pub async fn list(
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/coaches/<coach_id>")]
-pub async fn get(coach_id: Uuid, _auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<CoachView> {
+pub async fn get(
+  coach_id: Uuid,
+  _auth: Auth<Jwt<Player>>,
+  db_conn: DbConn,
+) -> QueryResponse<CoachView> {
   let coach = db_conn
     .run(move |conn| Coach::find_by_id(&coach_id).first::<Coach>(conn))
     .await?;

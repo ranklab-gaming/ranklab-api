@@ -1,4 +1,5 @@
-use crate::guards::auth::UserType;
+use super::{Coach, Player};
+use crate::auth::{Account, UserType};
 use crate::guards::DbConn;
 use crate::schema::one_time_tokens;
 use derive_builder::Builder;
@@ -8,8 +9,6 @@ use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use uuid::Uuid;
-
-use super::{Account, Coach, Player};
 
 #[derive(Builder, Queryable, Identifiable, Clone)]
 #[builder(

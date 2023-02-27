@@ -1,4 +1,4 @@
-use crate::guards::{Auth, Stripe};
+use crate::guards::{Auth, Jwt, Stripe};
 use crate::models::Coach;
 use crate::response::{MutationResponse, Response};
 use rocket::serde::json::Json;
@@ -21,13 +21,13 @@ pub struct CreateAccountLinkMutation {
 #[openapi(tag = "Ranklab")]
 #[post("/coach/stripe-account-links", data = "<body>")]
 pub async fn create(
-  auth: Auth<Coach>,
+  auth: Auth<Jwt<Coach>>,
   stripe: Stripe,
   body: Json<CreateAccountLinkMutation>,
 ) -> MutationResponse<AccountLink> {
   let mut account_link_params = stripe::CreateAccountLink::new(
     auth
-      .0
+      .into_deep_inner()
       .stripe_account_id
       .parse::<stripe::AccountId>()
       .unwrap(),

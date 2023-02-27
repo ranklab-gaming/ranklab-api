@@ -1,17 +1,15 @@
+use crate::auth::{generate_token, Account, UserType};
 use crate::config::Config;
 use crate::emails::{Email, Recipient};
-use crate::guards::auth::UserType;
 use crate::guards::{Auth, DbConn};
 use crate::models::{
-  Account, Coach, CoachChangeset, OneTimeToken, OneTimeTokenChangeset, Player, PlayerChangeset,
+  Coach, CoachChangeset, OneTimeToken, OneTimeTokenChangeset, Player, PlayerChangeset,
 };
 use crate::response::{MutationError, MutationResponse, Response, StatusResponse};
 use crate::schema::one_time_tokens;
 use bcrypt::{hash, verify, DEFAULT_COST};
-use chrono::prelude::*;
-use chrono::Duration;
+use chrono::Utc;
 use diesel::prelude::*;
-use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::distributions::{Alphanumeric, DistString};
 use rocket::http::Status;
 use rocket::serde::json::Json;
@@ -28,13 +26,6 @@ pub struct CreateSessionRequest {
   user_type: UserType,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-  sub: String,
-  exp: usize,
-  iss: String,
-}
-
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct CreateSessionResponse {
   pub token: String,
@@ -49,25 +40,6 @@ pub struct ResetPasswordRequest {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct UpdatePasswordRequest {
   password: String,
-}
-
-pub fn generate_token(account: &Account, config: &Config) -> String {
-  let now = Utc::now();
-  let exp = (now + Duration::minutes(1)).timestamp() as usize;
-
-  let sub = match account {
-    Account::Coach(coach) => format!("coach:{}", coach.id),
-    Account::Player(player) => format!("player:{}", player.id),
-  };
-
-  let claims = Claims {
-    sub,
-    exp,
-    iss: config.host.clone(),
-  };
-
-  let key = EncodingKey::from_secret(config.auth_client_secret.as_ref());
-  encode(&Header::default(), &claims, &key).expect("failed to encode token")
 }
 
 #[openapi(tag = "Ranklab")]
@@ -198,7 +170,8 @@ pub async fn update_password(
   db_conn: DbConn,
   auth: Auth<OneTimeToken>,
 ) -> MutationResponse<StatusResponse> {
-  let account = auth.0.account(&db_conn).await?;
+  let token = auth.into_inner();
+  let account = token.account(&db_conn).await?;
   let password_hash = hash(&password.password, DEFAULT_COST).unwrap();
 
   match account {
@@ -226,7 +199,7 @@ pub async fn update_password(
 
   db_conn
     .run(move |conn| {
-      diesel::update(&auth.0)
+      diesel::update(&token)
         .set(OneTimeTokenChangeset::default().used_at(Some(Utc::now().naive_utc())))
         .get_result::<OneTimeToken>(conn)
         .unwrap()

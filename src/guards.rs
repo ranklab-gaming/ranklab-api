@@ -2,7 +2,7 @@ pub mod auth;
 mod db_conn;
 mod stripe;
 pub use self::stripe::Stripe;
-pub use auth::Auth;
+pub use auth::{Jwt,Auth};
 pub use db_conn::DbConn;
 
 #[macro_export]

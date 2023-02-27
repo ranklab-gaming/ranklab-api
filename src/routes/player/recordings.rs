@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::guards::{Auth, DbConn};
+use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Player, Recording, RecordingChangeset, Review};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::schema::recordings;
@@ -34,9 +34,11 @@ pub struct CreateRecordingRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/recordings")]
-pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<RecordingView>> {
+pub async fn list(auth: Auth<Jwt<Player>>, db_conn: DbConn) -> QueryResponse<Vec<RecordingView>> {
   let recordings: Vec<Recording> = db_conn
-    .run(move |conn| Recording::filter_for_player(&auth.0.id).load::<Recording>(conn))
+    .run(move |conn| {
+      Recording::filter_for_player(&auth.into_deep_inner().id).load::<Recording>(conn)
+    })
     .await?;
 
   let review_recordings = recordings.clone();
@@ -66,7 +68,7 @@ pub async fn list(auth: Auth<Player>, db_conn: DbConn) -> QueryResponse<Vec<Reco
 pub async fn create(
   config: &State<Config>,
   db_conn: DbConn,
-  auth: Auth<Player>,
+  auth: Auth<Jwt<Player>>,
   recording: Json<CreateRecordingRequest>,
 ) -> MutationResponse<RecordingView> {
   if let Err(errors) = recording.validate() {
@@ -84,7 +86,7 @@ pub async fn create(
       diesel::insert_into(recordings::table)
         .values(
           RecordingChangeset::default()
-            .player_id(auth.0.id)
+            .player_id(auth.into_deep_inner().id)
             .video_key(key)
             .mime_type(recording.mime_type.clone()),
         )
@@ -102,12 +104,14 @@ pub async fn create(
 #[get("/player/recordings/<id>")]
 pub async fn get(
   id: Uuid,
-  auth: Auth<Player>,
+  auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
   config: &State<Config>,
 ) -> QueryResponse<RecordingView> {
   let recording: Recording = db_conn
-    .run(move |conn| Recording::find_for_player(&id, &auth.0.id).first::<Recording>(conn))
+    .run(move |conn| {
+      Recording::find_for_player(&id, &auth.into_deep_inner().id).first::<Recording>(conn)
+    })
     .await?;
 
   let url = create_upload_url(config, &recording.video_key);

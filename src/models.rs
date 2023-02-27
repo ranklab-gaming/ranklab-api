@@ -1,4 +1,3 @@
-mod account;
 mod coach;
 mod coach_invitations;
 mod comment;
@@ -8,7 +7,6 @@ mod player;
 mod recording;
 mod review;
 
-pub use account::Account;
 pub use coach::{Coach, CoachChangeset};
 pub use coach_invitations::{CoachInvitation, CoachInvitationChangeset};
 pub use comment::{Comment, CommentChangeset};

@@ -1,4 +1,4 @@
-use crate::guards::{Auth, Stripe};
+use crate::guards::{Auth, Jwt, Stripe};
 use crate::models::Player;
 use crate::response::{MutationResponse, Response};
 use rocket::serde::json::Json;
@@ -31,13 +31,13 @@ pub struct BillingPortalSession {
 #[openapi(tag = "Ranklab")]
 #[post("/player/stripe-billing-portal-sessions", data = "<body>")]
 pub async fn create(
-  auth: Auth<Player>,
+  auth: Auth<Jwt<Player>>,
   stripe: Stripe,
   body: Json<CreateBillingPortalSessionMutation>,
 ) -> MutationResponse<BillingPortalLink> {
   let billing_portal_session_params = BillingPortalSessionParams {
     return_url: body.return_url.clone(),
-    customer: auth.0.stripe_customer_id,
+    customer: auth.into_deep_inner().stripe_customer_id,
   };
 
   let billing_portal_session: BillingPortalSession = stripe

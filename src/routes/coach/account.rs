@@ -1,4 +1,4 @@
-use crate::guards::{Auth, DbConn, Stripe};
+use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Coach, CoachChangeset, CoachInvitation, CoachInvitationChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::coaches;
@@ -55,22 +55,22 @@ pub struct UpdateAccountRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/coach/account")]
-pub async fn get(auth: Auth<Coach>) -> QueryResponse<CoachView> {
-  Response::success(auth.0.into())
+pub async fn get(auth: Auth<Jwt<Coach>>) -> QueryResponse<CoachView> {
+  Response::success(auth.into_deep_inner().into())
 }
 
 #[openapi(tag = "Ranklab")]
 #[put("/coach/account", data = "<account>")]
 pub async fn update(
   account: Json<UpdateAccountRequest>,
-  auth: Auth<Coach>,
+  auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
 ) -> MutationResponse<CoachView> {
   if let Err(errors) = account.validate() {
     return Response::validation_error(errors);
   }
 
-  let coach = auth.0.clone();
+  let coach = auth.into_deep_inner();
 
   let coach: CoachView = db_conn
     .run(move |conn| {
@@ -211,7 +211,7 @@ pub async fn create(
 
   db_conn
     .run(move |conn| {
-      diesel::update(&auth.0)
+      diesel::update(&auth.into_inner())
         .set(CoachInvitationChangeset::default().used_at(Some(Utc::now().naive_utc())))
         .get_result::<CoachInvitation>(conn)
         .unwrap()

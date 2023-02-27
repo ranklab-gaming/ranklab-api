@@ -1,4 +1,4 @@
-use crate::guards::{Auth, DbConn};
+use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Coach, Comment, CommentChangeset, Review};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::comments;
@@ -31,7 +31,7 @@ pub struct UpdateCommentRequest {
 #[post("/coach/comments", data = "<comment>")]
 pub async fn create(
   comment: Json<CreateCommentRequest>,
-  auth: Auth<Coach>,
+  auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
 ) -> MutationResponse<CommentView> {
   if let Err(errors) = comment.validate() {
@@ -39,7 +39,7 @@ pub async fn create(
   }
 
   let review_id = comment.review_id;
-  let coach_id = auth.0.id;
+  let coach_id = auth.into_deep_inner().id;
 
   let review: Review = db_conn
     .run(move |conn| Review::find_draft_for_coach(&review_id, &coach_id).first(conn))
@@ -74,10 +74,10 @@ pub async fn create(
 pub async fn update(
   id: Uuid,
   comment: Json<UpdateCommentRequest>,
-  auth: Auth<Coach>,
+  auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
 ) -> MutationResponse<CommentView> {
-  let coach_id = auth.0.id;
+  let coach_id = auth.into_deep_inner().id;
 
   let existing_comment = db_conn
     .run(move |conn| Comment::find_for_coach(&id, &coach_id).first::<Comment>(conn))
@@ -113,12 +113,12 @@ pub struct ListCommentsQuery {
 #[get("/coach/comments?<params..>")]
 pub async fn list(
   params: ListCommentsQuery,
-  auth: Auth<Coach>,
+  auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
 ) -> QueryResponse<Vec<CommentView>> {
   let comments: Vec<CommentView> = db_conn
     .run(move |conn| {
-      Comment::filter_by_review_for_coach(&params.review_id, &auth.0.id)
+      Comment::filter_by_review_for_coach(&params.review_id, &auth.into_deep_inner().id)
         .load::<Comment>(conn)
         .unwrap()
     })

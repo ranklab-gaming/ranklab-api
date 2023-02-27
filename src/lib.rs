@@ -3,6 +3,7 @@
 #[macro_use]
 extern crate rocket;
 
+pub mod auth;
 pub mod aws;
 pub mod clients;
 pub mod config;

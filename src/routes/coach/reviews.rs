@@ -1,5 +1,5 @@
 use crate::data_types::ReviewState;
-use crate::guards::{Auth, DbConn};
+use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Coach, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
@@ -21,13 +21,13 @@ pub struct ListReviewsQuery {
 #[openapi(tag = "Ranklab")]
 #[get("/coach/reviews?<params..>")]
 pub async fn list(
-  auth: Auth<Coach>,
+  auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
   params: ListReviewsQuery,
 ) -> QueryResponse<PaginatedResult<ReviewView>> {
   let paginated_reviews: PaginatedResult<Review> = db_conn
     .run(move |conn| {
-      Review::filter_for_coach(&auth.0, params.archived.unwrap_or(false))
+      Review::filter_for_coach(&auth.into_deep_inner(), params.archived.unwrap_or(false))
         .paginate(params.page.unwrap_or(1))
         .load_and_count_pages::<Review>(conn)
         .unwrap()
@@ -53,9 +53,9 @@ pub struct UpdateReviewRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/coach/reviews/<id>")]
-pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<ReviewView> {
+pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResponse<ReviewView> {
   let review = db_conn
-    .run(move |conn| Review::find_for_coach(&id, &auth.0.id).first::<Review>(conn))
+    .run(move |conn| Review::find_for_coach(&id, &auth.into_deep_inner().id).first::<Review>(conn))
     .await?;
 
   Response::success(ReviewView::from(review, None))
@@ -66,7 +66,7 @@ pub async fn get(id: Uuid, auth: Auth<Coach>, db_conn: DbConn) -> QueryResponse<
 pub async fn update(
   id: Uuid,
   review: Json<UpdateReviewRequest>,
-  auth: Auth<Coach>,
+  auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
 ) -> MutationResponse<ReviewView> {
   if let Err(errors) = review.validate() {
@@ -74,7 +74,7 @@ pub async fn update(
   }
 
   let existing_review = db_conn
-    .run(move |conn| Review::find_for_coach(&id, &auth.0.id).first::<Review>(conn))
+    .run(move |conn| Review::find_for_coach(&id, &auth.into_deep_inner().id).first::<Review>(conn))
     .await?;
 
   if let Some(true) = review.published {

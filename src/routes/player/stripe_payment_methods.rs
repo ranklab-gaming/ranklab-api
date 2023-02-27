@@ -1,4 +1,4 @@
-use crate::guards::{Auth, Stripe};
+use crate::guards::{Auth, Jwt, Stripe};
 use crate::models::Player;
 use crate::response::{QueryResponse, Response};
 use rocket_okapi::openapi;
@@ -14,14 +14,14 @@ pub struct PaymentMethod {
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/stripe-payment-methods")]
-pub async fn list(auth: Auth<Player>, stripe: Stripe) -> QueryResponse<Vec<PaymentMethod>> {
+pub async fn list(auth: Auth<Jwt<Player>>, stripe: Stripe) -> QueryResponse<Vec<PaymentMethod>> {
   let mut payment_method_params = stripe::ListPaymentMethods::new();
 
   payment_method_params.type_ = Some(stripe::PaymentMethodTypeFilter::Card);
 
   payment_method_params.customer = Some(
     auth
-      .0
+      .into_deep_inner()
       .stripe_customer_id
       .parse::<stripe::CustomerId>()
       .unwrap(),
