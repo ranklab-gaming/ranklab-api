@@ -64,7 +64,18 @@ impl<'a, T: FromJwt> OpenApiFromRequest<'a> for Auth<Jwt<T>> {
     _name: String,
     _required: bool,
   ) -> rocket_okapi::Result<RequestHeaderInput> {
-    Ok(RequestHeaderInput::None)
+    Ok(RequestHeaderInput::Security(
+      "jwt".to_owned(),
+      SecurityScheme {
+        description: None,
+        data: SecuritySchemeData::Http {
+          scheme: "bearer".to_owned(),
+          bearer_format: Some("jwt".to_owned()),
+        },
+        extensions: Object::default(),
+      },
+      SecurityRequirement::default(),
+    ))
   }
 }
 
