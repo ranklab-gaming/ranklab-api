@@ -62,10 +62,18 @@ jobs:
             ${{ steps.ecr-login.outputs.registry }}/${{ env.app-name }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}
             ghcr.io/${{ github.repository }}:latest
-      - name: Download ECS task definition
+      - name: Download latest ECS task definition
         id: download-task
         run: |
-          aws ecs describe-task-definition --task-definition ${{ secrets.ECS_TASK_DEFINITION_FAMILY }} --query 'taskDefinition' --output json > task-definition.json
+          aws ecs describe-task-definition --task-definition ${{ secrets.ECS_TASK_DEFINITION_FAMILY }} --query 'taskDefinition' --output json > latest-task-definition.json
+          echo "::set-output name=revision::$(($(cat latest-task-definition.json | jq .revision) - 1))"
+      - name: Render Amazon ECS task definition from template
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        id: render-task-definition
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.container-name }}
+          image: ${{ steps.ecr-login.outputs.registry }}/${{ env.app-name }}:${{ github.sha }}
       - name: Deploy ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
@@ -73,3 +81,8 @@ jobs:
           service: ${{ env.service-name }}
           cluster: ${{ env.cluster-name }}
           wait-for-service-stability: true
+      - name: De-register (latest-1) revision
+        if: ${{ steps.download-task.outputs.revision > 0 }}
+        run: |
+          aws ecs deregister-task-definition \
+            --task-definition ${{ secrets.ECS_TASK_DEFINITION_FAMILY }}:${{ steps.download-task.outputs.revision }}
