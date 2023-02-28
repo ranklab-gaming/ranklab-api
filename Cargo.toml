@@ -54,7 +54,7 @@ rusoto_signature = "0.48.0"
 rusoto_sqs = "0.48.0"
 rusoto_stepfunctions = "0.48.0"
 schemars = { version = "0.8.12", features = ["chrono"] }
-sentry = "0.29.3"
+sentry = "0.30.0"
 serde = "1.0.152"
 serde_json = "1.0.93"
 serde_path_to_error = "0.1.9"
