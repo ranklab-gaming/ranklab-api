@@ -15,7 +15,6 @@ pub struct Config {
   pub stripe_direct_webhooks_secret: String,
   pub stripe_connect_webhooks_queue: String,
   pub stripe_connect_webhooks_secret: String,
-  pub stripe_product_id: String,
   pub scheduled_tasks_queue: Option<String>,
   pub scheduled_tasks_state_machine_arn: Option<String>,
 }

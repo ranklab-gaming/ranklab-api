@@ -16,13 +16,9 @@ use rocket::{Build, Rocket};
 use rocket_okapi::openapi_get_routes;
 use std::env;
 
+const DEFAULT_PROFILE: Profile = rocket::config::Config::DEFAULT_PROFILE;
+const DEBUG_PROFILE: Profile = rocket::config::Config::DEBUG_PROFILE;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
-
-const DEFAULT_PROFILE: &str = if cfg!(debug_assertions) {
-  "debug"
-} else {
-  "release"
-};
 
 pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
   let database_url: String = rocket
@@ -41,20 +37,16 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 fn rocket() -> Rocket<Build> {
-  let profile_name = env::var("ROCKET_PROFILE").unwrap_or_else(|_| DEFAULT_PROFILE.to_string());
-  let profile = Profile::new(&profile_name);
-
-  let env_suffix = if profile == rocket::config::Config::DEBUG_PROFILE {
-    "development".into()
+  let env_suffix = if DEFAULT_PROFILE == DEBUG_PROFILE {
+    "development".to_owned()
   } else {
-    profile.as_str()
+    DEFAULT_PROFILE.to_string()
   };
 
   dotenv::from_filename(format!(".env.{}", env_suffix)).ok();
   dotenv::dotenv().ok();
 
   let mut figment = rocket::Config::figment()
-    .select(profile)
     .merge(Toml::file("Ranklab.toml").nested())
     .merge(Env::prefixed("RANKLAB_").global());
 
@@ -62,10 +54,8 @@ fn rocket() -> Rocket<Build> {
     figment = figment.merge(("databases.default.url", database_url));
   }
 
-  let sentry_dsn: Option<String> = figment.extract_inner("sentry_dsn").ok();
-
   rocket::custom(figment)
-    .attach(fairings::Sentry::fairing(sentry_dsn))
+    .attach(fairings::Sentry::fairing())
     .attach(fairings::Sqs::fairing())
     .attach(DbConn::fairing())
     .attach(AdHoc::on_ignite("Run Migrations", run_migrations))

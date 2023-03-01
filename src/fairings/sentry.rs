@@ -5,23 +5,21 @@ use rocket::{Build, Rocket};
 use sentry::ClientInitGuard;
 
 pub struct SentryFairing {
-  dsn: Option<String>,
   guard: Mutex<Option<ClientInitGuard>>,
 }
 
 impl SentryFairing {
-  pub fn fairing(dsn: Option<String>) -> impl Fairing {
+  pub fn fairing() -> impl Fairing {
     Self {
-      dsn,
       guard: Mutex::new(None),
     }
   }
 
-  fn init(&self) {
-    match &self.dsn {
+  fn init(&self, dsn: Option<String>) {
+    match &dsn {
       None => {}
-      _length => {
-        let guard = sentry::init(self.dsn.clone());
+      _ => {
+        let guard = sentry::init(dsn);
         *self.guard.lock().unwrap() = Some(guard);
       }
     }
@@ -38,7 +36,8 @@ impl Fairing for SentryFairing {
   }
 
   async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
-    self.init();
+    let sentry_dsn: Option<String> = rocket.figment().extract_inner("sentry_dsn").ok();
+    self.init(sentry_dsn);
     Ok(rocket)
   }
 }
