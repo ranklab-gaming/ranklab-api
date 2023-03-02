@@ -49,10 +49,7 @@ impl SqsFairing {
   }
 
   async fn start<T: QueueHandler>(&self, rocket: &Rocket<Orbit>) {
-    let db_conn = DbConn::get_one(rocket)
-      .await
-      .expect("Failed to get db connection");
-
+    let db_conn = DbConn::get_one(rocket).await.unwrap();
     let config = rocket.state::<Config>().unwrap().clone();
     let profile = rocket.config().profile.clone();
     let aws_access_key_id = config.aws_access_key_id.clone();

@@ -188,7 +188,7 @@ pub async fn create(
         .values(
           CoachChangeset::default()
             .email(coach.email.clone())
-            .password(hash(coach.password.clone(), DEFAULT_COST).expect("Failed to hash password"))
+            .password(hash(coach.password.clone(), DEFAULT_COST).unwrap())
             .stripe_account_id(account.id.to_string())
             .name(coach.name.clone())
             .bio(coach.bio.clone())

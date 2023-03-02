@@ -70,7 +70,7 @@ pub async fn create(
       diesel::insert_into(players::table)
         .values(
           PlayerChangeset::default()
-            .password(hash(player.password.clone(), DEFAULT_COST).expect("Failed to hash password"))
+            .password(hash(player.password.clone(), DEFAULT_COST).unwrap())
             .email(player.email.clone())
             .name(player.name.clone())
             .games(player.games.clone().into_iter().map(Some).collect())

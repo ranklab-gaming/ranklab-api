@@ -28,9 +28,7 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
   let mut conn = PgConnection::establish(&database_url).unwrap();
 
-  conn
-    .run_pending_migrations(MIGRATIONS)
-    .expect("Failed to run migrations");
+  conn.run_pending_migrations(MIGRATIONS).unwrap();
 
   rocket
 }
