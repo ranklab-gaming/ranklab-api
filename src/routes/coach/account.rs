@@ -60,15 +60,14 @@ pub async fn update(
   account: Json<UpdateCoachRequest>,
   auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
-  config: &State<Config>,
-) -> MutationResponse<CreateSessionResponse> {
+) -> MutationResponse<CoachView> {
   if let Err(errors) = account.validate() {
     return Response::validation_error(errors);
   }
 
   let coach = auth.into_deep_inner();
 
-  let coach: Coach = db_conn
+  let coach: CoachView = db_conn
     .run(move |conn| {
       diesel::update(&coach)
         .set(
@@ -82,12 +81,10 @@ pub async fn update(
         .get_result::<Coach>(conn)
         .unwrap()
     })
-    .await;
+    .await
+    .into();
 
-  let account = Account::Coach(coach);
-  let token = generate_token(&account, config);
-
-  Response::success(CreateSessionResponse { token })
+  Response::success(coach)
 }
 
 #[openapi(tag = "Ranklab")]
@@ -97,7 +94,8 @@ pub async fn create(
   coach: Json<CreateCoachRequest>,
   db_conn: DbConn,
   stripe: Stripe,
-) -> MutationResponse<CoachView> {
+  config: &State<Config>,
+) -> MutationResponse<CreateSessionResponse> {
   if let Err(errors) = coach.validate() {
     return Response::validation_error(errors);
   }
@@ -210,5 +208,8 @@ pub async fn create(
     })
     .await;
 
-  Response::success(coach.into())
+  let account = Account::Coach(coach);
+  let token = generate_token(&account, config);
+
+  Response::success(CreateSessionResponse { token })
 }
