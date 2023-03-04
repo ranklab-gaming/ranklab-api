@@ -57,7 +57,7 @@ schemars = { version = "0.8.12", features = ["chrono"] }
 sentry = "0.30.0"
 serde = "1.0.152"
 serde_json = "1.0.93"
-serde_path_to_error = "0.1.9"
+serde_path_to_error = "0.1.10"
 sha2 = "0.10.6"
 smol_str = "0.1.24"
 thiserror = "1.0.38"
