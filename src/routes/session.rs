@@ -148,7 +148,7 @@ pub async fn reset_password(
       "title": "You requested to reset your password",
       "body": "Click the button below to reset it",
       "cta" : "Reset Password",
-      "cta_url" : format!("{}/auth/update-password?token={}&user_type={}", config.web_host, token.value, user_type),
+      "cta_url" : format!("{}/password/reset?token={}&user_type={}", config.web_host, token.value, user_type),
     }),
     vec![Recipient::new(
       email,
