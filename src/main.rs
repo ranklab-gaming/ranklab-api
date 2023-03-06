@@ -91,7 +91,7 @@ fn rocket() -> Rocket<Build> {
         player::reviews::get,
         player::reviews::list,
         player::reviews::update,
-        player::stripe_billing_portal_links::create,
+        player::stripe_billing_portal_sessions::create,
         player::stripe_payment_methods::list,
         session::create,
         session::reset_password,
