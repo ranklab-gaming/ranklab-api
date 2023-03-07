@@ -13,7 +13,7 @@ pub struct AccountLink {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct CreateAccountLinkMutation {
+pub struct CreateAccountLinkRequest {
   refresh_url: String,
   return_url: String,
 }
@@ -23,7 +23,7 @@ pub struct CreateAccountLinkMutation {
 pub async fn create(
   auth: Auth<Jwt<Coach>>,
   stripe: Stripe,
-  body: Json<CreateAccountLinkMutation>,
+  body: Json<CreateAccountLinkRequest>,
 ) -> MutationResponse<AccountLink> {
   let mut account_link_params = stripe::CreateAccountLink::new(
     auth

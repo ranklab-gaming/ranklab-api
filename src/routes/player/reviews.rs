@@ -67,7 +67,7 @@ pub async fn get(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct CreateReviewMutation {
+pub struct CreateReviewRequest {
   recording_id: Uuid,
   #[validate(length(min = 1))]
   title: String,
@@ -83,7 +83,7 @@ pub async fn create(
   db_conn: DbConn,
   auth: Auth<Jwt<Player>>,
   stripe: Stripe,
-  body: Json<CreateReviewMutation>,
+  body: Json<CreateReviewRequest>,
 ) -> MutationResponse<ReviewView> {
   let body_recording_id = body.recording_id;
   let player = auth.into_deep_inner();
