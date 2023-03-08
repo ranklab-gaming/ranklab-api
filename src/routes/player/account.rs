@@ -1,5 +1,6 @@
 use crate::auth::{generate_token, Account};
 use crate::config::Config;
+use crate::games;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Player, PlayerChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
@@ -8,6 +9,7 @@ use crate::schema::players;
 use crate::views::PlayerView;
 use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -25,6 +27,7 @@ pub struct UpdatePlayerRequest {
   email: String,
   #[validate(length(min = 1), custom = "crate::games::validate_id")]
   game_id: String,
+  skill_level: i16,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
@@ -37,6 +40,7 @@ pub struct CreatePlayerRequest {
   password: String,
   #[validate(length(min = 1), custom = "crate::games::validate_id")]
   game_id: String,
+  skill_level: i16,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -56,6 +60,17 @@ pub async fn create(
 ) -> MutationResponse<CreateSessionResponse> {
   if let Err(errors) = player.validate() {
     return Response::validation_error(errors);
+  }
+
+  let game = games::find(&player.game_id).unwrap();
+
+  if game
+    .skill_levels
+    .iter()
+    .find(|skill_level| skill_level.value == player.skill_level as u8)
+    .is_none()
+  {
+    return Response::mutation_error(Status::UnprocessableEntity);
   }
 
   let ip_address = match ip_address.ip() {
@@ -86,6 +101,7 @@ pub async fn create(
             .email(player.email.clone())
             .name(player.name.clone())
             .game_id(player.game_id.clone())
+            .skill_level(player.skill_level)
             .stripe_customer_id(customer.id.to_string()),
         )
         .get_result(conn)
@@ -111,6 +127,16 @@ pub async fn update(
   }
 
   let player = auth.into_deep_inner();
+  let game = games::find(&player.game_id).unwrap();
+
+  if game
+    .skill_levels
+    .iter()
+    .find(|skill_level| skill_level.value == player.skill_level as u8)
+    .is_none()
+  {
+    return Response::mutation_error(Status::UnprocessableEntity);
+  }
 
   let player: PlayerView = db_conn
     .run(move |conn| {
@@ -119,7 +145,8 @@ pub async fn update(
           PlayerChangeset::default()
             .email(account.email.clone())
             .name(account.name.clone())
-            .game_id(account.game_id.clone()),
+            .game_id(account.game_id.clone())
+            .skill_level(account.skill_level),
         )
         .get_result::<Player>(conn)
         .unwrap()
