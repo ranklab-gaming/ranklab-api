@@ -1,12 +1,11 @@
 use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
-use crate::models::{Coach, Player, Review, ReviewChangeset};
+use crate::models::{Coach, Player, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::{coaches, reviews};
 use crate::views::ReviewView;
 use diesel::prelude::*;
-use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -69,11 +68,7 @@ pub async fn get(
 #[derive(Deserialize, JsonSchema)]
 pub struct CreateReviewRequest {
   recording_id: Uuid,
-  #[validate(length(min = 1))]
-  title: String,
   notes: String,
-  #[validate(custom = "crate::games::validate_id")]
-  game_id: String,
   coach_id: Uuid,
 }
 
@@ -89,14 +84,19 @@ pub async fn create(
   let player = auth.into_deep_inner();
   let auth_player_id = player.id;
   let coach_id = body.coach_id;
+  let coach_game_id = player.game_id.clone();
+  let player_game_id = player.game_id.clone();
 
   let coach = db_conn
-    .run(move |conn| coaches::table.find(coach_id).first::<Coach>(conn))
+    .run(move |conn| Coach::find_for_game_id(&coach_id, &coach_game_id).first::<Coach>(conn))
     .await?;
 
-  if coach.game_id != body.game_id {
-    return Response::mutation_error(Status::UnprocessableEntity);
-  }
+  let recording = db_conn
+    .run(move |conn| {
+      Recording::find_for_player_by_game_id(&body_recording_id, &auth_player_id, &player_game_id)
+        .first::<Recording>(conn)
+    })
+    .await?;
 
   let customer_id = player
     .stripe_customer_id
@@ -124,9 +124,9 @@ pub async fn create(
           ReviewChangeset::default()
             .recording_id(body_recording_id)
             .player_id(auth_player_id)
-            .title(body.title.clone())
+            .title(recording.title.clone())
             .notes(ammonia::clean(&body.notes))
-            .game_id(body.game_id.clone())
+            .game_id(recording.game_id.clone())
             .coach_id(body.coach_id)
             .stripe_payment_intent_id(payment_intent.id.to_string()),
         )

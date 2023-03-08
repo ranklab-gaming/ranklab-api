@@ -13,9 +13,12 @@ use uuid::Uuid;
 #[builder_struct_attr(diesel(table_name = recordings))]
 pub struct Recording {
   pub created_at: chrono::NaiveDateTime,
+  pub game_id: String,
   pub id: Uuid,
   pub mime_type: String,
   pub player_id: Uuid,
+  pub skill_level: i16,
+  pub title: String,
   pub updated_at: chrono::NaiveDateTime,
   pub uploaded: bool,
   pub video_key: String,
@@ -36,6 +39,25 @@ impl Recording {
     recordings::table.filter(
       recordings::id
         .eq(*id)
+        .and(recordings::player_id.eq(*player_id)),
+    )
+  }
+
+  pub fn find_for_player_by_game_id(
+    id: &Uuid,
+    player_id: &Uuid,
+    game_id: &str,
+  ) -> Filter<
+    recordings::table,
+    And<
+      And<Eq<recordings::id, Uuid>, Eq<recordings::game_id, String>>,
+      Eq<recordings::player_id, Uuid>,
+    >,
+  > {
+    recordings::table.filter(
+      recordings::id
+        .eq(*id)
+        .and(recordings::game_id.eq(game_id.to_string()))
         .and(recordings::player_id.eq(*player_id)),
     )
   }

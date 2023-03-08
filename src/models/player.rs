@@ -1,4 +1,3 @@
-use crate::data_types::PlayerGame;
 use crate::schema::players;
 use derive_builder::Builder;
 use diesel::dsl::{Find, FindBy};
@@ -15,7 +14,7 @@ use uuid::Uuid;
 pub struct Player {
   pub created_at: chrono::NaiveDateTime,
   pub email: String,
-  pub games: Vec<Option<PlayerGame>>,
+  pub game_id: String,
   pub id: Uuid,
   pub name: String,
   pub password: String,

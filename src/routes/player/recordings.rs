@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::games;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Player, Recording, RecordingChangeset, Review};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
@@ -30,6 +31,11 @@ pub struct CreateRecordingRequest {
   size: usize,
   #[validate(regex = "self::MIME_TYPE_REGEX")]
   mime_type: String,
+  #[validate(length(min = 1))]
+  title: String,
+  skill_level: i16,
+  #[validate(length(min = 1), custom = "games::validate_id")]
+  game_id: String,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -75,6 +81,17 @@ pub async fn create(
     return Response::validation_error(errors);
   }
 
+  let game = games::find(&recording.game_id).unwrap();
+
+  if game
+    .skill_levels
+    .iter()
+    .find(|skill_level| skill_level.value == recording.skill_level as u8)
+    .is_none()
+  {
+    return Response::mutation_error(Status::UnprocessableEntity);
+  }
+
   let extensions = mime_guess::get_mime_extensions_str(&recording.mime_type)
     .ok_or(MutationError::Status(Status::UnprocessableEntity))?;
 
@@ -87,6 +104,9 @@ pub async fn create(
         .values(
           RecordingChangeset::default()
             .player_id(auth.into_deep_inner().id)
+            .game_id(recording.game_id.clone())
+            .title(recording.title.clone())
+            .skill_level(recording.skill_level)
             .video_key(key)
             .mime_type(recording.mime_type.clone()),
         )

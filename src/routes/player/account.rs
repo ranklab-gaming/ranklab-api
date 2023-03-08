@@ -1,6 +1,5 @@
 use crate::auth::{generate_token, Account};
 use crate::config::Config;
-use crate::data_types::PlayerGame;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Player, PlayerChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
@@ -24,8 +23,8 @@ pub struct UpdatePlayerRequest {
   name: String,
   #[validate(email)]
   email: String,
-  #[validate(length(min = 1))]
-  games: Vec<PlayerGame>,
+  #[validate(length(min = 1), custom = "crate::games::validate_id")]
+  game_id: String,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
@@ -36,8 +35,8 @@ pub struct CreatePlayerRequest {
   email: String,
   #[validate(length(min = 8))]
   password: String,
-  #[validate(length(min = 1))]
-  games: Vec<PlayerGame>,
+  #[validate(length(min = 1), custom = "crate::games::validate_id")]
+  game_id: String,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -86,7 +85,7 @@ pub async fn create(
             .password(hash(player.password.clone(), DEFAULT_COST).unwrap())
             .email(player.email.clone())
             .name(player.name.clone())
-            .games(player.games.clone().into_iter().map(Some).collect())
+            .game_id(player.game_id.clone())
             .stripe_customer_id(customer.id.to_string()),
         )
         .get_result(conn)
@@ -120,7 +119,7 @@ pub async fn update(
           PlayerChangeset::default()
             .email(account.email.clone())
             .name(account.name.clone())
-            .games(account.games.clone().into_iter().map(Some).collect()),
+            .game_id(account.game_id.clone()),
         )
         .get_result::<Player>(conn)
         .unwrap()

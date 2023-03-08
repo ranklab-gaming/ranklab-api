@@ -1,4 +1,3 @@
-use crate::data_types::PlayerGame;
 use crate::models::Player;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -10,7 +9,7 @@ pub struct PlayerView {
   pub id: Uuid,
   pub name: String,
   pub email: String,
-  pub games: Vec<PlayerGame>,
+  pub game_id: String,
 }
 
 impl From<Player> for PlayerView {
@@ -19,7 +18,7 @@ impl From<Player> for PlayerView {
       id: player.id,
       name: player.name,
       email: player.email,
-      games: player.games.into_iter().map(|game| game.unwrap()).collect(),
+      game_id: player.game_id,
     }
   }
 }

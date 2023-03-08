@@ -63,7 +63,7 @@ diesel::table! {
     players (id) {
         created_at -> Timestamp,
         email -> Text,
-        games -> Array<Nullable<Jsonb>>,
+        game_id -> Text,
         id -> Uuid,
         name -> Text,
         password -> Text,
@@ -75,9 +75,12 @@ diesel::table! {
 diesel::table! {
     recordings (id) {
         created_at -> Timestamp,
+        game_id -> Text,
         id -> Uuid,
         mime_type -> Text,
         player_id -> Uuid,
+        skill_level -> Int2,
+        title -> Text,
         updated_at -> Timestamp,
         uploaded -> Bool,
         video_key -> Text,

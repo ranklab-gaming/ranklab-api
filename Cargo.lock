@@ -603,18 +603,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diesel_as_jsonb"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc25acd76bc20f38d0384f77a3d6ce768f95c76f433a5bea16c825d194158f64"
-dependencies = [
- "heck",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "diesel_derives"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1967,7 +1955,6 @@ dependencies = [
  "derive_builder",
  "diesel",
  "diesel-derive-enum",
- "diesel_as_jsonb",
  "diesel_migrations",
  "dotenv",
  "hex",

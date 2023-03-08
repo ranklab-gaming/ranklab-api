@@ -1,6 +1,6 @@
 use crate::schema::coaches;
 use derive_builder::Builder;
-use diesel::helper_types::{Filter, Find, FindBy, ILike};
+use diesel::helper_types::{And, Eq, Filter, Find, FindBy};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -43,7 +43,18 @@ impl Coach {
     coaches::table.filter(coaches::email.eq(email.to_string()))
   }
 
-  pub fn find_by_query(query: &str) -> Filter<coaches::table, ILike<coaches::name, String>> {
-    coaches::table.filter(coaches::name.ilike(format!("%{}%", query)))
+  pub fn filter_by_game_id(game_id: &str) -> Filter<coaches::table, Eq<coaches::game_id, String>> {
+    coaches::table.filter(coaches::game_id.eq(game_id.to_string()))
+  }
+
+  pub fn find_for_game_id(
+    coach_id: &Uuid,
+    game_id: &str,
+  ) -> Filter<coaches::table, And<Eq<coaches::id, Uuid>, Eq<coaches::game_id, String>>> {
+    coaches::table.filter(
+      coaches::id
+        .eq(*coach_id)
+        .and(coaches::game_id.eq(game_id.to_string())),
+    )
   }
 }
