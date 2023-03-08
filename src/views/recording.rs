@@ -16,6 +16,8 @@ pub struct RecordingView {
   pub updated_at: chrono::NaiveDateTime,
   pub review_title: Option<String>,
   pub review_id: Option<Uuid>,
+  pub title: String,
+  pub skill_level: i16,
 }
 
 impl RecordingView {
@@ -31,6 +33,8 @@ impl RecordingView {
       updated_at: recording.updated_at,
       review_title: review.map(|review| review.title.clone()),
       review_id: review.map(|review| review.id),
+      title: recording.title,
+      skill_level: recording.skill_level,
     }
   }
 }
