@@ -67,6 +67,7 @@ diesel::table! {
         id -> Uuid,
         name -> Text,
         password -> Text,
+        skill_level -> Int2,
         stripe_customer_id -> Text,
         updated_at -> Timestamp,
     }
