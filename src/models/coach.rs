@@ -43,18 +43,34 @@ impl Coach {
     coaches::table.filter(coaches::email.eq(email.to_string()))
   }
 
-  pub fn filter_by_game_id(game_id: &str) -> Filter<coaches::table, Eq<coaches::game_id, String>> {
-    coaches::table.filter(coaches::game_id.eq(game_id.to_string()))
+  pub fn filter_by_game_id(
+    game_id: &str,
+  ) -> Filter<
+    coaches::table,
+    And<Eq<coaches::game_id, String>, Eq<coaches::stripe_details_submitted, bool>>,
+  > {
+    coaches::table.filter(
+      coaches::game_id
+        .eq(game_id.to_string())
+        .and(coaches::stripe_details_submitted.eq(true)),
+    )
   }
 
   pub fn find_for_game_id(
     coach_id: &Uuid,
     game_id: &str,
-  ) -> Filter<coaches::table, And<Eq<coaches::id, Uuid>, Eq<coaches::game_id, String>>> {
+  ) -> Filter<
+    coaches::table,
+    And<
+      And<Eq<coaches::id, Uuid>, Eq<coaches::game_id, String>>,
+      Eq<coaches::stripe_details_submitted, bool>,
+    >,
+  > {
     coaches::table.filter(
       coaches::id
         .eq(*coach_id)
-        .and(coaches::game_id.eq(game_id.to_string())),
+        .and(coaches::game_id.eq(game_id.to_string()))
+        .and(coaches::stripe_details_submitted.eq(true)),
     )
   }
 }
