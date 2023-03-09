@@ -127,6 +127,7 @@ pub async fn create(
             .title(recording.title.clone())
             .notes(ammonia::clean(&body.notes))
             .game_id(recording.game_id.clone())
+            .skill_level(recording.skill_level)
             .coach_id(body.coach_id)
             .stripe_payment_intent_id(payment_intent.id.to_string()),
         )

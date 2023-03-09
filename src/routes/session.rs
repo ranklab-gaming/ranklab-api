@@ -69,8 +69,12 @@ pub async fn create(
     Account::Player(player) => player.password.clone(),
   };
 
-  verify(session_password, &password)
+  let valid = verify(session_password, &password)
     .map_err(|_| MutationError::Status(Status::UnprocessableEntity))?;
+
+  if !valid {
+    return Response::mutation_error(Status::NotFound);
+  }
 
   let token = generate_token(&account, config);
 
