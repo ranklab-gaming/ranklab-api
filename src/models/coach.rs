@@ -1,6 +1,6 @@
 use crate::schema::coaches;
 use derive_builder::Builder;
-use diesel::helper_types::{And, Eq, Filter, Find, FindBy};
+use diesel::helper_types::{And, Eq, EqAny, Filter, Find, FindBy};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -41,6 +41,10 @@ impl Coach {
 
   pub fn find_by_email(email: &str) -> FindBy<coaches::table, coaches::email, String> {
     coaches::table.filter(coaches::email.eq(email.to_string()))
+  }
+
+  pub fn filter_by_ids(ids: Vec<Uuid>) -> Filter<coaches::table, EqAny<coaches::id, Vec<Uuid>>> {
+    coaches::table.filter(coaches::id.eq_any(ids))
   }
 
   pub fn filter_by_game_id(

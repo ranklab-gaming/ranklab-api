@@ -38,7 +38,7 @@ pub async fn list(
     .records
     .clone()
     .into_iter()
-    .map(|review| ReviewView::from(review, None))
+    .map(|review| ReviewView::new(review, None, None))
     .collect();
 
   Response::success(paginated_reviews.records(review_views))
@@ -58,7 +58,7 @@ pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResp
     .run(move |conn| Review::find_for_coach(&id, &auth.into_deep_inner().id).first::<Review>(conn))
     .await?;
 
-  Response::success(ReviewView::from(review, None))
+  Response::success(ReviewView::new(review, None, None))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -88,7 +88,7 @@ pub async fn update(
         })
         .await;
 
-      return Response::success(ReviewView::from(updated_review, None));
+      return Response::success(ReviewView::new(updated_review, None, None));
     }
   }
 
@@ -103,9 +103,9 @@ pub async fn update(
         })
         .await;
 
-      return Response::success(ReviewView::from(updated_review, None));
+      return Response::success(ReviewView::new(updated_review, None, None));
     }
   }
 
-  Response::success(ReviewView::from(existing_review, None))
+  Response::success(ReviewView::new(existing_review, None, None))
 }

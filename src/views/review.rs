@@ -1,8 +1,10 @@
 use crate::data_types::ReviewState;
-use crate::models::Review;
+use crate::models::{Coach, Review};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
+
+use super::CoachView;
 
 #[derive(Serialize, JsonSchema)]
 #[serde(rename = "Review")]
@@ -17,10 +19,15 @@ pub struct ReviewView {
   pub notes: String,
   pub state: ReviewState,
   pub stripe_client_secret: Option<String>,
+  pub coach: Option<CoachView>,
 }
 
 impl ReviewView {
-  pub fn from(review: Review, payment_intent: Option<stripe::PaymentIntent>) -> Self {
+  pub fn new(
+    review: Review,
+    payment_intent: Option<stripe::PaymentIntent>,
+    coach: Option<Coach>,
+  ) -> Self {
     ReviewView {
       id: review.id,
       player_id: review.player_id,
@@ -33,6 +40,10 @@ impl ReviewView {
       state: review.state,
       stripe_client_secret: match payment_intent {
         Some(payment_intent) => Some(payment_intent.client_secret.unwrap()),
+        None => None,
+      },
+      coach: match coach {
+        Some(coach) => Some(coach.into()),
         None => None,
       },
     }

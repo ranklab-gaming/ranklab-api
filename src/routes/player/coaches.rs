@@ -12,10 +12,5 @@ pub async fn list(auth: Auth<Jwt<Player>>, db_conn: DbConn) -> QueryResponse<Vec
     .run(move |conn| Coach::filter_by_game_id(&auth.into_deep_inner().game_id).load(conn))
     .await?;
 
-  Response::success(
-    coaches
-      .into_iter()
-      .map(|coach| CoachView::from(coach))
-      .collect(),
-  )
+  Response::success(coaches.into_iter().map(Into::into).collect())
 }

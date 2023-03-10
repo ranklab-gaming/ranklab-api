@@ -38,11 +38,34 @@ pub async fn list(
     })
     .await;
 
+  let records = paginated_reviews.records.clone();
+
+  let coaches = db_conn
+    .run(move |conn| {
+      Coach::filter_by_ids(
+        records
+          .clone()
+          .into_iter()
+          .map(|review| review.coach_id)
+          .collect(),
+      )
+      .load::<Coach>(conn)
+    })
+    .await?;
+
   let review_views = paginated_reviews
     .records
     .clone()
     .into_iter()
-    .map(|review| ReviewView::from(review, None))
+    .map(|review| {
+      let coach_id = review.coach_id;
+
+      ReviewView::new(
+        review,
+        None,
+        coaches.iter().find(|coach| coach.id == coach_id).cloned(),
+      )
+    })
     .collect();
 
   Response::success(paginated_reviews.records(review_views))
@@ -62,7 +85,7 @@ pub async fn get(
 
   let payment_intent = review.get_payment_intent(&stripe.into_inner()).await;
 
-  Response::success(ReviewView::from(review, Some(payment_intent)))
+  Response::success(ReviewView::new(review, Some(payment_intent), None))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -136,7 +159,7 @@ pub async fn create(
     })
     .await;
 
-  Response::success(ReviewView::from(review, None))
+  Response::success(ReviewView::new(review, None, None))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -161,7 +184,7 @@ pub async fn update(
     .await?;
 
   if !review.accepted {
-    return Response::success(ReviewView::from(existing_review, None));
+    return Response::success(ReviewView::new(existing_review, None, None));
   }
 
   let review_coach_id = existing_review.coach_id;
@@ -206,5 +229,5 @@ pub async fn update(
     })
     .await;
 
-  Response::success(ReviewView::from(updated_review, None))
+  Response::success(ReviewView::new(updated_review, None, None))
 }
