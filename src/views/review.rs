@@ -18,6 +18,7 @@ pub struct ReviewView {
   pub skill_level: i16,
   pub notes: String,
   pub state: ReviewState,
+  pub created_at: chrono::NaiveDateTime,
   pub stripe_client_secret: Option<String>,
   pub coach: Option<CoachView>,
 }
@@ -38,6 +39,7 @@ impl ReviewView {
       skill_level: review.skill_level,
       notes: review.notes,
       state: review.state,
+      created_at: review.created_at,
       stripe_client_secret: match payment_intent {
         Some(payment_intent) => Some(payment_intent.client_secret.unwrap()),
         None => None,
