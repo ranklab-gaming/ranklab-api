@@ -95,15 +95,12 @@ diesel::table! {
     reviews (id) {
         coach_id -> Uuid,
         created_at -> Timestamp,
-        game_id -> Text,
         id -> Uuid,
         notes -> Text,
         player_id -> Uuid,
         recording_id -> Uuid,
-        skill_level -> Int2,
         state -> ReviewState,
         stripe_payment_intent_id -> Text,
-        title -> Text,
         updated_at -> Timestamp,
     }
 }

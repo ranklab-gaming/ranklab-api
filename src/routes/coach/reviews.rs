@@ -1,6 +1,6 @@
 use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn, Jwt};
-use crate::models::{Coach, Review, ReviewChangeset};
+use crate::models::{Coach, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::views::ReviewView;
@@ -34,11 +34,37 @@ pub async fn list(
     })
     .await;
 
+  let records = paginated_reviews.records.clone();
+
+  let recordings = db_conn
+    .run(move |conn| {
+      Recording::filter_by_ids(
+        records
+          .into_iter()
+          .map(|review| review.recording_id)
+          .collect(),
+      )
+      .load::<Recording>(conn)
+    })
+    .await?;
+
   let review_views: Vec<ReviewView> = paginated_reviews
     .records
     .clone()
     .into_iter()
-    .map(|review| ReviewView::new(review, None, None))
+    .map(|review| {
+      let recording_id = review.recording_id;
+
+      ReviewView::new(
+        review,
+        None,
+        None,
+        recordings
+          .iter()
+          .find(|recording| recording.id == recording_id)
+          .cloned(),
+      )
+    })
     .collect();
 
   Response::success(paginated_reviews.records(review_views))
@@ -58,7 +84,13 @@ pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResp
     .run(move |conn| Review::find_for_coach(&id, &auth.into_deep_inner().id).first::<Review>(conn))
     .await?;
 
-  Response::success(ReviewView::new(review, None, None))
+  let recording_id = review.recording_id;
+
+  let recording = db_conn
+    .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
+    .await?;
+
+  Response::success(ReviewView::new(review, None, None, Some(recording)))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -88,7 +120,7 @@ pub async fn update(
         })
         .await;
 
-      return Response::success(ReviewView::new(updated_review, None, None));
+      return Response::success(ReviewView::new(updated_review, None, None, None));
     }
   }
 
@@ -103,9 +135,9 @@ pub async fn update(
         })
         .await;
 
-      return Response::success(ReviewView::new(updated_review, None, None));
+      return Response::success(ReviewView::new(updated_review, None, None, None));
     }
   }
 
-  Response::success(ReviewView::new(existing_review, None, None))
+  Response::success(ReviewView::new(existing_review, None, None, None))
 }

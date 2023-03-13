@@ -1,4 +1,4 @@
-use crate::models::{Recording, Review};
+use crate::models::Recording;
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -14,14 +14,13 @@ pub struct RecordingView {
   pub mime_type: String,
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime,
-  pub review_title: Option<String>,
-  pub review_id: Option<Uuid>,
+  pub game_id: String,
   pub title: String,
   pub skill_level: i16,
 }
 
 impl RecordingView {
-  pub fn new(recording: Recording, review: Option<&Review>, upload_url: Option<String>) -> Self {
+  pub fn new(recording: Recording, upload_url: Option<String>) -> Self {
     RecordingView {
       id: recording.id,
       player_id: recording.player_id,
@@ -31,8 +30,7 @@ impl RecordingView {
       mime_type: recording.mime_type,
       created_at: recording.created_at,
       updated_at: recording.updated_at,
-      review_title: review.map(|review| review.title.clone()),
-      review_id: review.map(|review| review.id),
+      game_id: recording.game_id,
       title: recording.title,
       skill_level: recording.skill_level,
     }

@@ -53,17 +53,37 @@ pub async fn list(
     })
     .await?;
 
+  let records = paginated_reviews.records.clone();
+
+  let recordings = db_conn
+    .run(move |conn| {
+      Recording::filter_by_ids(
+        records
+          .clone()
+          .into_iter()
+          .map(|review| review.recording_id)
+          .collect(),
+      )
+      .load::<Recording>(conn)
+    })
+    .await?;
+
   let review_views = paginated_reviews
     .records
     .clone()
     .into_iter()
     .map(|review| {
       let coach_id = review.coach_id;
+      let recording_id = review.recording_id;
 
       ReviewView::new(
         review,
         None,
         coaches.iter().find(|coach| coach.id == coach_id).cloned(),
+        recordings
+          .iter()
+          .find(|recording| recording.id == recording_id)
+          .cloned(),
       )
     })
     .collect();
@@ -84,14 +104,24 @@ pub async fn get(
     .await?;
 
   let coach_id = review.coach_id;
+  let recording_id = review.recording_id;
 
   let coach = db_conn
     .run(move |conn| Coach::find_by_id(&coach_id).first::<Coach>(conn))
     .await?;
 
+  let recording = db_conn
+    .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
+    .await?;
+
   let payment_intent = review.get_payment_intent(&stripe.into_inner()).await;
 
-  Response::success(ReviewView::new(review, Some(payment_intent), Some(coach)))
+  Response::success(ReviewView::new(
+    review,
+    Some(payment_intent),
+    Some(coach),
+    Some(recording),
+  ))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -114,17 +144,9 @@ pub async fn create(
   let auth_player_id = player.id;
   let coach_id = body.coach_id;
   let coach_game_id = player.game_id.clone();
-  let player_game_id = player.game_id.clone();
 
   let coach = db_conn
     .run(move |conn| Coach::find_for_game_id(&coach_id, &coach_game_id).first::<Coach>(conn))
-    .await?;
-
-  let recording = db_conn
-    .run(move |conn| {
-      Recording::find_for_player_by_game_id(&body_recording_id, &auth_player_id, &player_game_id)
-        .first::<Recording>(conn)
-    })
     .await?;
 
   let customer_id = player
@@ -153,10 +175,7 @@ pub async fn create(
           ReviewChangeset::default()
             .recording_id(body_recording_id)
             .player_id(auth_player_id)
-            .title(recording.title.clone())
             .notes(ammonia::clean(&body.notes))
-            .game_id(recording.game_id.clone())
-            .skill_level(recording.skill_level)
             .coach_id(body.coach_id)
             .stripe_payment_intent_id(payment_intent.id.to_string()),
         )
@@ -165,7 +184,7 @@ pub async fn create(
     })
     .await;
 
-  Response::success(ReviewView::new(review, None, None))
+  Response::success(ReviewView::new(review, None, None, None))
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -190,7 +209,7 @@ pub async fn update(
     .await?;
 
   if !review.accepted {
-    return Response::success(ReviewView::new(existing_review, None, None));
+    return Response::success(ReviewView::new(existing_review, None, None, None));
   }
 
   let review_coach_id = existing_review.coach_id;
@@ -235,5 +254,5 @@ pub async fn update(
     })
     .await;
 
-  Response::success(ReviewView::new(updated_review, None, None))
+  Response::success(ReviewView::new(updated_review, None, None, None))
 }

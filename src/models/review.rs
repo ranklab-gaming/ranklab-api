@@ -20,15 +20,12 @@ use uuid::Uuid;
 pub struct Review {
   pub coach_id: Uuid,
   pub created_at: chrono::NaiveDateTime,
-  pub game_id: String,
   pub id: Uuid,
   pub notes: String,
   pub player_id: Uuid,
   pub recording_id: Uuid,
-  pub skill_level: i16,
   pub state: ReviewState,
   pub stripe_payment_intent_id: String,
-  pub title: String,
   pub updated_at: chrono::NaiveDateTime,
 }
 

@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::games;
 use crate::guards::{Auth, DbConn, Jwt};
-use crate::models::{Player, Recording, RecordingChangeset, Review};
+use crate::models::{Player, Recording, RecordingChangeset};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::schema::recordings;
 use crate::views::RecordingView;
@@ -47,23 +47,9 @@ pub async fn list(auth: Auth<Jwt<Player>>, db_conn: DbConn) -> QueryResponse<Vec
     })
     .await?;
 
-  let review_recordings = recordings.clone();
-
-  let reviews: Vec<Review> = db_conn
-    .run(move |conn| Review::belonging_to(&review_recordings).load(conn))
-    .await?;
-
   let recording_views: Vec<RecordingView> = recordings
     .into_iter()
-    .map(|recording| {
-      RecordingView::new(
-        recording.clone(),
-        reviews
-          .iter()
-          .find(|review| review.recording_id == recording.id),
-        None,
-      )
-    })
+    .map(|recording| RecordingView::new(recording.clone(), None))
     .collect();
 
   Response::success(recording_views)
@@ -117,7 +103,7 @@ pub async fn create(
 
   let url = create_upload_url(config, &recording.video_key);
 
-  Response::success(RecordingView::new(recording, None, Some(url)))
+  Response::success(RecordingView::new(recording, Some(url)))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -136,7 +122,7 @@ pub async fn get(
 
   let url = create_upload_url(config, &recording.video_key);
 
-  Response::success(RecordingView::new(recording, None, Some(url)))
+  Response::success(RecordingView::new(recording, Some(url)))
 }
 
 fn create_upload_url(config: &Config, key: &str) -> String {

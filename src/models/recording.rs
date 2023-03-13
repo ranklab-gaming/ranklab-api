@@ -1,10 +1,12 @@
 use crate::schema::recordings;
 use derive_builder::Builder;
-use diesel::dsl::{And, Eq, Filter, FindBy};
+use diesel::dsl::{And, Eq, EqAny, Filter, FindBy};
 use diesel::prelude::*;
+use schemars::JsonSchema;
+use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Builder, Queryable, Identifiable, Clone)]
+#[derive(Builder, Queryable, Identifiable, Clone, Serialize, JsonSchema)]
 #[builder(
   derive(AsChangeset, Insertable),
   pattern = "owned",
@@ -66,5 +68,15 @@ impl Recording {
     player_id: &Uuid,
   ) -> Filter<recordings::table, Eq<recordings::player_id, Uuid>> {
     recordings::table.filter(recordings::player_id.eq(*player_id))
+  }
+
+  pub fn filter_by_ids(
+    ids: Vec<Uuid>,
+  ) -> Filter<recordings::table, EqAny<recordings::id, Vec<Uuid>>> {
+    recordings::table.filter(recordings::id.eq_any(ids))
+  }
+
+  pub fn find_by_id(id: &Uuid) -> FindBy<recordings::table, recordings::id, Uuid> {
+    recordings::table.filter(recordings::id.eq(*id))
   }
 }
