@@ -25,9 +25,12 @@ pub async fn list(
   db_conn: DbConn,
   params: ListReviewsQuery,
 ) -> QueryResponse<PaginatedResult<ReviewView>> {
+  let coach = auth.into_deep_inner();
+  let cloned_coach = coach.clone();
+
   let paginated_reviews: PaginatedResult<Review> = db_conn
     .run(move |conn| {
-      Review::filter_for_coach(&auth.into_deep_inner(), params.archived.unwrap_or(false))
+      Review::filter_for_coach(&coach, params.archived.unwrap_or(false))
         .paginate(params.page.unwrap_or(1))
         .load_and_count_pages::<Review>(conn)
         .unwrap()
@@ -58,7 +61,7 @@ pub async fn list(
       ReviewView::new(
         review,
         None,
-        None,
+        Some(cloned_coach.clone()),
         recordings
           .iter()
           .find(|recording| recording.id == recording_id)
@@ -80,8 +83,11 @@ pub struct UpdateReviewRequest {
 #[openapi(tag = "Ranklab")]
 #[get("/coach/reviews/<id>")]
 pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResponse<ReviewView> {
+  let coach = auth.into_deep_inner();
+  let coach_id = coach.id;
+
   let review = db_conn
-    .run(move |conn| Review::find_for_coach(&id, &auth.into_deep_inner().id).first::<Review>(conn))
+    .run(move |conn| Review::find_for_coach(&id, &coach_id).first::<Review>(conn))
     .await?;
 
   let recording_id = review.recording_id;
@@ -90,7 +96,7 @@ pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResp
     .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
     .await?;
 
-  Response::success(ReviewView::new(review, None, None, Some(recording)))
+  Response::success(ReviewView::new(review, None, Some(coach), Some(recording)))
 }
 
 #[openapi(tag = "Ranklab")]
