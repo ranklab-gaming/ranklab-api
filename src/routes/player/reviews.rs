@@ -83,9 +83,15 @@ pub async fn get(
     .run(move |conn| Review::find_for_player(&id, &auth.into_deep_inner().id).first::<Review>(conn))
     .await?;
 
+  let coach_id = review.coach_id;
+
+  let coach = db_conn
+    .run(move |conn| Coach::find_by_id(&coach_id).first::<Coach>(conn))
+    .await?;
+
   let payment_intent = review.get_payment_intent(&stripe.into_inner()).await;
 
-  Response::success(ReviewView::new(review, Some(payment_intent), None))
+  Response::success(ReviewView::new(review, Some(payment_intent), Some(coach)))
 }
 
 #[derive(Deserialize, JsonSchema)]
