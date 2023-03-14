@@ -13,7 +13,7 @@ use diesel::prelude::*;
 use rand::distributions::{Alphanumeric, DistString};
 use rocket::http::Status;
 use rocket::serde::json::Json;
-use rocket::State;
+use rocket::{tokio, State};
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -162,7 +162,7 @@ pub async fn reset_password(
     )],
   );
 
-  email.deliver();
+  tokio::spawn(async move { email.deliver().await });
 
   response
 }

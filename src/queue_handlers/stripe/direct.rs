@@ -88,7 +88,7 @@ impl Direct {
       )],
     );
 
-    email.deliver();
+    email.deliver().await.map_err(anyhow::Error::from)?;
 
     Ok(())
   }

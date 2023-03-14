@@ -1,10 +1,9 @@
 use crate::aws;
 use crate::config::Config;
-use rocket::tokio;
-use rusoto_core::{HttpClient, Region};
+use rusoto_core::{HttpClient, Region, RusotoError};
 use rusoto_sesv2::{
   BulkEmailContent, BulkEmailEntry, Destination, ReplacementEmailContent, ReplacementTemplate,
-  SendBulkEmailRequest, SesV2, SesV2Client, Template,
+  SendBulkEmailError, SendBulkEmailRequest, SesV2, SesV2Client, Template,
 };
 
 pub struct Recipient {
@@ -55,41 +54,41 @@ impl Email {
     }
   }
 
-  pub fn deliver(self) {
+  pub async fn deliver(self) -> Result<(), RusotoError<SendBulkEmailError>> {
     if self.recipients.is_empty() {
-      return;
+      return Ok(());
     }
 
-    tokio::spawn(async move {
-      let email_request = SendBulkEmailRequest {
-        from_email_address: Some("noreply@ranklab.gg".to_owned()),
-        default_content: BulkEmailContent {
-          template: Some(Template {
-            template_name: Some(self.template_name),
-            template_data: Some(self.template_data.to_string()),
+    let email_request = SendBulkEmailRequest {
+      from_email_address: Some("noreply@ranklab.gg".to_owned()),
+      default_content: BulkEmailContent {
+        template: Some(Template {
+          template_name: Some(self.template_name),
+          template_data: Some(self.template_data.to_string()),
+          ..Default::default()
+        }),
+      },
+      bulk_email_entries: self
+        .recipients
+        .iter()
+        .map(|recipient| BulkEmailEntry {
+          destination: Destination {
+            to_addresses: Some(vec![recipient.email.clone()]),
             ..Default::default()
-          }),
-        },
-        bulk_email_entries: self
-          .recipients
-          .iter()
-          .map(|recipient| BulkEmailEntry {
-            destination: Destination {
-              to_addresses: Some(vec![recipient.email.clone()]),
-              ..Default::default()
-            },
-            replacement_email_content: Some(ReplacementEmailContent {
-              replacement_template: Some(ReplacementTemplate {
-                replacement_template_data: Some(recipient.template_data.to_string()),
-              }),
+          },
+          replacement_email_content: Some(ReplacementEmailContent {
+            replacement_template: Some(ReplacementTemplate {
+              replacement_template_data: Some(recipient.template_data.to_string()),
             }),
-            ..Default::default()
-          })
-          .collect(),
-        ..Default::default()
-      };
+          }),
+          ..Default::default()
+        })
+        .collect(),
+      ..Default::default()
+    };
 
-      self.client.send_bulk_email(email_request).await.unwrap();
-    });
+    self.client.send_bulk_email(email_request).await?;
+
+    Ok(())
   }
 }
