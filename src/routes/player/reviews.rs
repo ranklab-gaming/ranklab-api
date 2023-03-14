@@ -6,6 +6,7 @@ use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::{coaches, reviews};
 use crate::views::ReviewView;
 use diesel::prelude::*;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -221,7 +222,7 @@ pub async fn update(
     .unwrap();
 
   if let Some(accepted) = review.accepted {
-    if !accepted {
+    if !accepted || existing_review.state == ReviewState::Accepted {
       return Response::success(ReviewView::new(existing_review, None, None, None));
     }
 
@@ -261,8 +262,12 @@ pub async fn update(
   }
 
   if let Some(cancelled) = review.cancelled {
-    if !cancelled {
+    if !cancelled || existing_review.state == ReviewState::Refunded {
       return Response::success(ReviewView::new(existing_review, None, None, None));
+    }
+
+    if existing_review.state != ReviewState::AwaitingReview {
+      return Response::mutation_error(Status::UnprocessableEntity);
     }
 
     let mut create_refund = CreateRefund::new();
