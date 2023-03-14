@@ -12,7 +12,8 @@ use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
 use stripe::{
-  CreatePaymentIntent, CreatePaymentIntentTransferData, Currency, Expandable, PaymentIntentId,
+  CreatePaymentIntent, CreatePaymentIntentTransferData, CreateRefund, Currency, Expandable,
+  PaymentIntentId,
 };
 use uuid::Uuid;
 
@@ -190,7 +191,8 @@ pub async fn create(
 #[derive(Deserialize, JsonSchema)]
 #[schemars(rename = "PlayerUpdateReviewRequest")]
 pub struct UpdateReviewRequest {
-  accepted: bool,
+  accepted: Option<bool>,
+  cancelled: Option<bool>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -203,56 +205,74 @@ pub async fn update(
   stripe: Stripe,
 ) -> MutationResponse<ReviewView> {
   let auth_id = auth.into_deep_inner().id;
+  let client = stripe.into_inner();
 
   let existing_review: Review = db_conn
     .run(move |conn| Review::find_for_player(&id, &auth_id).first(conn))
     .await?;
-
-  if !review.accepted {
-    return Response::success(ReviewView::new(existing_review, None, None, None));
-  }
-
-  let review_coach_id = existing_review.coach_id;
-  let stripe = stripe.into_inner();
-
-  let coach: Coach = db_conn
-    .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
-    .await;
 
   let stripe_payment_intent_id = existing_review
     .stripe_payment_intent_id
     .parse::<PaymentIntentId>()
     .unwrap();
 
-  let payment_intent = stripe::PaymentIntent::retrieve(&stripe, &stripe_payment_intent_id, &[])
+  let payment_intent = stripe::PaymentIntent::retrieve(&client, &stripe_payment_intent_id, &[])
     .await
     .unwrap();
 
-  let mut transfer_params =
-    stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id);
+  if let Some(accepted) = review.accepted {
+    if !accepted {
+      return Response::success(ReviewView::new(existing_review, None, None, None));
+    }
 
-  transfer_params.amount = Some((payment_intent.amount as f64 * 0.8) as i64);
+    let review_coach_id = existing_review.coach_id;
 
-  let charge_id = match payment_intent.latest_charge {
-    Some(Expandable::Id(charge_id)) => charge_id,
-    Some(Expandable::Object(charge)) => charge.id,
-    None => panic!("No charge found"),
-  };
+    let coach: Coach = db_conn
+      .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
+      .await;
 
-  transfer_params.source_transaction = Some(charge_id);
+    let mut transfer_params =
+      stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id);
 
-  stripe::Transfer::create(&stripe, transfer_params)
-    .await
-    .unwrap();
+    transfer_params.amount = Some((payment_intent.amount as f64 * 0.8) as i64);
 
-  let updated_review = db_conn
-    .run(move |conn| {
-      diesel::update(&existing_review)
-        .set(ReviewChangeset::default().state(ReviewState::Accepted))
-        .get_result::<Review>(conn)
-        .unwrap()
-    })
-    .await;
+    let charge_id = match payment_intent.latest_charge {
+      Some(Expandable::Id(charge_id)) => charge_id,
+      Some(Expandable::Object(charge)) => charge.id,
+      None => panic!("No charge found"),
+    };
 
-  Response::success(ReviewView::new(updated_review, None, None, None))
+    transfer_params.source_transaction = Some(charge_id);
+
+    stripe::Transfer::create(&client, transfer_params)
+      .await
+      .unwrap();
+
+    let updated_review = db_conn
+      .run(move |conn| {
+        diesel::update(&existing_review)
+          .set(ReviewChangeset::default().state(ReviewState::Accepted))
+          .get_result::<Review>(conn)
+          .unwrap()
+      })
+      .await;
+
+    return Response::success(ReviewView::new(updated_review, None, None, None));
+  }
+
+  if let Some(cancelled) = review.cancelled {
+    if !cancelled {
+      return Response::success(ReviewView::new(existing_review, None, None, None));
+    }
+
+    let mut create_refund = CreateRefund::new();
+
+    create_refund.payment_intent = Some(payment_intent.id.clone());
+
+    stripe::Refund::create(&client, create_refund)
+      .await
+      .unwrap();
+  }
+
+  Response::success(ReviewView::new(existing_review, None, None, None))
 }
