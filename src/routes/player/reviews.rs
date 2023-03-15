@@ -226,6 +226,10 @@ pub async fn update(
       return Response::success(ReviewView::new(existing_review, None, None, None));
     }
 
+    if existing_review.state != ReviewState::Published {
+      return Response::mutation_error(Status::UnprocessableEntity);
+    }
+
     let review_coach_id = existing_review.coach_id;
 
     let coach: Coach = db_conn
@@ -277,6 +281,17 @@ pub async fn update(
     stripe::Refund::create(&client, create_refund)
       .await
       .unwrap();
+
+    let updated_review = db_conn
+      .run(move |conn| {
+        diesel::update(&existing_review)
+          .set(ReviewChangeset::default().state(ReviewState::Refunded))
+          .get_result::<Review>(conn)
+          .unwrap()
+      })
+      .await;
+
+    return Response::success(ReviewView::new(updated_review, None, None, None));
   }
 
   Response::success(ReviewView::new(existing_review, None, None, None))
