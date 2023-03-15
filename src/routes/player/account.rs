@@ -16,7 +16,6 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
-use std::net::SocketAddr;
 use validator::Validate;
 
 #[derive(Deserialize, JsonSchema, Validate)]
