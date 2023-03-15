@@ -56,7 +56,6 @@ pub async fn create(
   db_conn: DbConn,
   stripe: Stripe,
   config: &State<Config>,
-  ip_address: SocketAddr,
 ) -> MutationResponse<CreateSessionResponse> {
   if let Err(errors) = player.validate() {
     return Response::validation_error(errors);
@@ -73,20 +72,9 @@ pub async fn create(
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 
-  let ip_address = match ip_address.ip() {
-    std::net::IpAddr::V4(ip) => ip.to_string(),
-    std::net::IpAddr::V6(ip) => ip.to_ipv4().unwrap().to_string(),
-  };
-
   let mut params = stripe::CreateCustomer::new();
 
   params.email = Some(&player.email);
-  params.tax = Some(
-    stripe::CreateCustomerTax {
-      ip_address: Some(ip_address.into()),
-    }
-    .into(),
-  );
 
   let customer = stripe::Customer::create(&stripe.into_inner(), params)
     .await
