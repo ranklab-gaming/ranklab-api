@@ -13,8 +13,8 @@ use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
 use stripe::{
-  CreatePaymentIntent, CreatePaymentIntentTransferData, CreateRefund, Currency, Expandable,
-  PaymentIntentId,
+  CancelPaymentIntent, CreatePaymentIntent, CreatePaymentIntentTransferData, CreateRefund,
+  Currency, Expandable, PaymentIntentCancellationReason, PaymentIntentId,
 };
 use uuid::Uuid;
 
@@ -295,4 +295,43 @@ pub async fn update(
   }
 
   Response::success(ReviewView::new(existing_review, None, None, None))
+}
+
+#[openapi(tag = "Ranklab")]
+#[delete("/player/reviews/<id>")]
+pub async fn delete(
+  id: Uuid,
+  auth: Auth<Jwt<Player>>,
+  db_conn: DbConn,
+  stripe: Stripe,
+) -> MutationResponse<()> {
+  let auth_id = auth.into_deep_inner().id;
+  let client = stripe.into_inner();
+
+  let existing_review: Review = db_conn
+    .run(move |conn| Review::find_for_player(&id, &auth_id).first(conn))
+    .await?;
+
+  if existing_review.state != ReviewState::AwaitingPayment {
+    return Response::mutation_error(Status::UnprocessableEntity);
+  }
+
+  stripe::PaymentIntent::cancel(
+    &client,
+    &existing_review
+      .stripe_payment_intent_id
+      .parse::<PaymentIntentId>()
+      .unwrap(),
+    CancelPaymentIntent {
+      cancellation_reason: Some(PaymentIntentCancellationReason::RequestedByCustomer),
+    },
+  )
+  .await
+  .unwrap();
+
+  db_conn
+    .run(move |conn| diesel::delete(&existing_review).execute(conn).unwrap())
+    .await;
+
+  Response::success(())
 }

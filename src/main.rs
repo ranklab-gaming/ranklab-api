@@ -87,6 +87,7 @@ fn rocket() -> Rocket<Build> {
         player::recordings::get,
         player::recordings::list,
         player::reviews::create,
+        player::reviews::delete,
         player::reviews::get,
         player::reviews::list,
         player::reviews::update,
