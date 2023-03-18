@@ -180,9 +180,10 @@ pub async fn create(
   let tax_calculation = TaxCalculation::create(
     config,
     CreateTaxCalculation {
+      customer: customer_id.to_string(),
       preview: false,
       price: price.into(),
-      reference: "0".to_string(),
+      reference: Some("0".to_string()),
       customer_details: CustomerDetails {
         ip_address: Some(ip_address),
         address: None,

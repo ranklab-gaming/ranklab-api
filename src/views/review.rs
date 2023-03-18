@@ -20,7 +20,6 @@ pub struct ReviewView {
   pub state: ReviewState,
   pub created_at: chrono::NaiveDateTime,
   pub stripe_client_secret: Option<String>,
-  pub price: Option<i64>,
   pub tax: Option<i64>,
   pub coach: Option<CoachView>,
 }
@@ -49,9 +48,6 @@ impl ReviewView {
       stripe_client_secret: options
         .payment_intent
         .map(|payment_intent| payment_intent.client_secret.unwrap()),
-      price: options
-        .tax_calculation
-        .map(|tax_calculation| tax_calculation.amount),
       tax: options
         .tax_calculation
         .map(|tax_calculation| tax_calculation.amount_tax),

@@ -2,7 +2,7 @@ use crate::config::Config;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Deserialize, JsonSchema, Clone)]
 pub struct Address {
   pub city: String,
   pub country: String,
@@ -34,11 +34,11 @@ pub struct CustomerDetails {
 #[derive(Deserialize, JsonSchema)]
 pub struct TaxCalculation {
   pub id: String,
+  pub tax_amount_exclusive: i64,
 }
 
 #[derive(Deserialize, JsonSchema, Clone, Copy)]
 pub struct TaxCalculationLineItem {
-  pub amount: i64,
   pub amount_tax: i64,
 }
 
@@ -49,8 +49,9 @@ struct TaxCalculationLineItemResponse {
 
 pub struct CreateTaxCalculation {
   pub customer_details: CustomerDetails,
+  pub customer: String,
   pub price: i64,
-  pub reference: String,
+  pub reference: Option<String>,
   pub preview: bool,
 }
 
@@ -79,19 +80,21 @@ impl TaxCalculation {
     let addr = params.customer_details.address.unwrap_or_default();
     let client = reqwest::Client::new();
     let request = client.post("https://api.stripe.com/v1/tax/calculations");
-    let ip = params.customer_details.ip_address;
+    let ip_address = params.customer_details.ip_address.unwrap_or_default();
+    let reference = params.reference.unwrap_or_default();
 
     let params = [
       ("currency", "usd".to_string()),
+      ("customer", params.customer),
       ("customer_details[address][city]", addr.city),
       ("customer_details[address][country]", addr.country),
       ("customer_details[address][line1]", addr.line1),
       ("customer_details[address][line2]", addr.line2),
       ("customer_details[address][postal_code]", addr.postal_code),
       ("customer_details[address][state]", addr.state),
-      ("customer_details[ip_address]", ip.unwrap_or_default()),
+      ("customer_details[ip_address]", ip_address),
       ("line_items[][price]", params.price.to_string()),
-      ("line_items[][reference]", params.reference),
+      ("line_items[][reference]", reference),
       ("preview", params.preview.to_string()),
     ];
 
