@@ -1,6 +1,5 @@
 use crate::data_types::ReviewState;
 use crate::models::{Coach, Recording, Review};
-use crate::stripe::TaxCalculation;
 use schemars::JsonSchema;
 use serde::Serialize;
 use stripe::PaymentIntent;
@@ -44,8 +43,7 @@ impl ReviewView {
         .map(|recording| RecordingView::new(recording, None)),
       stripe_client_secret: options
         .payment_intent
-        .as_ref()
-        .map(|payment| payment.intent.client_secret.clone().unwrap()),
+        .map(|payment_intent| payment_intent.client_secret.unwrap()),
       coach: options.coach.map(|coach| coach.into()),
     }
   }

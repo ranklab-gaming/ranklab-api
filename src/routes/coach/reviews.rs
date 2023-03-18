@@ -61,7 +61,7 @@ pub async fn list(
       ReviewView::new(
         review,
         ReviewViewOptions {
-          payment: None,
+          payment_intent: None,
           coach: Some(cloned_coach.clone()),
           recording: recordings
             .iter()
@@ -101,7 +101,7 @@ pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResp
   Response::success(ReviewView::new(
     review,
     ReviewViewOptions {
-      payment: None,
+      payment_intent: None,
       coach: Some(coach),
       recording: Some(recording),
     },
