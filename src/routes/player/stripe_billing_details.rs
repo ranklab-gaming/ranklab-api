@@ -1,14 +1,14 @@
 use crate::guards::{Auth, Jwt, Stripe};
 use crate::models::Player;
-use crate::response::{MutationError, MutationResponse, Response, StatusResponse};
+use crate::response::{MutationError, MutationResponse, QueryResponse, Response, StatusResponse};
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use stripe::CustomerId;
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
 pub struct Address {
   pub city: Option<String>,
   pub country: Option<String>,
@@ -18,9 +18,39 @@ pub struct Address {
   pub state: Option<String>,
 }
 
-#[derive(Deserialize, JsonSchema)]
-pub struct UpdateBillingDetailsRequest {
-  pub address: Address,
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
+pub struct BillingDetails {
+  pub address: Option<Address>,
+  pub name: Option<String>,
+  pub phone: Option<String>,
+}
+
+#[openapi(tag = "Ranklab")]
+#[get("/player/stripe-billing-details")]
+pub async fn get(auth: Auth<Jwt<Player>>, stripe: Stripe) -> QueryResponse<BillingDetails> {
+  let player = auth.into_deep_inner();
+  let stripe = stripe.into_inner();
+
+  let customer = stripe::Customer::retrieve(
+    &stripe,
+    &player.stripe_customer_id.parse::<CustomerId>().unwrap(),
+    Default::default(),
+  )
+  .await
+  .unwrap();
+
+  Response::success(BillingDetails {
+    address: customer.address.map(|address| Address {
+      city: address.city,
+      country: address.country,
+      line1: address.line1,
+      line2: address.line2,
+      postal_code: address.postal_code,
+      state: address.state,
+    }),
+    name: customer.name,
+    phone: customer.phone,
+  })
 }
 
 #[openapi(tag = "Ranklab")]
@@ -28,7 +58,7 @@ pub struct UpdateBillingDetailsRequest {
 pub async fn update(
   auth: Auth<Jwt<Player>>,
   stripe: Stripe,
-  body: Json<UpdateBillingDetailsRequest>,
+  body: Json<BillingDetails>,
 ) -> MutationResponse<StatusResponse> {
   let player = auth.into_deep_inner();
   let stripe = stripe.into_inner();
@@ -37,15 +67,16 @@ pub async fn update(
     &stripe,
     &player.stripe_customer_id.parse::<CustomerId>().unwrap(),
     stripe::UpdateCustomer {
-      address: Some(stripe::Address {
-        city: body.address.city.clone(),
-        country: body.address.country.clone(),
-        line1: body.address.line1.clone(),
-        line2: body.address.line2.clone(),
-        postal_code: body.address.postal_code.clone(),
-        state: body.address.state.clone(),
+      address: body.address.clone().map(|address| stripe::Address {
+        city: address.city,
+        country: address.country,
+        line1: address.line1,
+        line2: address.line2,
+        postal_code: address.postal_code,
+        state: address.state,
       }),
-
+      name: body.name.as_deref(),
+      phone: body.phone.as_deref(),
       ..Default::default()
     },
   )
