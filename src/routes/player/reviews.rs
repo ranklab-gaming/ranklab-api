@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::net::SocketAddr;
-
 use crate::config::Config;
 use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
@@ -9,8 +6,7 @@ use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::{coaches, reviews};
 use crate::stripe::{
-  CreateTaxCalculation, CustomerDetails, TaxCalculation, TaxCalculationError,
-  TaxCalculationLineItem,
+  CreateTaxCalculation, TaxCalculation, TaxCalculationError, TaxCalculationLineItem,
 };
 use crate::views::{ReviewView, ReviewViewOptions};
 use diesel::prelude::*;
@@ -21,6 +17,7 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
+use std::collections::HashMap;
 use stripe::{
   CancelPaymentIntent, CreatePaymentIntent, CreatePaymentIntentTransferData, CreateRefund,
   Currency, Expandable, PaymentIntentCancellationReason, PaymentIntentId,
@@ -155,7 +152,6 @@ pub async fn create(
   auth: Auth<Jwt<Player>>,
   body: Json<CreateReviewRequest>,
   stripe: Stripe,
-  ip_addr: SocketAddr,
   config: &State<Config>,
 ) -> MutationResponse<ReviewView> {
   let recording_id = body.recording_id;
@@ -163,6 +159,7 @@ pub async fn create(
   let player_id = player.id;
   let coach_id = body.coach_id;
   let game_id = player.game_id.clone();
+  let stripe = stripe.into_inner();
 
   let coach = db_conn
     .run(move |conn| Coach::find_for_game_id(&coach_id, &game_id).first::<Coach>(conn))
@@ -175,19 +172,13 @@ pub async fn create(
 
   let price = coach.price;
   let coach_account_id = coach.stripe_account_id.clone();
-  let ip_address = ip_addr.ip().to_string();
 
   let tax_calculation = TaxCalculation::create(
     config,
     CreateTaxCalculation {
-      customer: customer_id.to_string(),
-      preview: false,
+      customer: Some(customer_id.to_string()),
+      customer_details: None,
       price: price.into(),
-      reference: Some("0".to_string()),
-      customer_details: CustomerDetails {
-        ip_address: Some(ip_address),
-        address: None,
-      },
     },
   )
   .await
@@ -210,7 +201,7 @@ pub async fn create(
     destination: coach_account_id,
   });
 
-  let payment_intent = stripe::PaymentIntent::create(&stripe.into_inner(), payment_intent_params)
+  let payment_intent = stripe::PaymentIntent::create(&stripe, payment_intent_params)
     .await
     .unwrap();
 

@@ -13,13 +13,13 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use stripe::{CustomerId, UpdateCustomer};
 use uuid::Uuid;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct CreateTaxCalculationRequest {
-  pub address: Address,
+  pub address: Option<Address>,
   pub review_id: Uuid,
-  pub preview: bool,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -37,7 +37,7 @@ pub async fn create(
   params: Json<CreateTaxCalculationRequest>,
 ) -> MutationResponse<CreateTaxCalculationResponse> {
   let player = auth.into_deep_inner();
-  let customer_id = player.stripe_customer_id;
+  let customer_id = player.stripe_customer_id.parse::<CustomerId>().unwrap();
   let review_id = params.review_id;
   let player_id = player.id;
   let stripe = stripe.into_inner();
@@ -52,20 +52,46 @@ pub async fn create(
     .run(move |conn| Coach::find_by_id(&coach_id).first::<Coach>(conn))
     .await?;
 
+  if let Some(address) = &params.address {
+    stripe::Customer::update(
+      &stripe,
+      &customer_id,
+      UpdateCustomer {
+        address: Some(stripe::Address {
+          city: Some(address.city.clone()),
+          country: Some(address.country.clone()),
+          line1: Some(address.line1.clone()),
+          line2: Some(address.line2.clone()),
+          postal_code: Some(address.postal_code.clone()),
+          state: Some(address.state.clone()),
+        }),
+        ..Default::default()
+      },
+    )
+    .await
+    .map_err(|err| {
+      if let stripe::StripeError::Stripe(err) = &err {
+        if err.http_status == 400 {
+          return MutationError::Status(Status::BadRequest);
+        }
+      }
+
+      MutationError::InternalServerError(err.into())
+    })?;
+  }
+
   let tax_calculation = TaxCalculation::create(
     config,
     CreateTaxCalculation {
-      customer: customer_id,
-      preview: params.preview,
       price: coach.price.into(),
-      reference: match params.preview {
-        true => Some("0".to_string()),
-        false => None,
+      customer: match &params.address {
+        Some(_) => None,
+        None => Some(customer_id.to_string()),
       },
-      customer_details: CustomerDetails {
-        address: Some(params.address.clone()),
+      customer_details: params.address.clone().map(|address| CustomerDetails {
+        address: Some(address),
         ip_address: None,
-      },
+      }),
     },
   )
   .await
@@ -74,7 +100,7 @@ pub async fn create(
     TaxCalculationError::ServerError(err) => MutationError::InternalServerError(err.into()),
   })?;
 
-  if !params.preview {
+  if params.address.is_none() {
     let payment_intent = review.get_payment_intent(&stripe).await;
     let mut metadata = HashMap::new();
 

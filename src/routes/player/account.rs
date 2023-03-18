@@ -77,13 +77,17 @@ pub async fn create(
 
   params.email = Some(&player.email);
 
-  let ip_address = match ip_address.ip() {
-    std::net::IpAddr::V4(ip) => ip.to_string(),
-    std::net::IpAddr::V6(ip) => ip.to_ipv4().unwrap().to_string(),
-  };
+  if let SocketAddr::V4(ip_address) = ip_address {
+    if ip_address.ip().is_private() {
+      params.address = Some(stripe::Address {
+        country: Some("GB".to_string()),
+        ..Default::default()
+      });
+    }
+  }
 
   params.tax = Some(stripe::CreateCustomerTax {
-    ip_address: Some(ip_address),
+    ip_address: Some(ip_address.ip().to_string()),
   });
 
   let customer = stripe::Customer::create(&stripe.into_inner(), params)
