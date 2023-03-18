@@ -8,7 +8,10 @@ use crate::models::{Coach, Player, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::{coaches, reviews};
-use crate::stripe::{CreateTaxCalculation, CustomerDetails, TaxCalculation, TaxCalculationError};
+use crate::stripe::{
+  CreateTaxCalculation, CustomerDetails, TaxCalculation, TaxCalculationError,
+  TaxCalculationLineItem,
+};
 use crate::views::{ReviewView, ReviewViewOptions};
 use diesel::prelude::*;
 use rocket::http::Status;
@@ -81,6 +84,7 @@ pub async fn list(
         review,
         ReviewViewOptions {
           payment_intent: None,
+          tax_calculation: None,
           coach: coaches.iter().find(|coach| coach.id == coach_id).cloned(),
           recording: recordings
             .iter()
@@ -101,6 +105,7 @@ pub async fn get(
   auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
   stripe: Stripe,
+  config: &State<Config>,
 ) -> QueryResponse<ReviewView> {
   let review = db_conn
     .run(move |conn| Review::find_for_player(&id, &auth.into_deep_inner().id).first::<Review>(conn))
@@ -119,11 +124,17 @@ pub async fn get(
     .await?;
 
   let payment_intent = review.get_payment_intent(&stripe).await;
+  let tax_calculation_id = &payment_intent.metadata["tax_calculation_id"];
+
+  let tax_calculation = TaxCalculationLineItem::retrieve(config, tax_calculation_id.to_string())
+    .await
+    .unwrap();
 
   Response::success(ReviewView::new(
     review,
     ReviewViewOptions {
       payment_intent: Some(payment_intent),
+      tax_calculation: Some(tax_calculation),
       coach: Some(coach),
       recording: Some(recording),
     },

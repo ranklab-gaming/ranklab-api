@@ -62,6 +62,7 @@ pub async fn list(
         review,
         ReviewViewOptions {
           payment_intent: None,
+          tax_calculation: None,
           coach: Some(cloned_coach.clone()),
           recording: recordings
             .iter()
@@ -102,6 +103,7 @@ pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResp
     review,
     ReviewViewOptions {
       payment_intent: None,
+      tax_calculation: None,
       coach: Some(coach),
       recording: Some(recording),
     },

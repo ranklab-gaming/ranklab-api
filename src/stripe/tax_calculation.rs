@@ -33,10 +33,18 @@ pub struct CustomerDetails {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct TaxCalculation {
-  pub amount_total: i64,
-  pub tax_amount_exclusive: i64,
-  pub tax_amount_inclusive: i64,
   pub id: String,
+}
+
+#[derive(Deserialize, JsonSchema, Clone, Copy)]
+pub struct TaxCalculationLineItem {
+  pub amount: i64,
+  pub amount_tax: i64,
+}
+
+#[derive(Deserialize, JsonSchema)]
+struct TaxCalculationLineItemResponse {
+  data: Vec<TaxCalculationLineItem>,
 }
 
 pub struct CreateTaxCalculation {
@@ -52,6 +60,15 @@ pub enum TaxCalculationError {
   BadRequest,
   #[error(transparent)]
   ServerError(#[from] reqwest::Error),
+}
+
+fn with_headers(request: reqwest::RequestBuilder, config: &Config) -> reqwest::RequestBuilder {
+  request
+    .header(
+      "Stripe-Version",
+      "2022-08-01;tax_calc_beta=v3;tax_txns_beta=v2",
+    )
+    .header("Authorization", format!("Bearer {}", config.stripe_secret))
 }
 
 impl TaxCalculation {
@@ -78,10 +95,7 @@ impl TaxCalculation {
       ("preview", params.preview.to_string()),
     ];
 
-    let response = Self::with_headers(request, config)
-      .form(&params)
-      .send()
-      .await?;
+    let response = with_headers(request, config).form(&params).send().await?;
 
     let tax_calculation = match response.error_for_status() {
       Ok(response) => response.json::<TaxCalculation>().await.unwrap(),
@@ -96,7 +110,9 @@ impl TaxCalculation {
 
     Ok(tax_calculation)
   }
+}
 
+impl TaxCalculationLineItem {
   pub async fn retrieve(
     config: &Config,
     tax_calculation_id: String,
@@ -108,18 +124,9 @@ impl TaxCalculation {
       tax_calculation_id
     ));
 
-    let response = Self::with_headers(request, config).send().await?;
-    let tax_calculation = response.json::<TaxCalculation>().await?;
+    let response = with_headers(request, config).send().await?;
+    let json = response.json::<TaxCalculationLineItemResponse>().await?;
 
-    Ok(tax_calculation)
-  }
-
-  fn with_headers(request: reqwest::RequestBuilder, config: &Config) -> reqwest::RequestBuilder {
-    request
-      .header(
-        "Stripe-Version",
-        "2022-08-01;tax_calc_beta=v3;tax_txns_beta=v2",
-      )
-      .header("Authorization", format!("Bearer {}", config.stripe_secret))
+    Ok(json.data[0])
   }
 }
