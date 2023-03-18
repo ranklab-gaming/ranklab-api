@@ -10,4 +10,4 @@ pub use comment::CommentView;
 pub use game::GameView;
 pub use player::PlayerView;
 pub use recording::RecordingView;
-pub use review::ReviewView;
+pub use review::{ReviewView, ReviewViewOptions, ReviewViewOptionsPayment};

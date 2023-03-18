@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use crate::auth::{generate_token, Account};
 use crate::config::Config;
 use crate::games;
@@ -55,6 +57,7 @@ pub async fn create(
   db_conn: DbConn,
   stripe: Stripe,
   config: &State<Config>,
+  ip_address: SocketAddr,
 ) -> MutationResponse<CreateSessionResponse> {
   if let Err(errors) = player.validate() {
     return Response::validation_error(errors);
@@ -62,11 +65,10 @@ pub async fn create(
 
   let game = games::find(&player.game_id).unwrap();
 
-  if game
+  if !game
     .skill_levels
     .iter()
-    .find(|skill_level| skill_level.value == player.skill_level as u8)
-    .is_none()
+    .any(|skill_level| skill_level.value == player.skill_level as u8)
   {
     return Response::mutation_error(Status::UnprocessableEntity);
   }
@@ -74,6 +76,15 @@ pub async fn create(
   let mut params = stripe::CreateCustomer::new();
 
   params.email = Some(&player.email);
+
+  let ip_address = match ip_address.ip() {
+    std::net::IpAddr::V4(ip) => ip.to_string(),
+    std::net::IpAddr::V6(ip) => ip.to_ipv4().unwrap().to_string(),
+  };
+
+  params.tax = Some(stripe::CreateCustomerTax {
+    ip_address: Some(ip_address),
+  });
 
   let customer = stripe::Customer::create(&stripe.into_inner(), params)
     .await
@@ -116,11 +127,10 @@ pub async fn update(
   let player = auth.into_deep_inner();
   let game = games::find(&player.game_id).unwrap();
 
-  if game
+  if !game
     .skill_levels
     .iter()
-    .find(|skill_level| skill_level.value == player.skill_level as u8)
-    .is_none()
+    .any(|skill_level| skill_level.value == player.skill_level as u8)
   {
     return Response::mutation_error(Status::UnprocessableEntity);
   }

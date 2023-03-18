@@ -47,6 +47,7 @@ impl Coach {
     coaches::table.filter(coaches::id.eq_any(ids))
   }
 
+  #[allow(clippy::type_complexity)]
   pub fn filter_by_game_id(
     game_id: &str,
   ) -> Filter<
@@ -60,6 +61,7 @@ impl Coach {
     )
   }
 
+  #[allow(clippy::type_complexity)]
   pub fn find_for_game_id(
     coach_id: &Uuid,
     game_id: &str,

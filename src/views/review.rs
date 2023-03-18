@@ -1,7 +1,9 @@
 use crate::data_types::ReviewState;
 use crate::models::{Coach, Recording, Review};
+use crate::stripe::TaxCalculation;
 use schemars::JsonSchema;
 use serde::Serialize;
+use stripe::PaymentIntent;
 use uuid::Uuid;
 
 use super::{CoachView, RecordingView};
@@ -21,13 +23,14 @@ pub struct ReviewView {
   pub coach: Option<CoachView>,
 }
 
+pub struct ReviewViewOptions {
+  pub payment_intent: Option<PaymentIntent>,
+  pub coach: Option<Coach>,
+  pub recording: Option<Recording>,
+}
+
 impl ReviewView {
-  pub fn new(
-    review: Review,
-    payment_intent: Option<stripe::PaymentIntent>,
-    coach: Option<Coach>,
-    recording: Option<Recording>,
-  ) -> Self {
+  pub fn new(review: Review, options: ReviewViewOptions) -> Self {
     ReviewView {
       id: review.id,
       player_id: review.player_id,
@@ -36,18 +39,27 @@ impl ReviewView {
       notes: review.notes,
       state: review.state,
       created_at: review.created_at,
-      recording: match recording {
-        Some(recording) => Some(RecordingView::new(recording, None)),
-        None => None,
-      },
-      stripe_client_secret: match payment_intent {
-        Some(payment_intent) => Some(payment_intent.client_secret.unwrap()),
-        None => None,
-      },
-      coach: match coach {
-        Some(coach) => Some(coach.into()),
-        None => None,
-      },
+      recording: options
+        .recording
+        .map(|recording| RecordingView::new(recording, None)),
+      stripe_client_secret: options
+        .payment_intent
+        .as_ref()
+        .map(|payment| payment.intent.client_secret.clone().unwrap()),
+      coach: options.coach.map(|coach| coach.into()),
     }
+  }
+}
+
+impl From<Review> for ReviewView {
+  fn from(review: Review) -> Self {
+    ReviewView::new(
+      review,
+      ReviewViewOptions {
+        payment_intent: None,
+        coach: None,
+        recording: None,
+      },
+    )
   }
 }

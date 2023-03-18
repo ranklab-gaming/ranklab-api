@@ -1,6 +1,8 @@
+use crate::config::Config;
 use crate::data_types::ReviewState;
 use crate::models::{Coach, Recording};
 use crate::schema::reviews;
+use crate::stripe::TaxCalculation;
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, EqAny, Filter, FindBy, Or, Order};
 use diesel::expression::SqlLiteral;
@@ -33,8 +35,8 @@ pub struct Review {
 impl Review {
   pub fn find_by_payment_intent_id<T: ToString>(
     order_id: &T,
-  ) -> FindBy<reviews::table, reviews::stripe_payment_intent_id, String> {
-    reviews::table.filter(reviews::stripe_payment_intent_id.eq(order_id.to_string()))
+  ) -> FindBy<reviews::table, reviews::stripe_payment_intent_id, Option<String>> {
+    reviews::table.filter(reviews::stripe_payment_intent_id.eq(Some(order_id.to_string())))
   }
 
   pub fn find_for_player(

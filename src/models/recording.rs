@@ -45,6 +45,7 @@ impl Recording {
     )
   }
 
+  #[allow(clippy::type_complexity)]
   pub fn find_for_player_by_game_id(
     id: &Uuid,
     player_id: &Uuid,

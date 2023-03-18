@@ -16,4 +16,5 @@ pub mod queue_handlers;
 pub mod response;
 pub mod routes;
 pub mod schema;
+pub mod stripe;
 pub mod views;

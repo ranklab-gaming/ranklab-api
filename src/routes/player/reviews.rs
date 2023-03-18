@@ -1,20 +1,21 @@
+use crate::config::Config;
 use crate::data_types::ReviewState;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Coach, Player, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
-use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::{coaches, reviews};
-use crate::views::ReviewView;
+use crate::views::{ReviewView, ReviewViewOptions, ReviewViewOptionsPayment};
 use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::Json;
+use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
 use stripe::{
-  CancelPaymentIntent, CreatePaymentIntent, CreatePaymentIntentTransferData, CreateRefund,
-  Currency, Expandable, PaymentIntentCancellationReason, PaymentIntentId,
+  CancelPaymentIntent, CreateRefund, Expandable, PaymentIntentCancellationReason, PaymentIntentId,
 };
 use uuid::Uuid;
 
@@ -44,14 +45,8 @@ pub async fn list(
 
   let coaches = db_conn
     .run(move |conn| {
-      Coach::filter_by_ids(
-        records
-          .clone()
-          .into_iter()
-          .map(|review| review.coach_id)
-          .collect(),
-      )
-      .load::<Coach>(conn)
+      Coach::filter_by_ids(records.into_iter().map(|review| review.coach_id).collect())
+        .load::<Coach>(conn)
     })
     .await?;
 
@@ -61,7 +56,6 @@ pub async fn list(
     .run(move |conn| {
       Recording::filter_by_ids(
         records
-          .clone()
           .into_iter()
           .map(|review| review.recording_id)
           .collect(),
@@ -80,12 +74,14 @@ pub async fn list(
 
       ReviewView::new(
         review,
-        None,
-        coaches.iter().find(|coach| coach.id == coach_id).cloned(),
-        recordings
-          .iter()
-          .find(|recording| recording.id == recording_id)
-          .cloned(),
+        ReviewViewOptions {
+          payment: None,
+          coach: coaches.iter().find(|coach| coach.id == coach_id).cloned(),
+          recording: recordings
+            .iter()
+            .find(|recording| recording.id == recording_id)
+            .cloned(),
+        },
       )
     })
     .collect();
@@ -100,6 +96,7 @@ pub async fn get(
   auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
   stripe: Stripe,
+  config: &State<Config>,
 ) -> QueryResponse<ReviewView> {
   let review = db_conn
     .run(move |conn| Review::find_for_player(&id, &auth.into_deep_inner().id).first::<Review>(conn))
@@ -107,6 +104,7 @@ pub async fn get(
 
   let coach_id = review.coach_id;
   let recording_id = review.recording_id;
+  let stripe = stripe.into_inner();
 
   let coach = db_conn
     .run(move |conn| Coach::find_by_id(&coach_id).first::<Coach>(conn))
@@ -116,13 +114,33 @@ pub async fn get(
     .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
     .await?;
 
-  let payment_intent = review.get_payment_intent(&stripe.into_inner()).await;
+  let payment_intent = review.get_payment_intent(&stripe).await;
+
+  let payment = match payment_intent {
+    Some(payment_intent) => {
+      let tax_calculation = review
+        .get_tax_calculation(
+          config,
+          payment_intent.metadata["tax_calculation_id"].clone(),
+        )
+        .await
+        .unwrap();
+
+      Some(ReviewViewOptionsPayment {
+        intent: payment_intent,
+        tax_calculation,
+      })
+    }
+    None => None,
+  };
 
   Response::success(ReviewView::new(
     review,
-    Some(payment_intent),
-    Some(coach),
-    Some(recording),
+    ReviewViewOptions {
+      payment,
+      coach: Some(coach),
+      recording: Some(recording),
+    },
   ))
 }
 
@@ -138,17 +156,16 @@ pub struct CreateReviewRequest {
 pub async fn create(
   db_conn: DbConn,
   auth: Auth<Jwt<Player>>,
-  stripe: Stripe,
   body: Json<CreateReviewRequest>,
 ) -> MutationResponse<ReviewView> {
-  let body_recording_id = body.recording_id;
+  let recording_id = body.recording_id;
   let player = auth.into_deep_inner();
-  let auth_player_id = player.id;
+  let player_id = player.id;
   let coach_id = body.coach_id;
-  let coach_game_id = player.game_id.clone();
+  let game_id = player.game_id.clone();
 
   let coach = db_conn
-    .run(move |conn| Coach::find_for_game_id(&coach_id, &coach_game_id).first::<Coach>(conn))
+    .run(move |conn| Coach::find_for_game_id(&coach_id, &game_id).first::<Coach>(conn))
     .await?;
 
   let customer_id = player
@@ -175,10 +192,10 @@ pub async fn create(
       diesel::insert_into(reviews::table)
         .values(
           ReviewChangeset::default()
-            .recording_id(body_recording_id)
-            .player_id(auth_player_id)
+            .recording_id(recording_id)
+            .player_id(player_id)
             .notes(ammonia::clean(&body.notes))
-            .coach_id(body.coach_id)
+            .coach_id(coach.id)
             .stripe_payment_intent_id(payment_intent.id.to_string()),
         )
         .get_result::<Review>(conn)
@@ -186,7 +203,7 @@ pub async fn create(
     })
     .await;
 
-  Response::success(ReviewView::new(review, None, None, None))
+  Response::success(review.into())
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -212,89 +229,84 @@ pub async fn update(
     .run(move |conn| Review::find_for_player(&id, &auth_id).first(conn))
     .await?;
 
-  let stripe_payment_intent_id = existing_review
-    .stripe_payment_intent_id
-    .parse::<PaymentIntentId>()
-    .unwrap();
+  let payment_intent = existing_review.get_payment_intent(&client).await;
 
-  let payment_intent = stripe::PaymentIntent::retrieve(&client, &stripe_payment_intent_id, &[])
-    .await
-    .unwrap();
+  if let Some(payment_intent) = payment_intent {
+    if let Some(accepted) = review.accepted {
+      if !accepted || existing_review.state == ReviewState::Accepted {
+        return Response::success(existing_review.into());
+      }
 
-  if let Some(accepted) = review.accepted {
-    if !accepted || existing_review.state == ReviewState::Accepted {
-      return Response::success(ReviewView::new(existing_review, None, None, None));
+      if existing_review.state != ReviewState::Published {
+        return Response::mutation_error(Status::UnprocessableEntity);
+      }
+
+      let review_coach_id = existing_review.coach_id;
+
+      let coach: Coach = db_conn
+        .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
+        .await;
+
+      let mut transfer_params =
+        stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id);
+
+      transfer_params.amount = Some((payment_intent.amount as f64 * 0.8) as i64);
+
+      let charge_id = match payment_intent.latest_charge {
+        Some(Expandable::Id(charge_id)) => charge_id,
+        Some(Expandable::Object(charge)) => charge.id,
+        None => panic!("No charge found"),
+      };
+
+      transfer_params.source_transaction = Some(charge_id);
+
+      stripe::Transfer::create(&client, transfer_params)
+        .await
+        .unwrap();
+
+      let updated_review = db_conn
+        .run(move |conn| {
+          diesel::update(&existing_review)
+            .set(ReviewChangeset::default().state(ReviewState::Accepted))
+            .get_result::<Review>(conn)
+            .unwrap()
+        })
+        .await;
+
+      return Response::success(updated_review.into());
     }
 
-    if existing_review.state != ReviewState::Published {
-      return Response::mutation_error(Status::UnprocessableEntity);
+    if let Some(cancelled) = review.cancelled {
+      if !cancelled || existing_review.state == ReviewState::Refunded {
+        return Response::success(existing_review.into());
+      }
+
+      if existing_review.state != ReviewState::AwaitingReview {
+        return Response::mutation_error(Status::UnprocessableEntity);
+      }
+
+      let mut create_refund = CreateRefund::new();
+
+      create_refund.payment_intent = Some(payment_intent.id.clone());
+
+      stripe::Refund::create(&client, create_refund)
+        .await
+        .unwrap();
+
+      let updated_review = db_conn
+        .run(move |conn| {
+          diesel::update(&existing_review)
+            .set(ReviewChangeset::default().state(ReviewState::Refunded))
+            .get_result::<Review>(conn)
+            .unwrap()
+        })
+        .await;
+
+      return Response::success(updated_review.into());
     }
-
-    let review_coach_id = existing_review.coach_id;
-
-    let coach: Coach = db_conn
-      .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
-      .await;
-
-    let mut transfer_params =
-      stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id);
-
-    transfer_params.amount = Some((payment_intent.amount as f64 * 0.8) as i64);
-
-    let charge_id = match payment_intent.latest_charge {
-      Some(Expandable::Id(charge_id)) => charge_id,
-      Some(Expandable::Object(charge)) => charge.id,
-      None => panic!("No charge found"),
-    };
-
-    transfer_params.source_transaction = Some(charge_id);
-
-    stripe::Transfer::create(&client, transfer_params)
-      .await
-      .unwrap();
-
-    let updated_review = db_conn
-      .run(move |conn| {
-        diesel::update(&existing_review)
-          .set(ReviewChangeset::default().state(ReviewState::Accepted))
-          .get_result::<Review>(conn)
-          .unwrap()
-      })
-      .await;
-
-    return Response::success(ReviewView::new(updated_review, None, None, None));
   }
 
-  if let Some(cancelled) = review.cancelled {
-    if !cancelled || existing_review.state == ReviewState::Refunded {
-      return Response::success(ReviewView::new(existing_review, None, None, None));
-    }
-
-    if existing_review.state != ReviewState::AwaitingReview {
-      return Response::mutation_error(Status::UnprocessableEntity);
-    }
-
-    let mut create_refund = CreateRefund::new();
-
-    create_refund.payment_intent = Some(payment_intent.id.clone());
-
-    stripe::Refund::create(&client, create_refund)
-      .await
-      .unwrap();
-
-    let updated_review = db_conn
-      .run(move |conn| {
-        diesel::update(&existing_review)
-          .set(ReviewChangeset::default().state(ReviewState::Refunded))
-          .get_result::<Review>(conn)
-          .unwrap()
-      })
-      .await;
-
-    return Response::success(ReviewView::new(updated_review, None, None, None));
-  }
-
-  Response::success(ReviewView::new(existing_review, None, None, None))
+  Response::success(existing_review.into())
 }
 
 #[openapi(tag = "Ranklab")]
@@ -304,7 +316,7 @@ pub async fn delete(
   auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
   stripe: Stripe,
-) -> MutationResponse<()> {
+) -> MutationResponse<StatusResponse> {
   let auth_id = auth.into_deep_inner().id;
   let client = stripe.into_inner();
 
@@ -316,22 +328,21 @@ pub async fn delete(
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 
-  stripe::PaymentIntent::cancel(
-    &client,
-    &existing_review
-      .stripe_payment_intent_id
-      .parse::<PaymentIntentId>()
-      .unwrap(),
-    CancelPaymentIntent {
-      cancellation_reason: Some(PaymentIntentCancellationReason::RequestedByCustomer),
-    },
-  )
-  .await
-  .unwrap();
+  if let Some(payment_intent_id) = existing_review.stripe_payment_intent_id.clone() {
+    stripe::PaymentIntent::cancel(
+      &client,
+      &payment_intent_id.parse::<PaymentIntentId>().unwrap(),
+      CancelPaymentIntent {
+        cancellation_reason: Some(PaymentIntentCancellationReason::RequestedByCustomer),
+      },
+    )
+    .await
+    .unwrap();
 
-  db_conn
-    .run(move |conn| diesel::delete(&existing_review).execute(conn).unwrap())
-    .await;
+    db_conn
+      .run(move |conn| diesel::delete(&existing_review).execute(conn).unwrap())
+      .await;
+  }
 
-  Response::success(())
+  Response::status(Status::NoContent)
 }

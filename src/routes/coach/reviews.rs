@@ -3,7 +3,7 @@ use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Coach, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
-use crate::views::ReviewView;
+use crate::views::{ReviewView, ReviewViewOptions};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
@@ -60,12 +60,14 @@ pub async fn list(
 
       ReviewView::new(
         review,
-        None,
-        Some(cloned_coach.clone()),
-        recordings
-          .iter()
-          .find(|recording| recording.id == recording_id)
-          .cloned(),
+        ReviewViewOptions {
+          payment: None,
+          coach: Some(cloned_coach.clone()),
+          recording: recordings
+            .iter()
+            .find(|recording| recording.id == recording_id)
+            .cloned(),
+        },
       )
     })
     .collect();
@@ -96,7 +98,14 @@ pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResp
     .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
     .await?;
 
-  Response::success(ReviewView::new(review, None, Some(coach), Some(recording)))
+  Response::success(ReviewView::new(
+    review,
+    ReviewViewOptions {
+      payment: None,
+      coach: Some(coach),
+      recording: Some(recording),
+    },
+  ))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -126,7 +135,7 @@ pub async fn update(
         })
         .await;
 
-      return Response::success(ReviewView::new(updated_review, None, None, None));
+      return Response::success(updated_review.into());
     }
   }
 
@@ -141,9 +150,9 @@ pub async fn update(
         })
         .await;
 
-      return Response::success(ReviewView::new(updated_review, None, None, None));
+      return Response::success(updated_review.into());
     }
   }
 
-  Response::success(ReviewView::new(existing_review, None, None, None))
+  Response::success(existing_review.into())
 }

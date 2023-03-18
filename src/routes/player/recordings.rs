@@ -49,7 +49,7 @@ pub async fn list(auth: Auth<Jwt<Player>>, db_conn: DbConn) -> QueryResponse<Vec
 
   let recording_views: Vec<RecordingView> = recordings
     .into_iter()
-    .map(|recording| RecordingView::new(recording.clone(), None))
+    .map(|recording| RecordingView::new(recording, None))
     .collect();
 
   Response::success(recording_views)
@@ -69,11 +69,10 @@ pub async fn create(
 
   let game = games::find(&recording.game_id).unwrap();
 
-  if game
+  if !game
     .skill_levels
     .iter()
-    .find(|skill_level| skill_level.value == recording.skill_level as u8)
-    .is_none()
+    .any(|skill_level| skill_level.value == recording.skill_level as u8)
   {
     return Response::mutation_error(Status::UnprocessableEntity);
   }
