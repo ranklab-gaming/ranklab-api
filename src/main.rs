@@ -93,7 +93,6 @@ fn rocket() -> Rocket<Build> {
         player::reviews::update,
         player::stripe_billing_portal_sessions::create,
         player::stripe_payment_methods::list,
-        player::stripe_tax_calculations::create,
         session::create,
         session::reset_password,
         session::update_password

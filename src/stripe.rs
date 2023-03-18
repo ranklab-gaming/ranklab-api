@@ -1,5 +1,2 @@
 mod tax_calculation;
-pub use tax_calculation::{
-  Address, CreateTaxCalculation, CustomerDetails, TaxCalculation, TaxCalculationError,
-  TaxCalculationLineItem,
-};
+pub use tax_calculation::{TaxCalculation, TaxCalculationError, TaxCalculationLineItem};

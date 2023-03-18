@@ -5,9 +5,7 @@ use crate::models::{Coach, Player, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::{coaches, reviews};
-use crate::stripe::{
-  CreateTaxCalculation, TaxCalculation, TaxCalculationError, TaxCalculationLineItem,
-};
+use crate::stripe::{TaxCalculation, TaxCalculationError, TaxCalculationLineItem};
 use crate::views::{ReviewView, ReviewViewOptions};
 use diesel::prelude::*;
 use rocket::http::Status;
@@ -173,19 +171,12 @@ pub async fn create(
   let price = coach.price;
   let coach_account_id = coach.stripe_account_id.clone();
 
-  let tax_calculation = TaxCalculation::create(
-    config,
-    CreateTaxCalculation {
-      customer: Some(customer_id.to_string()),
-      customer_details: None,
-      price: price.into(),
-    },
-  )
-  .await
-  .map_err(|err| match err {
-    TaxCalculationError::BadRequest => MutationError::Status(Status::BadRequest),
-    TaxCalculationError::ServerError(err) => MutationError::InternalServerError(err.into()),
-  })?;
+  let tax_calculation = TaxCalculation::create(config, &customer_id, price.into())
+    .await
+    .map_err(|err| match err {
+      TaxCalculationError::BadRequest => MutationError::Status(Status::UnprocessableEntity),
+      TaxCalculationError::ServerError(err) => MutationError::InternalServerError(err.into()),
+    })?;
 
   let mut payment_intent_params = CreatePaymentIntent::new(price.into(), Currency::USD);
   let mut payment_intent_metadata = HashMap::new();
