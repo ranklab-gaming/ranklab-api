@@ -168,28 +168,26 @@ pub async fn create(
     .parse::<stripe::CustomerId>()
     .unwrap();
 
-  let price = coach.price;
-  let coach_account_id = coach.stripe_account_id.clone();
-
-  let tax_calculation = TaxCalculation::create(config, &customer_id, price.into())
+  let tax_calculation = TaxCalculation::create(config, &customer_id, coach.price.into())
     .await
     .map_err(|err| match err {
       TaxCalculationError::BadRequest => MutationError::Status(Status::UnprocessableEntity),
       TaxCalculationError::ServerError(err) => MutationError::InternalServerError(err.into()),
     })?;
 
-  let mut payment_intent_params = CreatePaymentIntent::new(price.into(), Currency::USD);
+  let mut payment_intent_params =
+    CreatePaymentIntent::new(tax_calculation.amount_total, Currency::USD);
+
   let mut payment_intent_metadata = HashMap::new();
 
   payment_intent_metadata.insert("tax_calculation_id".to_string(), tax_calculation.id);
-
   payment_intent_params.customer = Some(customer_id);
-  payment_intent_params.application_fee_amount = Some(((price as f32) * 0.2).round() as i64);
+  payment_intent_params.application_fee_amount = Some(((coach.price as f32) * 0.2).round() as i64);
   payment_intent_params.metadata = Some(payment_intent_metadata);
 
   payment_intent_params.transfer_data = Some(CreatePaymentIntentTransferData {
     amount: None,
-    destination: coach_account_id,
+    destination: coach.stripe_account_id.clone(),
   });
 
   let payment_intent = stripe::PaymentIntent::create(&stripe, payment_intent_params)

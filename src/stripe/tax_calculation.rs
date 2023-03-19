@@ -6,6 +6,7 @@ use stripe::CustomerId;
 #[derive(Deserialize, JsonSchema)]
 pub struct TaxCalculation {
   pub id: String,
+  pub amount_total: i64,
 }
 
 #[derive(Deserialize, JsonSchema, Clone, Copy)]
