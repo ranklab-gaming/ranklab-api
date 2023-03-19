@@ -8,12 +8,12 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use stripe::CustomerId;
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone)]
+#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 pub struct Address {
   pub city: Option<String>,
   pub country: Option<String>,
-  pub line1: Option<String>,
-  pub line2: Option<String>,
+  pub line_1: Option<String>,
+  pub line_2: Option<String>,
   pub postal_code: Option<String>,
   pub state: Option<String>,
 }
@@ -43,8 +43,8 @@ pub async fn get(auth: Auth<Jwt<Player>>, stripe: Stripe) -> QueryResponse<Billi
     address: customer.address.map(|address| Address {
       city: address.city,
       country: address.country,
-      line1: address.line1,
-      line2: address.line2,
+      line_1: address.line1,
+      line_2: address.line2,
       postal_code: address.postal_code,
       state: address.state,
     }),
@@ -70,8 +70,8 @@ pub async fn update(
       address: body.address.clone().map(|address| stripe::Address {
         city: address.city,
         country: address.country,
-        line1: address.line1,
-        line2: address.line2,
+        line1: address.line_1,
+        line2: address.line_2,
         postal_code: address.postal_code,
         state: address.state,
       }),
