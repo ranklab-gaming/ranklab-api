@@ -72,7 +72,7 @@ impl SqsFairing {
         match fairing.poll(&handler, &client, &profile).await {
           Ok(_) => (),
           Err(e) => {
-            error!("[sqs] {}", e);
+            error!("[sqs] {:?}", e);
             sentry::capture_error(e.root_cause());
           }
         }
