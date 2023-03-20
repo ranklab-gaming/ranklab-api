@@ -1,6 +1,5 @@
 use okapi::openapi3::Responses;
 use rocket::http::Status;
-use rocket::response::status::Custom;
 use rocket::response::Responder;
 use rocket::serde::json::Json;
 use rocket::{response, Request};
@@ -92,12 +91,14 @@ fn add_500_error(responses: &mut Responses) {
     });
 }
 
+#[derive(Debug)]
 pub enum MutationError {
   ValidationErrors(ValidationErrors),
   Status(Status),
   InternalServerError(Box<dyn Error + Send + Sync>),
 }
 
+#[derive(Debug)]
 pub enum QueryError {
   Status(Status),
   InternalServerError(Box<dyn Error + Send + Sync>),
@@ -136,7 +137,7 @@ impl<'r> Responder<'r, 'static> for MutationError {
     match self {
       MutationError::Status(status) => status.respond_to(req),
       MutationError::ValidationErrors(errors) => {
-        Custom(Status::UnprocessableEntity, Json(errors)).respond_to(req)
+        (Status::UnprocessableEntity, Json(errors)).respond_to(req)
       }
       MutationError::InternalServerError(error) => panic!("{:?}", error),
     }

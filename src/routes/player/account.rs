@@ -5,12 +5,13 @@ use crate::config::Config;
 use crate::games;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Player, PlayerChangeset};
-use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::routes::session::CreateSessionResponse;
 use crate::schema::players;
 use crate::views::PlayerView;
 use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
+use diesel::result::DatabaseErrorKind;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -18,7 +19,7 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
-use validator::Validate;
+use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Deserialize, JsonSchema, Validate)]
 pub struct UpdatePlayerRequest {
@@ -85,7 +86,7 @@ pub async fn create(
     .await
     .unwrap();
 
-  let player: Player = db_conn
+  let player = db_conn
     .run(move |conn| {
       diesel::insert_into(players::table)
         .values(
@@ -97,10 +98,23 @@ pub async fn create(
             .skill_level(player.skill_level)
             .stripe_customer_id(customer.id.to_string()),
         )
-        .get_result(conn)
-        .unwrap()
+        .get_result::<Player>(conn)
     })
-    .await;
+    .await
+    .map_err(|err| match &err {
+      diesel::result::Error::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
+        if let Some(name) = info.constraint_name() {
+          if name == "players_email_key" {
+            let mut errors = ValidationErrors::new();
+            errors.add("email", ValidationError::new("uniqueness"));
+            return MutationError::ValidationErrors(errors);
+          }
+        };
+
+        MutationError::InternalServerError(err.into())
+      }
+      _ => MutationError::InternalServerError(err.into()),
+    })?;
 
   let account = Account::Player(player);
   let token = generate_token(&account, config);
