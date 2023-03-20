@@ -7,17 +7,21 @@ use crate::emails::{Email, Recipient};
 use crate::fairings::sqs::QueueHandlerError;
 use crate::guards::DbConn;
 use crate::models::{Coach, Review, ReviewChangeset};
+use crate::stripe::TaxTransaction;
 use anyhow::anyhow;
 use diesel::prelude::*;
 use rusoto_core::{HttpClient, Region};
 use rusoto_stepfunctions::StepFunctionsClient;
 use serde_json::json;
-use stripe::{EventObject, EventType, Expandable, WebhookEvent};
+use stripe::{
+  EventObject, EventType, Expandable, PaymentIntent, UpdatePaymentIntent, WebhookEvent,
+};
 
 pub struct Direct {
   config: Config,
   db_conn: DbConn,
   step_functions: StepFunctionsClient,
+  client: StripeClient,
 }
 
 impl Direct {
@@ -25,10 +29,38 @@ impl Direct {
     &self,
     webhook: WebhookEvent,
   ) -> Result<(), QueueHandlerError> {
-    let payment_intent_id = match &webhook.data.object {
-      EventObject::PaymentIntent(payment_intent) => payment_intent.id.clone(),
+    let mut payment_intent = match &webhook.data.object {
+      EventObject::PaymentIntent(payment_intent) => payment_intent.clone(),
       _ => return Ok(()),
     };
+
+    let client = self.client.as_ref();
+    let payment_intent_id = payment_intent.id.clone();
+    let tax_calculation_id = &payment_intent.metadata["tax_calculation_id"];
+
+    let tax_transaction = TaxTransaction::create_from_calculation(
+      &self.config,
+      tax_calculation_id.to_string(),
+      payment_intent_id.to_string(),
+    )
+    .await
+    .map_err(anyhow::Error::from)?;
+
+    payment_intent.metadata.insert(
+      "tax_transaction_id".to_string(),
+      tax_transaction.id.to_string(),
+    );
+
+    PaymentIntent::update(
+      client,
+      &payment_intent.id,
+      UpdatePaymentIntent {
+        metadata: Some(payment_intent.metadata),
+        ..Default::default()
+      },
+    )
+    .await
+    .map_err(anyhow::Error::from)?;
 
     let review: Review = self
       .db_conn
@@ -103,10 +135,26 @@ impl Direct {
       return Ok(());
     }
 
+    let client = self.client.as_ref();
+
     let payment_intent_id = match charge.payment_intent {
       Some(Expandable::Id(payment_intent_id)) => payment_intent_id,
       _ => return Err(anyhow!("No payment intent id found in charge").into()),
     };
+
+    let payment_intent = PaymentIntent::retrieve(client, &payment_intent_id, &[])
+      .await
+      .map_err(anyhow::Error::from)?;
+
+    let tax_transaction_id = &payment_intent.metadata["tax_transaction_id"];
+
+    TaxTransaction::create_reversal(
+      &self.config,
+      tax_transaction_id.to_string(),
+      format!("{}-refund", payment_intent_id),
+    )
+    .await
+    .map_err(anyhow::Error::from)?;
 
     self
       .db_conn
@@ -124,7 +172,7 @@ impl Direct {
 
 #[async_trait]
 impl StripeEventHandler for Direct {
-  fn new(db_conn: DbConn, config: Config, _client: StripeClient) -> Self {
+  fn new(db_conn: DbConn, config: Config, client: StripeClient) -> Self {
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
     let mut builder = hyper::Client::builder();
@@ -133,6 +181,7 @@ impl StripeEventHandler for Direct {
 
     Self {
       config,
+      client,
       db_conn,
       step_functions: StepFunctionsClient::new_with(
         HttpClient::from_builder(builder, hyper_tls::HttpsConnector::new()),
