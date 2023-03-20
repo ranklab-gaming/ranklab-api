@@ -171,7 +171,7 @@ pub async fn create(
   let tax_calculation = TaxCalculation::create(config, &customer_id, coach.price.into())
     .await
     .map_err(|err| match err {
-      RequestError::BadRequest => MutationError::Status(Status::UnprocessableEntity),
+      RequestError::BadRequest(_) => MutationError::Status(Status::UnprocessableEntity),
       RequestError::ServerError(err) => MutationError::InternalServerError(err.into()),
     })?;
 

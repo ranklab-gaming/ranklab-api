@@ -42,7 +42,7 @@ impl TaxCalculation {
       Ok(response) => response.json::<TaxCalculation>().await.unwrap(),
       Err(err) => {
         if err.status() == Some(reqwest::StatusCode::BAD_REQUEST) {
-          return Err(RequestError::BadRequest);
+          return Err(RequestError::BadRequest(err));
         }
 
         return Err(err.into());

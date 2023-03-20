@@ -5,7 +5,7 @@ pub use tax::transactions::TaxTransaction;
 #[derive(thiserror::Error, Debug)]
 pub enum RequestError {
   #[error("Bad request")]
-  BadRequest,
+  BadRequest(reqwest::Error),
   #[error(transparent)]
   ServerError(#[from] reqwest::Error),
 }
