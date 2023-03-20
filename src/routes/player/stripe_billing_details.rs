@@ -4,6 +4,7 @@ use crate::response::{MutationError, MutationResponse, QueryResponse, Response, 
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
+use rust_iso3166::iso3166_2;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use stripe::CustomerId;
@@ -67,13 +68,28 @@ pub async fn update(
     &stripe,
     &player.stripe_customer_id.parse::<CustomerId>().unwrap(),
     stripe::UpdateCustomer {
-      address: body.address.clone().map(|address| stripe::Address {
-        city: address.city,
-        country: address.country,
-        line1: address.line_1,
-        line2: address.line_2,
-        postal_code: address.postal_code,
-        state: address.state,
+      address: body.address.clone().map(|address| {
+        let country = address.country.map(|country| country.to_uppercase());
+
+        let state = match address.state.map(|state| state.to_uppercase()) {
+          Some(state) => {
+            if let Some(country) = &country {
+              iso3166_2::from_code(&format!("{}-{}", country, state)).map(|_| state)
+            } else {
+              None
+            }
+          }
+          None => None,
+        };
+
+        stripe::Address {
+          country,
+          state,
+          city: address.city,
+          line1: address.line_1,
+          line2: address.line_2,
+          postal_code: address.postal_code,
+        }
       }),
       name: body.name.as_deref(),
       phone: body.phone.as_deref(),
