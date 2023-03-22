@@ -96,6 +96,8 @@ impl SqsFairing {
 
     if let Some(messages) = response.messages {
       for message in messages {
+        info!("[sqs] Received message: {:?}", message.message_id);
+
         match handler.handle(&message, profile).await {
           Err(QueueHandlerError::Ignorable(e)) => {
             if profile == rocket::config::Config::RELEASE_PROFILE {
@@ -107,6 +109,8 @@ impl SqsFairing {
           Err(e) => return Err(e.into()),
           Ok(()) => (),
         };
+
+        info!("[sqs] Deleting message: {:?}", message.message_id);
 
         let delete_request = DeleteMessageRequest {
           queue_url: handler.url(),
