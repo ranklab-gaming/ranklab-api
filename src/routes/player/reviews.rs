@@ -182,7 +182,6 @@ pub async fn create(
 
   payment_intent_metadata.insert("tax_calculation_id".to_string(), tax_calculation.id);
   payment_intent_params.customer = Some(customer_id);
-  payment_intent_params.application_fee_amount = Some(((coach.price as f32) * 0.2).round() as i64);
   payment_intent_params.metadata = Some(payment_intent_metadata);
 
   let payment_intent = stripe::PaymentIntent::create(&stripe, payment_intent_params)
