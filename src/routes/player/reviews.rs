@@ -17,8 +17,8 @@ use serde;
 use serde::Deserialize;
 use std::collections::HashMap;
 use stripe::{
-  CancelPaymentIntent, CreatePaymentIntent, CreatePaymentIntentTransferData, CreateRefund,
-  Currency, Expandable, PaymentIntentCancellationReason, PaymentIntentId,
+  CancelPaymentIntent, CreatePaymentIntent, CreateRefund, Currency, Expandable,
+  PaymentIntentCancellationReason, PaymentIntentId,
 };
 use uuid::Uuid;
 
