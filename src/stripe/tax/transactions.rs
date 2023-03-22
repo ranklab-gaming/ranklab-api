@@ -51,6 +51,7 @@ impl TaxTransaction {
   ) -> Result<Self, RequestError> {
     let client = reqwest::Client::new();
     let request = client.post("https://api.stripe.com/v1/tax/transactions/create_from_calculation");
+
     let body = [
       ("calculation", tax_calculation_id.clone()),
       ("reference", reference),
