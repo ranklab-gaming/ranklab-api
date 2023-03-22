@@ -162,9 +162,22 @@ pub async fn update(
             .emails_enabled(account.emails_enabled),
         )
         .get_result::<Player>(conn)
-        .unwrap()
     })
     .await
+    .map_err(|err| match &err {
+      diesel::result::Error::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
+        if let Some(name) = info.constraint_name() {
+          if name == "players_email_key" {
+            let mut errors = ValidationErrors::new();
+            errors.add("email", ValidationError::new("uniqueness"));
+            return MutationError::ValidationErrors(errors);
+          }
+        };
+
+        MutationError::InternalServerError(err.into())
+      }
+      _ => MutationError::InternalServerError(err.into()),
+    })?
     .into();
 
   Response::success(player)

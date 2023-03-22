@@ -2,20 +2,21 @@ use crate::auth::{generate_token, Account};
 use crate::config::Config;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Coach, CoachChangeset, CoachInvitation, CoachInvitationChangeset};
-use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::routes::session::CreateSessionResponse;
 use crate::schema::coaches;
 use crate::views::CoachView;
 use bcrypt::{hash, DEFAULT_COST};
 use chrono::Utc;
 use diesel::prelude::*;
+use diesel::result::DatabaseErrorKind;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::{self, Deserialize};
 use sha2::{Digest, Sha256};
-use validator::Validate;
+use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateCoachRequest {
@@ -82,9 +83,22 @@ pub async fn update(
             .emails_enabled(account.emails_enabled),
         )
         .get_result::<Coach>(conn)
-        .unwrap()
     })
     .await
+    .map_err(|err| match &err {
+      diesel::result::Error::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
+        if let Some(name) = info.constraint_name() {
+          if name == "coaches_email_key" {
+            let mut errors = ValidationErrors::new();
+            errors.add("email", ValidationError::new("uniqueness"));
+            return MutationError::ValidationErrors(errors);
+          }
+        };
+
+        MutationError::InternalServerError(err.into())
+      }
+      _ => MutationError::InternalServerError(err.into()),
+    })?
     .into();
 
   Response::success(coach)
@@ -202,9 +216,22 @@ pub async fn create(
             .country(coach.country.clone()),
         )
         .get_result(conn)
-        .unwrap()
     })
-    .await;
+    .await
+    .map_err(|err| match &err {
+      diesel::result::Error::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
+        if let Some(name) = info.constraint_name() {
+          if name == "coaches_email_key" {
+            let mut errors = ValidationErrors::new();
+            errors.add("email", ValidationError::new("uniqueness"));
+            return MutationError::ValidationErrors(errors);
+          }
+        };
+
+        MutationError::InternalServerError(err.into())
+      }
+      _ => MutationError::InternalServerError(err.into()),
+    })?;
 
   db_conn
     .run(move |conn| {
