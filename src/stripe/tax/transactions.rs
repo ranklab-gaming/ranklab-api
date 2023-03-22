@@ -47,13 +47,16 @@ impl TaxTransaction {
   ) -> Result<Self, RequestError> {
     let client = reqwest::Client::new();
     let request = client.post("https://api.stripe.com/v1/tax/transactions/create_from_calculation");
-
     let body = [
-      ("calculation", tax_calculation_id),
+      ("calculation", tax_calculation_id.clone()),
       ("reference", reference),
     ];
 
-    let response = with_headers(request, config).form(&body).send().await?;
+    let response = with_headers(request, config)
+      .header("Idempotency-Key", tax_calculation_id)
+      .form(&body)
+      .send()
+      .await?;
 
     let tax_transaction = match response.error_for_status() {
       Ok(response) => response.json::<TaxTransaction>().await.unwrap(),

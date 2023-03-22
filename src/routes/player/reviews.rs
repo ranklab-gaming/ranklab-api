@@ -185,11 +185,6 @@ pub async fn create(
   payment_intent_params.application_fee_amount = Some(((coach.price as f32) * 0.2).round() as i64);
   payment_intent_params.metadata = Some(payment_intent_metadata);
 
-  payment_intent_params.transfer_data = Some(CreatePaymentIntentTransferData {
-    amount: None,
-    destination: coach.stripe_account_id.clone(),
-  });
-
   let payment_intent = stripe::PaymentIntent::create(&stripe, payment_intent_params)
     .await
     .unwrap();
