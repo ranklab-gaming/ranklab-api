@@ -14,6 +14,7 @@ use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::{self, Deserialize};
+use sha2::{Digest, Sha256};
 use validator::Validate;
 
 #[derive(Deserialize, Validate, JsonSchema)]
@@ -176,9 +177,13 @@ pub async fn create(
     payouts: None,
   });
 
-  let account = stripe::Account::create(&stripe.into_inner(), params)
-    .await
-    .unwrap();
+  let stripe = stripe
+    .into_inner()
+    .with_strategy(stripe::RequestStrategy::Idempotent(hex::encode(
+      Sha256::digest(coach.email.as_bytes()),
+    )));
+
+  let account = stripe::Account::create(&stripe, params).await.unwrap();
 
   let coach: Coach = db_conn
     .run(move |conn| {

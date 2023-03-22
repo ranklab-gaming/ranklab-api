@@ -60,13 +60,18 @@ impl QueueHandler for ScheduledTasksHandler {
       .await?;
 
     if review.state == ReviewState::AwaitingReview {
-      let client = self.client.as_ref();
-      let payment_intent = review.get_payment_intent(client).await;
+      let client = self
+        .client
+        .as_ref()
+        .clone()
+        .with_strategy(stripe::RequestStrategy::Idempotent(review.id.to_string()));
+
+      let payment_intent = review.get_payment_intent(&client).await;
       let mut create_refund = CreateRefund::new();
 
       create_refund.payment_intent = Some(payment_intent.id.clone());
 
-      stripe::Refund::create(client, create_refund)
+      stripe::Refund::create(&client, create_refund)
         .await
         .map_err(anyhow::Error::from)?;
     }

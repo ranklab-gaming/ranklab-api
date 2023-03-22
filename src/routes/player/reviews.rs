@@ -224,7 +224,10 @@ pub async fn update(
   stripe: Stripe,
 ) -> MutationResponse<ReviewView> {
   let auth_id = auth.into_deep_inner().id;
-  let client = stripe.into_inner();
+
+  let client = stripe
+    .into_inner()
+    .with_strategy(stripe::RequestStrategy::Idempotent(id.to_string()));
 
   let existing_review: Review = db_conn
     .run(move |conn| Review::find_for_player(&id, &auth_id).first(conn))

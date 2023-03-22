@@ -19,6 +19,7 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Deserialize, JsonSchema, Validate)]
@@ -82,9 +83,13 @@ pub async fn create(
     ip_address: Some(ip_address.ip().to_string()),
   });
 
-  let customer = stripe::Customer::create(&stripe.into_inner(), params)
-    .await
-    .unwrap();
+  let stripe = stripe
+    .into_inner()
+    .with_strategy(stripe::RequestStrategy::Idempotent(hex::encode(
+      Sha256::digest(player.email.as_bytes()),
+    )));
+
+  let customer = stripe::Customer::create(&stripe, params).await.unwrap();
 
   let player = db_conn
     .run(move |conn| {
