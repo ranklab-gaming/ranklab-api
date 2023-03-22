@@ -102,15 +102,19 @@ impl Direct {
       .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
       .await?;
 
+    if !coach.emails_enabled {
+      return Ok(());
+    }
+
     let email = Email::new(
       &self.config,
       "notification".to_owned(),
       json!({
-        "subject": "New VODs are available",
-        "title": "There are new VODs available for review!",
+        "subject": "New recodings are waiting for your review",
+        "title": "There are new recordings available for review!",
         "body": "Go to your dashboard to start analyzing them.",
-        "cta" : "View Available VODs",
-        "cta_url" : "https://ranklab.gg/dashboard"
+        "cta" : "View Available Recordings",
+        "cta_url" : "https://ranklab.gg/coach/dashboard"
       }),
       vec![Recipient::new(
         coach.email.clone(),

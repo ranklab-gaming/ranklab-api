@@ -31,6 +31,7 @@ diesel::table! {
         stripe_details_submitted -> Bool,
         stripe_payouts_enabled -> Bool,
         updated_at -> Timestamp,
+        emails_enabled -> Bool,
     }
 }
 
@@ -70,6 +71,7 @@ diesel::table! {
         skill_level -> Int2,
         stripe_customer_id -> Text,
         updated_at -> Timestamp,
+        emails_enabled -> Bool,
     }
 }
 

@@ -26,6 +26,7 @@ pub struct Coach {
   pub stripe_details_submitted: bool,
   pub stripe_payouts_enabled: bool,
   pub updated_at: chrono::NaiveDateTime,
+  pub emails_enabled: bool,
 }
 
 impl Coach {

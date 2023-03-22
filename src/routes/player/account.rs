@@ -31,6 +31,7 @@ pub struct UpdatePlayerRequest {
   #[validate(length(min = 1), custom = "crate::games::validate_id")]
   game_id: String,
   skill_level: i16,
+  emails_enabled: bool,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
@@ -157,7 +158,8 @@ pub async fn update(
             .email(account.email.clone())
             .name(account.name.clone())
             .game_id(account.game_id.clone())
-            .skill_level(account.skill_level),
+            .skill_level(account.skill_level)
+            .emails_enabled(account.emails_enabled),
         )
         .get_result::<Player>(conn)
         .unwrap()

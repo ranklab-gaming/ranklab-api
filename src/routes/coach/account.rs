@@ -47,6 +47,7 @@ pub struct UpdateCoachRequest {
   bio: String,
   #[validate(range(min = 1, max = 10000))]
   price: i32,
+  emails_enabled: bool,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -77,7 +78,8 @@ pub async fn update(
             .name(account.name.clone())
             .bio(account.bio.clone())
             .price(account.price)
-            .game_id(account.game_id.clone()),
+            .game_id(account.game_id.clone())
+            .emails_enabled(account.emails_enabled),
         )
         .get_result::<Coach>(conn)
         .unwrap()

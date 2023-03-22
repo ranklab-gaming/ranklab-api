@@ -21,6 +21,7 @@ pub struct Player {
   pub skill_level: i16,
   pub stripe_customer_id: String,
   pub updated_at: chrono::NaiveDateTime,
+  pub emails_enabled: bool,
 }
 
 impl Player {

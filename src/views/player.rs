@@ -11,6 +11,7 @@ pub struct PlayerView {
   pub email: String,
   pub game_id: String,
   pub skill_level: i16,
+  pub emails_enabled: bool,
 }
 
 impl From<Player> for PlayerView {
@@ -21,6 +22,7 @@ impl From<Player> for PlayerView {
       email: player.email,
       game_id: player.game_id,
       skill_level: player.skill_level,
+      emails_enabled: player.emails_enabled,
     }
   }
 }
