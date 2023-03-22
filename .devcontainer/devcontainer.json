@@ -20,9 +20,7 @@
       ],
       "settings": {
         "editor.codeLens": false,
-        "[rust]": {
-          "editor.defaultFormatter": "rust-lang.rust-analyzer"
-        },
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
         "editor.detectIndentation": false,
         "editor.formatOnSave": true,
         "editor.inlineSuggest.enabled": true,
@@ -34,22 +32,10 @@
         "editor.wordWrap": "on",
         "explorer.confirmDelete": false,
         "explorer.confirmDragAndDrop": false,
-        "extensions.ignoreRecommendations": false,
-        "files.autoSave": "onFocusChange",
+        "extensions.ignoreRecommendations": true,
+        "files.autoSave": "off",
         "files.trimTrailingWhitespace": true,
-        "files.watcherExclude": {
-          "**/.git": true,
-          "**/.DS_Store": true,
-          "**/.git/objects/**": true,
-          "**/tmp/**": true
-        },
         "git.autofetch": true,
-        "github.copilot.enable": {
-          "*": true,
-          "yaml": false,
-          "plaintext": true,
-          "markdown": false
-        },
         "prettier.requireConfig": true,
         "search.followSymlinks": false,
         "security.workspace.trust.untrustedFiles": "open",
