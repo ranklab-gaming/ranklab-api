@@ -10,7 +10,6 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "esbenp.prettier-vscode",
         "rust-lang.rust-analyzer",
         "vadimcn.vscode-lldb",
         "github.vscode-pull-request-github",
