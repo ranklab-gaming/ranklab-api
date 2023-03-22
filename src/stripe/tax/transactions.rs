@@ -19,12 +19,16 @@ impl TaxTransaction {
     let request = client.post("https://api.stripe.com/v1/tax/transactions/create_reversal");
 
     let body = [
-      ("reversal[original_transaction]", tax_transaction_id),
+      ("original_transaction", tax_transaction_id.clone()),
       ("reference", reference),
       ("mode", "full".to_string()),
     ];
 
-    let response = with_headers(request, config).form(&body).send().await?;
+    let response = with_headers(request, config)
+      .header("Idempotency-Key", tax_transaction_id)
+      .form(&body)
+      .send()
+      .await?;
 
     let tax_transaction = match response.error_for_status() {
       Ok(response) => response.json::<TaxTransaction>().await.unwrap(),
