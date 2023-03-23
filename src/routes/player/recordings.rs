@@ -2,7 +2,6 @@ use crate::config::Config;
 use crate::games;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Player, Recording, RecordingChangeset};
-use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::schema::recordings;
 use crate::views::RecordingView;
@@ -39,35 +38,21 @@ pub struct CreateRecordingRequest {
   game_id: String,
 }
 
-#[derive(FromForm, JsonSchema)]
-pub struct ListRecordingsQuery {
-  page: Option<i64>,
-}
-
 #[openapi(tag = "Ranklab")]
-#[get("/player/recordings?<params..>")]
-pub async fn list(
-  auth: Auth<Jwt<Player>>,
-  db_conn: DbConn,
-  params: ListRecordingsQuery,
-) -> QueryResponse<PaginatedResult<RecordingView>> {
-  let recordings: PaginatedResult<Recording> = db_conn
+#[get("/player/recordings")]
+pub async fn list(auth: Auth<Jwt<Player>>, db_conn: DbConn) -> QueryResponse<Vec<RecordingView>> {
+  let recordings: Vec<Recording> = db_conn
     .run(move |conn| {
-      Recording::filter_for_player(&auth.into_deep_inner().id)
-        .paginate(params.page.unwrap_or(1))
-        .load_and_count_pages::<Recording>(conn)
-        .unwrap()
+      Recording::filter_for_player(&auth.into_deep_inner().id).load::<Recording>(conn)
     })
-    .await;
+    .await?;
 
   let recording_views: Vec<RecordingView> = recordings
-    .records
-    .clone()
     .into_iter()
     .map(|recording| RecordingView::new(recording, None))
     .collect();
 
-  Response::success(recordings.records(recording_views))
+  Response::success(recording_views)
 }
 
 #[openapi(tag = "Ranklab")]
