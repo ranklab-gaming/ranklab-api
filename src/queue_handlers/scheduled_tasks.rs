@@ -95,7 +95,7 @@ impl QueueHandler for ScheduledTasksHandler {
         "notification".to_owned(),
         json!({
           "subject": "Your review has been refunded",
-          "title": format!("{} coach hasn't reviewed your recording within the 5-days window, and your review has been automatically refunded.", coach.name),
+          "title": format!("{} hasn't reviewed your recording within the 5-days window, and your review has been automatically refunded.", coach.name),
           "body": "You can now find the review in your archive.",
           "cta" : "View Archive",
           "cta_url" : format!("{}/player/archive", self.config.web_host),
