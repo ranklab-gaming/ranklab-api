@@ -1,14 +1,18 @@
+use crate::config::Config;
 use crate::data_types::ReviewState;
+use crate::emails::{Email, Recipient};
 use crate::guards::{Auth, DbConn, Jwt};
-use crate::models::{Coach, Recording, Review, ReviewChangeset};
+use crate::models::{Coach, Player, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::views::{ReviewView, ReviewViewOptions};
 use diesel::prelude::*;
 use rocket::serde::json::Json;
+use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::Deserialize;
+use serde_json::json;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -117,13 +121,17 @@ pub async fn update(
   review: Json<UpdateReviewRequest>,
   auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
+  config: &State<Config>,
 ) -> MutationResponse<ReviewView> {
   if let Err(errors) = review.validate() {
     return Response::validation_error(errors);
   }
 
+  let coach = auth.into_deep_inner();
+  let coach_id = coach.id;
+
   let existing_review = db_conn
-    .run(move |conn| Review::find_for_coach(&id, &auth.into_deep_inner().id).first::<Review>(conn))
+    .run(move |conn| Review::find_for_coach(&id, &coach_id).first::<Review>(conn))
     .await?;
 
   if let Some(true) = review.published {
@@ -136,6 +144,33 @@ pub async fn update(
             .unwrap()
         })
         .await;
+
+      let player_id = updated_review.player_id;
+
+      let player = db_conn
+        .run(move |conn| Player::find_by_id(&player_id).first::<Player>(conn))
+        .await?;
+
+      let email = Email::new(
+        config,
+        "notification".to_owned(),
+        json!({
+          "subject": "Your review has been completed",
+          "title": format!("{} has finished reviewing your recording", coach.name),
+          "body": "You can now have a look at the comments and suggestions your coach has made.",
+          "cta" : "View Review",
+          "cta_url" : format!("{}/player/reviews/{}", config.web_host, updated_review.id),
+          "unsubscribe_url": format!("{}/player/account?tab=notifications", config.web_host),
+        }),
+        vec![Recipient::new(
+          player.email.clone(),
+          json!({
+            "name": player.name,
+          }),
+        )],
+      );
+
+      email.deliver().await.unwrap();
 
       return Response::success(updated_review.into());
     }
@@ -151,6 +186,33 @@ pub async fn update(
             .unwrap()
         })
         .await;
+
+      let player_id = updated_review.player_id;
+
+      let player = db_conn
+        .run(move |conn| Player::find_by_id(&player_id).first::<Player>(conn))
+        .await?;
+
+      let email = Email::new(
+        config,
+        "notification".to_owned(),
+        json!({
+          "subject": "Your review has been taken",
+          "title": format!("{} has started looking at your recording and will publish a review shortly", coach.name),
+          "body": "You will receive an email when your coach has finished reviewing your recording.",
+          "cta" : "View Review",
+          "cta_url" : format!("{}/player/reviews/{}", config.web_host, updated_review.id),
+          "unsubscribe_url": format!("{}/player/account?tab=notifications", config.web_host),
+        }),
+        vec![Recipient::new(
+          player.email.clone(),
+          json!({
+            "name": player.name,
+          }),
+        )],
+      );
+
+      email.deliver().await.unwrap();
 
       return Response::success(updated_review.into());
     }

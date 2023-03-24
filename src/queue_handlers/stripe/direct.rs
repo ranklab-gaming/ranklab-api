@@ -107,7 +107,7 @@ impl Direct {
         &self.config,
         "notification".to_owned(),
         json!({
-          "subject": "New recodings are waiting for your review",
+          "subject": "New recordings are waiting for your review",
           "title": "There are new recordings available for review!",
           "body": "Go to your dashboard to start analyzing them.",
           "cta" : "View Available Recordings",
