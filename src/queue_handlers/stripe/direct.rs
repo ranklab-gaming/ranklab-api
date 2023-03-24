@@ -102,29 +102,28 @@ impl Direct {
       .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
       .await?;
 
-    if !coach.emails_enabled {
-      return Ok(());
-    }
-
-    let email = Email::new(
-      &self.config,
-      "notification".to_owned(),
-      json!({
-        "subject": "New recodings are waiting for your review",
-        "title": "There are new recordings available for review!",
-        "body": "Go to your dashboard to start analyzing them.",
-        "cta" : "View Available Recordings",
-        "cta_url" : "https://ranklab.gg/coach/dashboard"
-      }),
-      vec![Recipient::new(
-        coach.email.clone(),
+    if coach.emails_enabled {
+      let email = Email::new(
+        &self.config,
+        "notification".to_owned(),
         json!({
-          "name": coach.name,
+          "subject": "New recodings are waiting for your review",
+          "title": "There are new recordings available for review!",
+          "body": "Go to your dashboard to start analyzing them.",
+          "cta" : "View Available Recordings",
+          "cta_url" : format!("{}/coach/dashboard", self.config.web_host),
+          "unsubscribe_url": format!("{}/coach/account?tab=notifications", self.config.web_host)
         }),
-      )],
-    );
+        vec![Recipient::new(
+          coach.email.clone(),
+          json!({
+            "name": coach.name,
+          }),
+        )],
+      );
 
-    email.deliver().await.map_err(anyhow::Error::from)?;
+      email.deliver().await.map_err(anyhow::Error::from)?;
+    }
 
     Ok(())
   }
