@@ -1,9 +1,10 @@
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Coach, Comment, CommentChangeset, Review};
-use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::comments;
 use crate::views::CommentView;
 use diesel::prelude::*;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -98,6 +99,26 @@ pub async fn update(
     .into();
 
   Response::success(updated_comment)
+}
+
+#[openapi(tag = "Ranklab")]
+#[delete("/coach/comments/<id>")]
+pub async fn delete(
+  id: Uuid,
+  auth: Auth<Jwt<Coach>>,
+  db_conn: DbConn,
+) -> MutationResponse<StatusResponse> {
+  let coach_id = auth.into_deep_inner().id;
+
+  let existing_comment = db_conn
+    .run(move |conn| Comment::find_for_coach(&id, &coach_id).first::<Comment>(conn))
+    .await?;
+
+  db_conn
+    .run(move |conn| diesel::delete(&existing_comment).execute(conn))
+    .await?;
+
+  Response::status(Status::NoContent)
 }
 
 #[derive(FromForm, JsonSchema)]

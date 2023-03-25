@@ -68,6 +68,7 @@ fn rocket() -> Rocket<Build> {
         coach::account::get,
         coach::account::update,
         coach::comments::create,
+        coach::comments::delete,
         coach::comments::list,
         coach::comments::update,
         coach::reviews::get,
