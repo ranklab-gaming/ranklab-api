@@ -276,7 +276,26 @@ pub async fn update(
       })
       .await;
 
-    return Response::success(updated_review.into());
+    let coach_id = updated_review.coach_id;
+    let recording_id = updated_review.recording_id;
+
+    let coach = db_conn
+      .run(move |conn| Coach::find_by_id(&coach_id).first::<Coach>(conn))
+      .await?;
+
+    let recording = db_conn
+      .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
+      .await?;
+
+    return Response::success(ReviewView::new(
+      updated_review,
+      ReviewViewOptions {
+        payment_intent: None,
+        tax_calculation: None,
+        coach: Some(coach),
+        recording: Some(recording),
+      },
+    ));
   }
 
   if let Some(cancelled) = review.cancelled {
@@ -305,7 +324,26 @@ pub async fn update(
       })
       .await;
 
-    return Response::success(updated_review.into());
+    let coach_id = updated_review.coach_id;
+    let recording_id = updated_review.recording_id;
+
+    let coach = db_conn
+      .run(move |conn| Coach::find_by_id(&coach_id).first::<Coach>(conn))
+      .await?;
+
+    let recording = db_conn
+      .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
+      .await?;
+
+    return Response::success(ReviewView::new(
+      updated_review,
+      ReviewViewOptions {
+        payment_intent: None,
+        tax_calculation: None,
+        coach: Some(coach),
+        recording: Some(recording),
+      },
+    ));
   }
 
   Response::success(existing_review.into())
