@@ -156,7 +156,7 @@ pub async fn update(
         "notification".to_owned(),
         json!({
           "subject": "Your review has been completed",
-          "title": format!("{} has finished reviewing your recording", coach.name),
+          "title": format!("{} has finished reviewing your recording.", coach.name),
           "body": "You can now have a look at the comments and suggestions your coach has made.",
           "cta" : "View Review",
           "cta_url" : format!("{}/player/reviews/{}", config.web_host, updated_review.id),
@@ -198,7 +198,7 @@ pub async fn update(
         "notification".to_owned(),
         json!({
           "subject": "Your review has been taken",
-          "title": format!("{} has started looking at your recording and will publish a review shortly", coach.name),
+          "title": format!("{} has started reviewing your recording", coach.name),
           "body": "You will receive an email when your coach has finished reviewing your recording.",
           "cta" : "View Review",
           "cta_url" : format!("{}/player/reviews/{}", config.web_host, updated_review.id),
