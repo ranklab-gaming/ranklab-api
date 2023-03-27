@@ -81,6 +81,7 @@ pub async fn list(
           payment_intent: None,
           tax_calculation: None,
           coach: coaches.iter().find(|coach| coach.id == coach_id).cloned(),
+          player: None,
           recording: recordings
             .iter()
             .find(|recording| recording.id == recording_id)
@@ -131,6 +132,7 @@ pub async fn get(
       payment_intent: Some(payment_intent),
       tax_calculation: Some(tax_calculation),
       coach: Some(coach),
+      player: None,
       recording: Some(recording),
     },
   ))
@@ -293,6 +295,7 @@ pub async fn update(
         payment_intent: None,
         tax_calculation: None,
         coach: Some(coach),
+        player: None,
         recording: Some(recording),
       },
     ));
@@ -342,6 +345,7 @@ pub async fn update(
         tax_calculation: None,
         coach: Some(coach),
         recording: Some(recording),
+        player: None,
       },
     ));
   }

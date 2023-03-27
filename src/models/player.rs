@@ -1,6 +1,6 @@
 use crate::schema::players;
 use derive_builder::Builder;
-use diesel::dsl::{Find, FindBy};
+use diesel::dsl::{EqAny, Filter, Find, FindBy};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -31,5 +31,9 @@ impl Player {
 
   pub fn find_by_email(email: &str) -> FindBy<players::table, players::email, String> {
     players::table.filter(players::email.eq(email.to_string()))
+  }
+
+  pub fn filter_by_ids(ids: Vec<Uuid>) -> Filter<players::table, EqAny<players::id, Vec<Uuid>>> {
+    players::table.filter(players::id.eq_any(ids))
   }
 }

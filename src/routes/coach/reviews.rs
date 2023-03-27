@@ -30,7 +30,6 @@ pub async fn list(
   params: ListReviewsQuery,
 ) -> QueryResponse<PaginatedResult<ReviewView>> {
   let coach = auth.into_deep_inner();
-  let cloned_coach = coach.clone();
 
   let paginated_reviews: PaginatedResult<Review> = db_conn
     .run(move |conn| {
@@ -55,22 +54,36 @@ pub async fn list(
     })
     .await?;
 
+  let records = paginated_reviews.records.clone();
+
+  let players = db_conn
+    .run(move |conn| {
+      Player::filter_by_ids(records.into_iter().map(|review| review.player_id).collect())
+        .load::<Player>(conn)
+    })
+    .await?;
+
   let review_views: Vec<ReviewView> = paginated_reviews
     .records
     .clone()
     .into_iter()
     .map(|review| {
       let recording_id = review.recording_id;
+      let player_id = review.player_id;
 
       ReviewView::new(
         review,
         ReviewViewOptions {
           payment_intent: None,
           tax_calculation: None,
-          coach: Some(cloned_coach.clone()),
+          coach: None,
           recording: recordings
             .iter()
             .find(|recording| recording.id == recording_id)
+            .cloned(),
+          player: players
+            .iter()
+            .find(|player| player.id == player_id)
             .cloned(),
         },
       )
@@ -91,13 +104,17 @@ pub struct UpdateReviewRequest {
 #[get("/coach/reviews/<id>")]
 pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResponse<ReviewView> {
   let coach = auth.into_deep_inner();
-  let coach_id = coach.id;
 
   let review = db_conn
-    .run(move |conn| Review::find_for_coach(&id, &coach_id).first::<Review>(conn))
+    .run(move |conn| Review::find_for_coach(&id, &coach.id).first::<Review>(conn))
     .await?;
 
   let recording_id = review.recording_id;
+  let player_id = review.player_id;
+
+  let player = db_conn
+    .run(move |conn| Player::find_by_id(&player_id).first::<Player>(conn))
+    .await?;
 
   let recording = db_conn
     .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
@@ -108,8 +125,9 @@ pub async fn get(id: Uuid, auth: Auth<Jwt<Coach>>, db_conn: DbConn) -> QueryResp
     ReviewViewOptions {
       payment_intent: None,
       tax_calculation: None,
-      coach: Some(coach),
+      coach: None,
       recording: Some(recording),
+      player: Some(player),
     },
   ))
 }
@@ -134,6 +152,18 @@ pub async fn update(
     .run(move |conn| Review::find_for_coach(&id, &coach_id).first::<Review>(conn))
     .await?;
 
+  let player_id = existing_review.player_id;
+
+  let player = db_conn
+    .run(move |conn| Player::find_by_id(&player_id).first::<Player>(conn))
+    .await?;
+
+  let recording_id = existing_review.recording_id;
+
+  let recording = db_conn
+    .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
+    .await?;
+
   if let Some(true) = review.published {
     if existing_review.state == ReviewState::Draft {
       let updated_review = db_conn
@@ -144,12 +174,6 @@ pub async fn update(
             .unwrap()
         })
         .await;
-
-      let player_id = updated_review.player_id;
-
-      let player = db_conn
-        .run(move |conn| Player::find_by_id(&player_id).first::<Player>(conn))
-        .await?;
 
       let email = Email::new(
         config,
@@ -172,7 +196,16 @@ pub async fn update(
 
       email.deliver().await.unwrap();
 
-      return Response::success(updated_review.into());
+      return Response::success(ReviewView::new(
+        updated_review,
+        ReviewViewOptions {
+          payment_intent: None,
+          tax_calculation: None,
+          coach: None,
+          recording: Some(recording),
+          player: Some(player),
+        },
+      ));
     }
   }
 
@@ -214,9 +247,27 @@ pub async fn update(
 
       email.deliver().await.unwrap();
 
-      return Response::success(updated_review.into());
+      return Response::success(ReviewView::new(
+        updated_review,
+        ReviewViewOptions {
+          payment_intent: None,
+          tax_calculation: None,
+          coach: None,
+          recording: Some(recording),
+          player: Some(player),
+        },
+      ));
     }
   }
 
-  Response::success(existing_review.into())
+  Response::success(ReviewView::new(
+    existing_review,
+    ReviewViewOptions {
+      payment_intent: None,
+      tax_calculation: None,
+      coach: None,
+      recording: Some(recording),
+      player: Some(player),
+    },
+  ))
 }

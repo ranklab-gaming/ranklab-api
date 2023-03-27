@@ -1,12 +1,12 @@
 use crate::data_types::ReviewState;
-use crate::models::{Coach, Recording, Review};
+use crate::models::{Coach, Player, Recording, Review};
 use crate::stripe::TaxCalculationLineItem;
 use schemars::JsonSchema;
 use serde::Serialize;
 use stripe::PaymentIntent;
 use uuid::Uuid;
 
-use super::{CoachView, RecordingView};
+use super::{CoachView, PlayerView, RecordingView};
 
 #[derive(Serialize, JsonSchema)]
 #[serde(rename = "Review")]
@@ -22,6 +22,7 @@ pub struct ReviewView {
   pub stripe_client_secret: Option<String>,
   pub tax: Option<i64>,
   pub coach: Option<CoachView>,
+  pub player: Option<PlayerView>,
 }
 
 #[derive(Default)]
@@ -29,6 +30,7 @@ pub struct ReviewViewOptions {
   pub payment_intent: Option<PaymentIntent>,
   pub tax_calculation: Option<TaxCalculationLineItem>,
   pub coach: Option<Coach>,
+  pub player: Option<Player>,
   pub recording: Option<Recording>,
 }
 
@@ -52,6 +54,7 @@ impl ReviewView {
         .tax_calculation
         .map(|tax_calculation| tax_calculation.amount_tax),
       coach: options.coach.map(|coach| coach.into()),
+      player: options.player.map(|player| player.into()),
     }
   }
 }
