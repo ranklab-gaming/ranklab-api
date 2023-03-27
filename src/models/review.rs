@@ -77,6 +77,8 @@ impl Review {
           when 'published' then 2
           when 'draft' then 3
           when 'awaiting_review' then 4
+          when 'accepted' then 5
+          when 'refunded' then 6
         end,
         created_at desc",
       ))
