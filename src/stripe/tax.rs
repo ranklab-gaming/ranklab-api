@@ -7,7 +7,7 @@ fn with_headers(request: reqwest::RequestBuilder, config: &Config) -> reqwest::R
   request
     .header(
       "Stripe-Version",
-      "2020-08-27;tax_calc_beta=v3;tax_txns_beta=v2",
+      "2022-11-15",
     )
     .header("Authorization", format!("Bearer {}", config.stripe_secret))
 }
