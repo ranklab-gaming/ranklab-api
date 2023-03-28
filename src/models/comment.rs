@@ -1,6 +1,7 @@
 use crate::schema::comments;
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, Filter};
+use diesel::helper_types::{Asc, Order};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -33,18 +34,26 @@ impl Comment {
 
   pub fn filter_by_review_id(
     review_id: &Uuid,
-  ) -> Filter<comments::table, Eq<comments::review_id, Uuid>> {
-    comments::table.filter(comments::review_id.eq(*review_id))
+  ) -> Order<Filter<comments::table, Eq<comments::review_id, Uuid>>, Asc<comments::video_timestamp>>
+  {
+    comments::table
+      .filter(comments::review_id.eq(*review_id))
+      .order(comments::video_timestamp.asc())
   }
 
   pub fn filter_by_review_for_coach(
     review_id: &Uuid,
     coach_id: &Uuid,
-  ) -> Filter<comments::table, And<Eq<comments::review_id, Uuid>, Eq<comments::coach_id, Uuid>>> {
-    comments::table.filter(
-      comments::review_id
-        .eq(*review_id)
-        .and(comments::coach_id.eq(*coach_id)),
-    )
+  ) -> Order<
+    Filter<comments::table, And<Eq<comments::review_id, Uuid>, Eq<comments::coach_id, Uuid>>>,
+    Asc<comments::video_timestamp>,
+  > {
+    comments::table
+      .filter(
+        comments::review_id
+          .eq(*review_id)
+          .and(comments::coach_id.eq(*coach_id)),
+      )
+      .order(comments::video_timestamp.asc())
   }
 }
