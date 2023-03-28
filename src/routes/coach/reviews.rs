@@ -97,7 +97,7 @@ pub async fn list(
 #[schemars(rename = "CoachUpdateReviewRequest")]
 pub struct UpdateReviewRequest {
   published: Option<bool>,
-  taken: Option<bool>,
+  started: Option<bool>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -209,7 +209,7 @@ pub async fn update(
     }
   }
 
-  if let Some(true) = review.taken {
+  if let Some(true) = review.started {
     if existing_review.state == ReviewState::AwaitingReview {
       let updated_review = db_conn
         .run(move |conn| {
@@ -230,9 +230,9 @@ pub async fn update(
         config,
         "notification".to_owned(),
         json!({
-          "subject": "Your review has been taken",
+          "subject": format!("{} has started reviewing your recording", coach.name),
           "title": format!("{} has started reviewing your recording", coach.name),
-          "body": "You will receive an email when your coach has finished reviewing your recording.",
+          "body": "You will receive an email when your coach is finished with the review.",
           "cta" : "View Review",
           "cta_url" : format!("{}/player/reviews/{}", config.web_host, updated_review.id),
           "unsubscribe_url": format!("{}/player/account?tab=notifications", config.web_host),
