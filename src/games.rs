@@ -1,3 +1,4 @@
+pub mod hearthstone;
 pub mod overwatch;
 pub mod valorant;
 
@@ -6,7 +7,11 @@ use lazy_static::lazy_static;
 use validator::ValidationError;
 
 lazy_static! {
-  static ref GAMES: Vec<Game> = vec![overwatch::overwatch(), valorant::valorant()];
+  static ref GAMES: Vec<Game> = vec![
+    overwatch::overwatch(),
+    valorant::valorant(),
+    hearthstone::hearthstone()
+  ];
 }
 
 pub fn all() -> &'static Vec<Game> {
