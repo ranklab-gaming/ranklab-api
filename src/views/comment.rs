@@ -12,10 +12,13 @@ pub struct CommentView {
   pub body: String,
   pub video_timestamp: i32,
   pub drawing: String,
+  pub preview: String,
 }
 
 impl From<Comment> for CommentView {
   fn from(comment: Comment) -> Self {
+    let preview = html2text::from_read(comment.body.as_bytes(), 100);
+
     CommentView {
       id: comment.id,
       review_id: comment.review_id,
@@ -23,6 +26,7 @@ impl From<Comment> for CommentView {
       body: comment.body,
       video_timestamp: comment.video_timestamp,
       drawing: comment.drawing,
+      preview,
     }
   }
 }
