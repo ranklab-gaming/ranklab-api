@@ -119,23 +119,36 @@ pub async fn get(
     .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
     .await?;
 
-  let payment_intent = review.get_payment_intent(&stripe).await;
-  let tax_calculation_id = &payment_intent.metadata["tax_calculation_id"];
+  if review.state == ReviewState::AwaitingPayment {
+    let payment_intent = review.get_payment_intent(&stripe).await;
+    let tax_calculation_id = &payment_intent.metadata["tax_calculation_id"];
 
-  let tax_calculation = TaxCalculationLineItem::retrieve(config, tax_calculation_id.to_string())
-    .await
-    .unwrap();
+    let tax_calculation = TaxCalculationLineItem::retrieve(config, tax_calculation_id.to_string())
+      .await
+      .unwrap();
 
-  Response::success(ReviewView::new(
-    review,
-    ReviewViewOptions {
-      payment_intent: Some(payment_intent),
-      tax_calculation: Some(tax_calculation),
-      coach: Some(coach),
-      player: None,
-      recording: Some(recording),
-    },
-  ))
+    Response::success(ReviewView::new(
+      review,
+      ReviewViewOptions {
+        payment_intent: Some(payment_intent),
+        tax_calculation: Some(tax_calculation),
+        coach: Some(coach),
+        player: None,
+        recording: Some(recording),
+      },
+    ))
+  } else {
+    Response::success(ReviewView::new(
+      review,
+      ReviewViewOptions {
+        payment_intent: None,
+        tax_calculation: None,
+        coach: Some(coach),
+        player: None,
+        recording: Some(recording),
+      },
+    ))
+  }
 }
 
 #[derive(Deserialize, JsonSchema)]
