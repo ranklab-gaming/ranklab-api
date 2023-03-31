@@ -44,15 +44,6 @@ fn rocket() -> Rocket<Build> {
   dotenv::from_filename(format!(".env.{}", env_suffix)).ok();
   dotenv::dotenv().ok();
 
-  println!(
-    "{}",
-    env::var("RANKLAB_STRIPE_CONNECT_WEBHOOKS_SECRET").unwrap()
-  );
-  println!(
-    "{}",
-    env::var("RANKLAB_STRIPE_DIRECT_WEBHOOKS_SECRET").unwrap()
-  );
-
   let mut figment = rocket::Config::figment()
     .merge(Toml::file("Ranklab.toml").nested())
     .merge(Env::prefixed("RANKLAB_").global());
