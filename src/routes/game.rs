@@ -38,7 +38,7 @@ pub async fn create(
 
   let mut custom_attributes = HashMap::new();
 
-  custom_attributes.insert("requested_game_id".to_string(), game_request.name.clone());
+  custom_attributes.insert("Requested Game".to_string(), game_request.name.clone());
 
   Contact::new(game_request.email.clone(), custom_attributes)
     .create(config)

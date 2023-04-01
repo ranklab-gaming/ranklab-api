@@ -4,11 +4,13 @@ use uuid::Uuid;
 
 pub mod contacts;
 
-pub fn generate_user_hash(id: Uuid, secret: &str) -> String {
-  let mut mac = Hmac::<sha2::Sha256>::new_from_slice(secret.as_bytes()).unwrap();
-  mac.update(id.to_string().as_bytes());
-  let result = mac.finalize().into_bytes();
-  hex::encode(result)
+pub fn generate_user_hash(id: Uuid, config: &Config) -> Option<String> {
+  config.intercom_verification_secret.as_ref().map(|secret| {
+    let mut mac = Hmac::<sha2::Sha256>::new_from_slice(secret.as_bytes()).unwrap();
+    mac.update(id.to_string().as_bytes());
+    let result = mac.finalize().into_bytes();
+    hex::encode(result)
+  })
 }
 
 struct Request;

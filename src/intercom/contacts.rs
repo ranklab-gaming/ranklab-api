@@ -5,32 +5,14 @@ use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Contact {
-  pub role: Option<String>,
-  pub external_id: Option<String>,
   pub email: String,
-  pub phone: Option<String>,
-  pub name: Option<String>,
-  pub avatar: Option<String>,
-  pub signed_up_at: Option<i32>,
-  pub last_seen_at: Option<i32>,
-  pub owner_id: Option<i32>,
-  pub unsubscribed_from_emails: Option<bool>,
   pub custom_attributes: HashMap<String, String>,
 }
 
 impl Contact {
   pub fn new(email: String, custom_attributes: HashMap<String, String>) -> Self {
     Contact {
-      role: None,
-      external_id: None,
       email,
-      phone: None,
-      name: None,
-      avatar: None,
-      signed_up_at: None,
-      last_seen_at: None,
-      owner_id: None,
-      unsubscribed_from_emails: None,
       custom_attributes,
     }
   }
