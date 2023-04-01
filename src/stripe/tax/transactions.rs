@@ -1,5 +1,7 @@
-use super::Request;
-use crate::{config::Config, stripe::RequestError};
+use crate::{
+  config::Config,
+  stripe::{build_request, RequestError},
+};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -23,7 +25,7 @@ impl TaxTransaction {
       ("mode", "full".to_string()),
     ];
 
-    let response = Request::with_headers(request, config)
+    let response = build_request(request, config)
       .header("Idempotency-Key", tax_transaction_id)
       .form(&body)
       .send()
@@ -56,7 +58,7 @@ impl TaxTransaction {
       ("reference", reference),
     ];
 
-    let response = Request::with_headers(request, config)
+    let response = build_request(request, config)
       .header("Idempotency-Key", tax_calculation_id)
       .form(&body)
       .send()

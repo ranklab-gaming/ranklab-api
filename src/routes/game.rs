@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use crate::config::Config;
 use crate::intercom::contacts::Contact;
-use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
+use crate::intercom::RequestError;
+use crate::response::{MutationError, MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::views::GameView;
 use rocket::http::Status;
 use rocket::serde::json::Json;
@@ -43,7 +44,10 @@ pub async fn create(
   Contact::new(game_request.email.clone(), custom_attributes)
     .create(config)
     .await
-    .unwrap();
+    .map_err(|err| match err {
+      RequestError::Conflict(_) => MutationError::Status(Status::UnprocessableEntity),
+      RequestError::ServerError(err) => MutationError::InternalServerError(err.into()),
+    })?;
 
   Response::status(Status::Ok)
 }

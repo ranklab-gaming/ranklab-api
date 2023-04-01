@@ -12,17 +12,21 @@ pub fn generate_user_hash(email: &str, config: &Config) -> Option<String> {
   })
 }
 
-struct Request;
+pub fn build_request(request: reqwest::RequestBuilder, config: &Config) -> reqwest::RequestBuilder {
+  request
+    .header("Intercom-Version", "2.8")
+    .header(
+      "Authorization",
+      format!("Bearer {}", config.intercom_access_token.as_ref().unwrap()),
+    )
+    .header("Accept", "application/json")
+    .header("Content-Type", "application/json")
+}
 
-impl Request {
-  fn with_headers(request: reqwest::RequestBuilder, config: &Config) -> reqwest::RequestBuilder {
-    request
-      .header("Intercom-Version", "2.8")
-      .header(
-        "Authorization",
-        format!("Bearer {}", config.intercom_access_token.as_ref().unwrap()),
-      )
-      .header("Accept", "application/json")
-      .header("Content-Type", "application/json")
-  }
+#[derive(thiserror::Error, Debug)]
+pub enum RequestError {
+  #[error("Conflict: {0}")]
+  Conflict(reqwest::Error),
+  #[error(transparent)]
+  ServerError(#[from] reqwest::Error),
 }
