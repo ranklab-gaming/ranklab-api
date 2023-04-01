@@ -53,8 +53,8 @@ pub struct UpdateCoachRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/coach/account")]
-pub async fn get(auth: Auth<Jwt<Coach>>) -> QueryResponse<CoachView> {
-  Response::success(auth.into_deep_inner().into())
+pub async fn get(auth: Auth<Jwt<Coach>>, config: &State<Config>) -> QueryResponse<CoachView> {
+  Response::success(CoachView::new(auth.into_deep_inner(), Some(config)))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -63,6 +63,7 @@ pub async fn update(
   account: Json<UpdateCoachRequest>,
   auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
+  config: &State<Config>,
 ) -> MutationResponse<CoachView> {
   if let Err(errors) = account.validate() {
     return Response::validation_error(errors);
@@ -70,7 +71,7 @@ pub async fn update(
 
   let coach = auth.into_deep_inner();
 
-  let coach: CoachView = db_conn
+  let coach = db_conn
     .run(move |conn| {
       diesel::update(&coach)
         .set(
@@ -98,10 +99,9 @@ pub async fn update(
         MutationError::InternalServerError(err.into())
       }
       _ => MutationError::InternalServerError(err.into()),
-    })?
-    .into();
+    })?;
 
-  Response::success(coach)
+  Response::success(CoachView::new(coach, Some(config)))
 }
 
 #[openapi(tag = "Ranklab")]

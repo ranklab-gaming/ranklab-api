@@ -49,8 +49,8 @@ pub struct CreatePlayerRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/account")]
-pub async fn get(auth: Auth<Jwt<Player>>) -> QueryResponse<PlayerView> {
-  Response::success(auth.into_deep_inner().into())
+pub async fn get(auth: Auth<Jwt<Player>>, config: &State<Config>) -> QueryResponse<PlayerView> {
+  Response::success(PlayerView::new(auth.into_deep_inner(), Some(config)))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -134,6 +134,7 @@ pub async fn update(
   account: Json<UpdatePlayerRequest>,
   auth: Auth<Jwt<Player>>,
   db_conn: DbConn,
+  config: &State<Config>,
 ) -> MutationResponse<PlayerView> {
   if let Err(errors) = account.validate() {
     return Response::validation_error(errors);
@@ -150,7 +151,7 @@ pub async fn update(
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 
-  let player: PlayerView = db_conn
+  let player: Player = db_conn
     .run(move |conn| {
       diesel::update(&player)
         .set(
@@ -177,8 +178,7 @@ pub async fn update(
         MutationError::InternalServerError(err.into())
       }
       _ => MutationError::InternalServerError(err.into()),
-    })?
-    .into();
+    })?;
 
-  Response::success(player)
+  Response::success(PlayerView::new(player, Some(config)))
 }
