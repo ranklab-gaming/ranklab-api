@@ -1,9 +1,49 @@
-use crate::response::{QueryResponse, Response};
+use std::collections::HashMap;
+
+use crate::config::Config;
+use crate::intercom::contacts::Contact;
+use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::views::GameView;
+use rocket::http::Status;
+use rocket::serde::json::Json;
+use rocket::State;
 use rocket_okapi::openapi;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use validator::Validate;
+
+#[derive(Deserialize, JsonSchema, Validate)]
+pub struct CreateGameRequest {
+  #[validate(email)]
+  email: String,
+  #[validate(length(min = 1))]
+  name: String,
+}
 
 #[openapi(tag = "Ranklab")]
 #[get("/games")]
 pub async fn list() -> QueryResponse<Vec<GameView>> {
   Response::success(crate::games::all().iter().map(Into::into).collect())
+}
+
+#[openapi(tag = "Ranklab")]
+#[post("/games", data = "<game_request>")]
+pub async fn create(
+  game_request: Json<CreateGameRequest>,
+  config: &State<Config>,
+) -> MutationResponse<StatusResponse> {
+  if let Err(errors) = game_request.validate() {
+    return Response::validation_error(errors);
+  }
+
+  let mut custom_attributes = HashMap::new();
+
+  custom_attributes.insert("requested_game_id".to_string(), game_request.name.clone());
+
+  Contact::new(game_request.email.clone(), custom_attributes)
+    .create(config)
+    .await
+    .unwrap();
+
+  Response::status(Status::Ok)
 }

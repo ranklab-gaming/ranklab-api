@@ -1,4 +1,4 @@
-use super::with_headers;
+use super::Request;
 use crate::{config::Config, stripe::RequestError};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -36,7 +36,10 @@ impl TaxCalculation {
       ("line_items[0][reference]", "0".to_string()),
     ];
 
-    let response = with_headers(request, config).form(&body).send().await?;
+    let response = Request::with_headers(request, config)
+      .form(&body)
+      .send()
+      .await?;
 
     let tax_calculation = match response.error_for_status() {
       Ok(response) => response.json::<TaxCalculation>().await.unwrap(),
@@ -62,7 +65,7 @@ impl TaxCalculationLineItem {
       tax_calculation_id
     ));
 
-    let response = with_headers(request, config).send().await?;
+    let response = Request::with_headers(request, config).send().await?;
     let json = response.json::<TaxCalculationLineItemResponse>().await?;
 
     Ok(json.data[0])

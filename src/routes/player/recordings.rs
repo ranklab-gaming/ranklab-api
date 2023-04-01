@@ -47,10 +47,7 @@ pub async fn list(auth: Auth<Jwt<Player>>, db_conn: DbConn) -> QueryResponse<Vec
     })
     .await?;
 
-  let recording_views: Vec<RecordingView> = recordings
-    .into_iter()
-    .map(|recording| RecordingView::new(recording, None))
-    .collect();
+  let recording_views: Vec<RecordingView> = recordings.into_iter().map(Into::into).collect();
 
   Response::success(recording_views)
 }

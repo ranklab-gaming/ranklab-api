@@ -19,6 +19,12 @@ pub struct RecordingView {
   pub skill_level: i16,
 }
 
+impl From<Recording> for RecordingView {
+  fn from(recording: Recording) -> Self {
+    RecordingView::new(recording, None)
+  }
+}
+
 impl RecordingView {
   pub fn new(recording: Recording, upload_url: Option<String>) -> Self {
     RecordingView {

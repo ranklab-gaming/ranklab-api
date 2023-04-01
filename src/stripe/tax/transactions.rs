@@ -1,8 +1,7 @@
+use super::Request;
 use crate::{config::Config, stripe::RequestError};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use super::with_headers;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct TaxTransaction {
@@ -24,7 +23,7 @@ impl TaxTransaction {
       ("mode", "full".to_string()),
     ];
 
-    let response = with_headers(request, config)
+    let response = Request::with_headers(request, config)
       .header("Idempotency-Key", tax_transaction_id)
       .form(&body)
       .send()
@@ -57,7 +56,7 @@ impl TaxTransaction {
       ("reference", reference),
     ];
 
-    let response = with_headers(request, config)
+    let response = Request::with_headers(request, config)
       .header("Idempotency-Key", tax_calculation_id)
       .form(&body)
       .send()

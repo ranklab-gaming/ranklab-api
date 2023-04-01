@@ -1,4 +1,5 @@
-use crate::models::Coach;
+use crate::intercom;
+use crate::{config::Config, models::Coach};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -16,10 +17,24 @@ pub struct CoachView {
   pub reviews_enabled: bool,
   pub payouts_enabled: bool,
   pub emails_enabled: bool,
+  pub intercom_hash: Option<String>,
 }
 
 impl From<Coach> for CoachView {
   fn from(coach: Coach) -> Self {
+    CoachView::new(coach, None)
+  }
+}
+
+impl CoachView {
+  pub fn new(coach: Coach, config: Option<&Config>) -> Self {
+    let intercom_hash = config.and_then(|config| {
+      config
+        .intercom_verification_secret
+        .as_ref()
+        .map(|secret| intercom::generate_user_hash(coach.id, secret))
+    });
+
     CoachView {
       id: coach.id,
       name: coach.name,
@@ -31,6 +46,7 @@ impl From<Coach> for CoachView {
       payouts_enabled: coach.stripe_payouts_enabled,
       reviews_enabled: coach.stripe_details_submitted,
       emails_enabled: coach.emails_enabled,
+      intercom_hash,
     }
   }
 }

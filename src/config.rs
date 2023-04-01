@@ -17,4 +17,6 @@ pub struct Config {
   pub stripe_connect_webhooks_secret: String,
   pub scheduled_tasks_queue: Option<String>,
   pub scheduled_tasks_state_machine_arn: Option<String>,
+  pub intercom_access_token: Option<String>,
+  pub intercom_verification_secret: Option<String>,
 }

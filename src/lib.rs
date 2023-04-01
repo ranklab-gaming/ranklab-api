@@ -10,6 +10,7 @@ pub mod emails;
 pub mod fairings;
 pub mod games;
 pub mod guards;
+pub mod intercom;
 pub mod models;
 pub mod pagination;
 pub mod queue_handlers;

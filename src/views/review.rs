@@ -44,9 +44,7 @@ impl ReviewView {
       notes: review.notes,
       state: review.state,
       created_at: review.created_at,
-      recording: options
-        .recording
-        .map(|recording| RecordingView::new(recording, None)),
+      recording: options.recording.map(Into::into),
       stripe_client_secret: options
         .payment_intent
         .map(|payment_intent| payment_intent.client_secret.unwrap()),

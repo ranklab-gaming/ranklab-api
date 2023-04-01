@@ -1,4 +1,5 @@
-use crate::models::Player;
+use crate::intercom;
+use crate::{config::Config, models::Player};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -12,10 +13,24 @@ pub struct PlayerView {
   pub game_id: String,
   pub skill_level: i16,
   pub emails_enabled: bool,
+  pub intercom_hash: Option<String>,
 }
 
 impl From<Player> for PlayerView {
   fn from(player: Player) -> Self {
+    PlayerView::new(player, None)
+  }
+}
+
+impl PlayerView {
+  pub fn new(player: Player, config: Option<&Config>) -> Self {
+    let intercom_hash = config.and_then(|config| {
+      config
+        .intercom_verification_secret
+        .as_ref()
+        .map(|secret| intercom::generate_user_hash(player.id, secret))
+    });
+
     PlayerView {
       id: player.id,
       name: player.name,
@@ -23,6 +38,7 @@ impl From<Player> for PlayerView {
       game_id: player.game_id,
       skill_level: player.skill_level,
       emails_enabled: player.emails_enabled,
+      intercom_hash,
     }
   }
 }

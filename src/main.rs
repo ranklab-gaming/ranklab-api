@@ -77,6 +77,7 @@ fn rocket() -> Rocket<Build> {
         coach::stripe_account_links::create,
         coach::stripe_country_specs::list,
         coach::stripe_login_links::create,
+        game::create,
         game::list,
         index::get_health,
         player::account::create,
