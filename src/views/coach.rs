@@ -28,7 +28,8 @@ impl From<Coach> for CoachView {
 
 impl CoachView {
   pub fn new(coach: Coach, config: Option<&Config>) -> Self {
-    let intercom_hash = config.and_then(|config| intercom::generate_user_hash(coach.id, config));
+    let intercom_hash =
+      config.and_then(|config| intercom::generate_user_hash(&coach.email, config));
 
     CoachView {
       id: coach.id,

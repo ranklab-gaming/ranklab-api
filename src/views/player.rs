@@ -24,7 +24,8 @@ impl From<Player> for PlayerView {
 
 impl PlayerView {
   pub fn new(player: Player, config: Option<&Config>) -> Self {
-    let intercom_hash = config.and_then(|config| intercom::generate_user_hash(player.id, config));
+    let intercom_hash =
+      config.and_then(|config| intercom::generate_user_hash(&player.email, config));
 
     PlayerView {
       id: player.id,
