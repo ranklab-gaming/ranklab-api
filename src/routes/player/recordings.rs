@@ -27,7 +27,7 @@ lazy_static! {
 
 #[derive(Deserialize, JsonSchema, Validate)]
 pub struct CreateRecordingRequest {
-  #[validate(range(min = 1usize, max = 2147483648usize))]
+  #[validate(range(min = 1usize, max = 4294967296usize))]
   size: usize,
   #[validate(regex = "self::MIME_TYPE_REGEX")]
   mime_type: String,
