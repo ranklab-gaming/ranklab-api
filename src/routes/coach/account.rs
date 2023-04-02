@@ -121,6 +121,7 @@ pub async fn create(
 
   params.type_ = Some(stripe::AccountType::Express);
   params.country = Some(&coach.country);
+  params.email = Some(&coach.email);
 
   params.capabilities = Some(stripe::CreateAccountCapabilities {
     transfers: Some(stripe::CreateAccountCapabilitiesTransfers {
