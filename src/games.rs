@@ -1,5 +1,6 @@
 pub mod hearthstone;
 pub mod overwatch;
+pub mod r6s;
 pub mod valorant;
 
 use crate::models::Game;
@@ -10,7 +11,8 @@ lazy_static! {
   static ref GAMES: Vec<Game> = vec![
     overwatch::overwatch(),
     valorant::valorant(),
-    hearthstone::hearthstone()
+    hearthstone::hearthstone(),
+    r6s::r6s(),
   ];
 }
 
