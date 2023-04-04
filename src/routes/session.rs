@@ -13,7 +13,7 @@ use diesel::prelude::*;
 use rand::distributions::{Alphanumeric, DistString};
 use rocket::http::Status;
 use rocket::serde::json::Json;
-use rocket::{tokio, State};
+use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -144,7 +144,7 @@ pub async fn reset_password(
     })
     .await;
 
-  let email = Email::new(
+  let reset_password_email = Email::new(
     config,
     "notification".to_owned(),
     json!({
@@ -162,7 +162,7 @@ pub async fn reset_password(
     )],
   );
 
-  tokio::spawn(async move { email.deliver().await });
+  reset_password_email.deliver().await.unwrap();
 
   response
 }
