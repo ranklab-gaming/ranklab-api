@@ -18,6 +18,7 @@ pub struct CoachView {
   pub payouts_enabled: bool,
   pub emails_enabled: bool,
   pub intercom_hash: Option<String>,
+  pub slug: String,
 }
 
 impl From<Coach> for CoachView {
@@ -42,6 +43,7 @@ impl CoachView {
       payouts_enabled: coach.stripe_payouts_enabled,
       reviews_enabled: coach.stripe_details_submitted,
       emails_enabled: coach.emails_enabled,
+      slug: coach.slug,
       intercom_hash,
     }
   }
