@@ -83,6 +83,7 @@ fn rocket() -> Rocket<Build> {
         player::account::create,
         player::account::get,
         player::account::update,
+        player::coaches::get,
         player::coaches::list,
         player::comments::list,
         player::recordings::create,

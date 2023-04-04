@@ -32,6 +32,7 @@ diesel::table! {
         stripe_payouts_enabled -> Bool,
         updated_at -> Timestamp,
         emails_enabled -> Bool,
+        slug -> Text,
     }
 }
 

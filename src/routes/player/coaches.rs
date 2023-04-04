@@ -14,3 +14,17 @@ pub async fn list(auth: Auth<Jwt<Player>>, db_conn: DbConn) -> QueryResponse<Vec
 
   Response::success(coaches.into_iter().map(Into::into).collect())
 }
+
+#[openapi(tag = "Ranklab")]
+#[get("/player/coaches/<slug>")]
+pub async fn get(
+  _auth: Auth<Jwt<Player>>,
+  db_conn: DbConn,
+  slug: String,
+) -> QueryResponse<CoachView> {
+  let coach = db_conn
+    .run(move |conn| Coach::find_by_slug(&slug).first::<Coach>(conn))
+    .await?;
+
+  Response::success(coach.into())
+}

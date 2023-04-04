@@ -27,6 +27,7 @@ pub struct Coach {
   pub stripe_payouts_enabled: bool,
   pub updated_at: chrono::NaiveDateTime,
   pub emails_enabled: bool,
+  pub slug: String,
 }
 
 impl Coach {
@@ -42,6 +43,10 @@ impl Coach {
 
   pub fn find_by_email(email: &str) -> FindBy<coaches::table, coaches::email, String> {
     coaches::table.filter(coaches::email.eq(email.to_string()))
+  }
+
+  pub fn find_by_slug(slug: &str) -> FindBy<coaches::table, coaches::slug, String> {
+    coaches::table.filter(coaches::slug.eq(slug.to_string()))
   }
 
   pub fn filter_by_ids(ids: Vec<Uuid>) -> Filter<coaches::table, EqAny<coaches::id, Vec<Uuid>>> {

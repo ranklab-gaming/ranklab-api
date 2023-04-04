@@ -16,16 +16,17 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::{self, Deserialize};
 use sha2::{Digest, Sha256};
+use slugify::slugify;
 use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateCoachRequest {
+  #[validate(length(min = 2))]
+  name: String,
   #[validate(email)]
   email: String,
   #[validate(length(min = 8))]
   password: String,
-  #[validate(length(min = 2))]
-  name: String,
   #[validate(length(min = 30))]
   bio: String,
   #[validate(length(min = 1), custom = "crate::games::validate_id")]
@@ -81,7 +82,8 @@ pub async fn update(
             .bio(account.bio.clone())
             .price(account.price)
             .game_id(account.game_id.clone())
-            .emails_enabled(account.emails_enabled),
+            .emails_enabled(account.emails_enabled)
+            .slug(slugify!(&account.name)),
         )
         .get_result::<Coach>(conn)
     })
@@ -92,6 +94,12 @@ pub async fn update(
           if name == "coaches_email_key" {
             let mut errors = ValidationErrors::new();
             errors.add("email", ValidationError::new("uniqueness"));
+            return MutationError::ValidationErrors(errors);
+          }
+
+          if name == "coaches_slug_key" {
+            let mut errors = ValidationErrors::new();
+            errors.add("name", ValidationError::new("uniqueness"));
             return MutationError::ValidationErrors(errors);
           }
         };
@@ -214,7 +222,8 @@ pub async fn create(
             .bio(coach.bio.clone())
             .price(coach.price)
             .game_id(coach.game_id.clone())
-            .country(coach.country.clone()),
+            .country(coach.country.clone())
+            .slug(slugify!(&coach.name)),
         )
         .get_result(conn)
     })
@@ -225,6 +234,12 @@ pub async fn create(
           if name == "coaches_email_key" {
             let mut errors = ValidationErrors::new();
             errors.add("email", ValidationError::new("uniqueness"));
+            return MutationError::ValidationErrors(errors);
+          }
+
+          if name == "coaches_slug_key" {
+            let mut errors = ValidationErrors::new();
+            errors.add("name", ValidationError::new("uniqueness"));
             return MutationError::ValidationErrors(errors);
           }
         };
