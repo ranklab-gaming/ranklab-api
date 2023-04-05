@@ -163,7 +163,12 @@ pub async fn create(
     sepa_debit_payments: None,
     sofort_payments: None,
     tax_reporting_us_1099_k: None,
-    tax_reporting_us_1099_misc: None,
+    tax_reporting_us_1099_misc: match coach.country.as_str() {
+      "US" => Some(stripe::CreateAccountCapabilitiesTaxReportingUs1099Misc {
+        requested: Some(true),
+      }),
+      _ => None,
+    },
     konbini_payments: None,
     blik_payments: None,
     promptpay_payments: None,
