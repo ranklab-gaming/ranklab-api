@@ -10,6 +10,7 @@ use validator::ValidationError;
 
 lazy_static! {
   static ref GAMES: Vec<Game> = vec![
+    test::test(),
     overwatch::overwatch(),
     valorant::valorant(),
     hearthstone::hearthstone(),
@@ -17,19 +18,11 @@ lazy_static! {
   ];
 }
 
-lazy_static! {
-  static ref TEST_GAME: Game = test::test();
-}
-
 pub fn all() -> &'static Vec<Game> {
   &GAMES
 }
 
 pub fn find(id: &str) -> Option<&'static Game> {
-  if id == "test" {
-    return Some(&TEST_GAME);
-  }
-
   all().iter().find(|g| g.id == id)
 }
 
