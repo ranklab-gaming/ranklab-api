@@ -1,6 +1,7 @@
 pub mod hearthstone;
 pub mod overwatch;
 pub mod r6s;
+pub mod test;
 pub mod valorant;
 
 use crate::models::Game;
@@ -16,11 +17,19 @@ lazy_static! {
   ];
 }
 
+lazy_static! {
+  static ref TEST_GAME: Game = test::test();
+}
+
 pub fn all() -> &'static Vec<Game> {
   &GAMES
 }
 
 pub fn find(id: &str) -> Option<&'static Game> {
+  if id == "test" {
+    return Some(&TEST_GAME);
+  }
+
   all().iter().find(|g| g.id == id)
 }
 
