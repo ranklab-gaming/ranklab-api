@@ -78,7 +78,7 @@ pub async fn create(
     .ok_or(MutationError::Status(Status::UnprocessableEntity))?;
 
   let extension = extensions.first().unwrap();
-  let key = format!("{}.{}", Uuid::new_v4(), extension);
+  let key = format!("originals/{}.{}", Uuid::new_v4(), extension);
 
   let recording: Recording = db_conn
     .run(move |conn| {
