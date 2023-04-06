@@ -1,0 +1,1 @@
+ALTER TABLE coach_invitations ALTER COLUMN value SET DEFAULT NULL;
