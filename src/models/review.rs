@@ -1,9 +1,10 @@
-use crate::data_types::ReviewState;
+use crate::data_types::{RecordingState, ReviewState};
 use crate::models::{Coach, Recording};
-use crate::schema::reviews;
+use crate::schema::{recordings, reviews};
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, EqAny, Filter, FindBy, Or, Order};
 use diesel::expression::SqlLiteral;
+use diesel::helper_types::{InnerJoin, Select};
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use stripe::{PaymentIntent, PaymentIntentId};
@@ -89,7 +90,13 @@ impl Review {
     archived: bool,
   ) -> Order<
     Filter<
-      reviews::table,
+      Filter<
+        Select<
+          InnerJoin<reviews::table, recordings::table>,
+          <reviews::table as diesel::Table>::AllColumns,
+        >,
+        Eq<recordings::state, RecordingState>,
+      >,
       And<Eq<reviews::coach_id, Uuid>, EqAny<reviews::state, Vec<ReviewState>>>,
     >,
     SqlLiteral<Bool>,
@@ -105,10 +112,14 @@ impl Review {
     };
 
     reviews::table
+      .inner_join(recordings::table)
+      .select(reviews::all_columns)
       .filter(
-        reviews::coach_id
-          .eq(coach.id)
-          .and(reviews::state.eq_any(states)),
+        recordings::state.eq(RecordingState::Processed).and(
+          reviews::coach_id
+            .eq(coach.id)
+            .and(reviews::state.eq_any(states)),
+        ),
       )
       .order(diesel::dsl::sql::<Bool>(
         "case \"state\"
@@ -118,24 +129,6 @@ impl Review {
         end,
         created_at desc",
       ))
-  }
-
-  pub fn find_by_recording_for_coach(
-    recording_id: &Uuid,
-    coach_id: &Uuid,
-  ) -> Filter<
-    reviews::table,
-    And<
-      Or<Eq<reviews::coach_id, Uuid>, Eq<reviews::state, ReviewState>>,
-      Eq<reviews::recording_id, Uuid>,
-    >,
-  > {
-    reviews::table.filter(
-      reviews::coach_id
-        .eq(*coach_id)
-        .or(reviews::state.eq(ReviewState::AwaitingReview))
-        .and(reviews::recording_id.eq(*recording_id)),
-    )
   }
 
   pub fn find_draft_for_coach(
@@ -157,15 +150,28 @@ impl Review {
     id: &Uuid,
     coach_id: &Uuid,
   ) -> Filter<
-    reviews::table,
-    And<Or<Eq<reviews::coach_id, Uuid>, Eq<reviews::state, ReviewState>>, Eq<reviews::id, Uuid>>,
+    Select<
+      InnerJoin<reviews::table, recordings::table>,
+      <reviews::table as diesel::Table>::AllColumns,
+    >,
+    And<
+      Or<
+        And<Eq<recordings::state, RecordingState>, Eq<reviews::coach_id, Uuid>>,
+        Eq<reviews::state, ReviewState>,
+      >,
+      Eq<reviews::id, Uuid>,
+    >,
   > {
-    reviews::table.filter(
-      reviews::coach_id
-        .eq(*coach_id)
-        .or(reviews::state.eq(ReviewState::AwaitingReview))
-        .and(reviews::id.eq(*id)),
-    )
+    reviews::table
+      .inner_join(recordings::table)
+      .select(reviews::all_columns)
+      .filter(
+        recordings::state
+          .eq(RecordingState::Processed)
+          .and(reviews::coach_id.eq(*coach_id))
+          .or(reviews::state.eq(ReviewState::AwaitingReview))
+          .and(reviews::id.eq(*id)),
+      )
   }
 
   pub async fn get_payment_intent(&self, client: &stripe::Client) -> PaymentIntent {
