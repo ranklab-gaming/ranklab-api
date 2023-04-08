@@ -1,6 +1,8 @@
+use crate::data_types::RecordingState;
 use crate::schema::recordings;
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, EqAny, Filter, FindBy};
+use diesel::helper_types::NotEq;
 use diesel::prelude::*;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -22,8 +24,10 @@ pub struct Recording {
   pub skill_level: i16,
   pub title: String,
   pub updated_at: chrono::NaiveDateTime,
-  pub uploaded: bool,
   pub video_key: String,
+  pub state: RecordingState,
+  pub thumbnail_key: Option<String>,
+  pub processed_video_key: Option<String>,
 }
 
 impl Recording {
@@ -65,10 +69,18 @@ impl Recording {
     )
   }
 
+  #[allow(clippy::type_complexity)]
   pub fn filter_for_player(
     player_id: &Uuid,
-  ) -> Filter<recordings::table, Eq<recordings::player_id, Uuid>> {
-    recordings::table.filter(recordings::player_id.eq(*player_id))
+  ) -> Filter<
+    recordings::table,
+    And<Eq<recordings::player_id, Uuid>, NotEq<recordings::state, RecordingState>>,
+  > {
+    recordings::table.filter(
+      recordings::player_id
+        .eq(*player_id)
+        .and(recordings::state.ne(RecordingState::Created)),
+    )
   }
 
   pub fn filter_by_ids(

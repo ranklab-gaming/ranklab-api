@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::games;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Player, Recording, RecordingChangeset};
-use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
+use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::recordings;
 use crate::views::RecordingView;
 use diesel::prelude::*;
@@ -74,11 +74,7 @@ pub async fn create(
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 
-  let extensions = mime_guess::get_mime_extensions_str(&recording.mime_type)
-    .ok_or(MutationError::Status(Status::UnprocessableEntity))?;
-
-  let extension = extensions.first().unwrap();
-  let key = format!("originals/{}.{}", Uuid::new_v4(), extension);
+  let key = format!("originals/{}", Uuid::new_v4());
 
   let recording: Recording = db_conn
     .run(move |conn| {
@@ -97,7 +93,7 @@ pub async fn create(
     })
     .await;
 
-  let url = create_upload_url(config, &recording.video_key);
+  let url = create_upload_url(config, &recording);
 
   Response::success(RecordingView::new(recording, Some(url)))
 }
@@ -116,15 +112,15 @@ pub async fn get(
     })
     .await?;
 
-  let url = create_upload_url(config, &recording.video_key);
+  let url = create_upload_url(config, &recording);
 
   Response::success(RecordingView::new(recording, Some(url)))
 }
 
-fn create_upload_url(config: &Config, key: &str) -> String {
+fn create_upload_url(config: &Config, recording: &Recording) -> String {
   let req = PutObjectRequest {
     bucket: config.s3_bucket.to_owned(),
-    key: key.to_owned(),
+    key: recording.video_key.to_owned(),
     acl: Some("public-read".to_string()),
     ..Default::default()
   };

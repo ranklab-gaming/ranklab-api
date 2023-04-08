@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::data_types::RecordingState;
 use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
 use crate::models::{Recording, RecordingChangeset};
@@ -55,15 +56,68 @@ impl QueueHandler for S3BucketHandler {
     let message_body: SqsMessageBody = serde_json::from_str(&body).map_err(anyhow::Error::from)?;
 
     for record in message_body.records {
-      self
-        .db_conn
-        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-          diesel::update(Recording::find_by_video_key(&record.s3.object.key))
-            .set(RecordingChangeset::default().uploaded(true))
-            .execute(conn)
-        })
-        .await
-        .map_err(QueueHandlerError::from)?;
+      let parts = record.s3.object.key.split('/').collect::<Vec<_>>();
+
+      let folder = *parts
+        .first()
+        .ok_or_else(|| anyhow!("No folder found in s3 key"))?;
+
+      let file = *parts
+        .get(1)
+        .ok_or_else(|| anyhow!("No file found in s3 key"))?;
+
+      let video_key = format!("originals/{}", file.split('_').collect::<Vec<_>>()[0]);
+      let recording = Recording::find_by_video_key(&video_key);
+
+      if folder == "originals" {
+        self
+          .db_conn
+          .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+            diesel::update(recording)
+              .set(RecordingChangeset::default().state(RecordingState::Uploaded))
+              .execute(conn)
+          })
+          .await
+          .map_err(QueueHandlerError::from)?;
+
+        continue;
+      }
+
+      if folder != "processed" {
+        continue;
+      }
+
+      if file.ends_with(".mp4") {
+        self
+          .db_conn
+          .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+            diesel::update(recording)
+              .set(
+                RecordingChangeset::default()
+                  .state(RecordingState::Processed)
+                  .processed_video_key(Some(record.s3.object.key)),
+              )
+              .execute(conn)
+          })
+          .await
+          .map_err(QueueHandlerError::from)?;
+
+        continue;
+      }
+
+      if file.ends_with(".jpg") {
+        self
+          .db_conn
+          .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+            diesel::update(recording)
+              .set(RecordingChangeset::default().thumbnail_key(Some(record.s3.object.key)))
+              .execute(conn)
+          })
+          .await
+          .map_err(QueueHandlerError::from)?;
+
+        continue;
+      }
     }
 
     Ok(())

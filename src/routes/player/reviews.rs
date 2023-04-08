@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::data_types::ReviewState;
+use crate::data_types::{RecordingState, ReviewState};
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Coach, Player, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
@@ -177,6 +177,14 @@ pub async fn create(
   let coach = db_conn
     .run(move |conn| Coach::find_for_game_id(&coach_id, &game_id).first::<Coach>(conn))
     .await?;
+
+  let recording = db_conn
+    .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
+    .await?;
+
+  if recording.state == RecordingState::Created {
+    return Response::mutation_error(Status::UnprocessableEntity);
+  }
 
   let customer_id = player
     .stripe_customer_id

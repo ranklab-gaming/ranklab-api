@@ -2,6 +2,10 @@
 
 pub mod sql_types {
     #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "recording_state"))]
+    pub struct RecordingState;
+
+    #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "review_state"))]
     pub struct ReviewState;
 }
@@ -77,6 +81,9 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::RecordingState;
+
     recordings (id) {
         created_at -> Timestamp,
         game_id -> Text,
@@ -86,8 +93,10 @@ diesel::table! {
         skill_level -> Int2,
         title -> Text,
         updated_at -> Timestamp,
-        uploaded -> Bool,
         video_key -> Text,
+        state -> RecordingState,
+        thumbnail_key -> Nullable<Text>,
+        processed_video_key -> Nullable<Text>,
     }
 }
 
