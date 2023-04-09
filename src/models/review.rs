@@ -73,7 +73,7 @@ impl Review {
           .and(reviews::state.eq_any(states)),
       )
       .order(diesel::dsl::sql::<Bool>(
-        "case \"state\"
+        "case reviews.\"state\"
           when 'awaiting_payment' then 1
           when 'published' then 2
           when 'draft' then 3
@@ -122,7 +122,7 @@ impl Review {
         ),
       )
       .order(diesel::dsl::sql::<Bool>(
-        "case \"state\"
+        "case reviews.\"state\"
           when 'awaiting_review' then 3
           when 'draft' then 2
           when 'published' then 1
