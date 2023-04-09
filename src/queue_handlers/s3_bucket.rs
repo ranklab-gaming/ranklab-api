@@ -1,8 +1,9 @@
 use crate::config::Config;
-use crate::data_types::RecordingState;
+use crate::data_types::{RecordingState, ReviewState};
+use crate::emails;
 use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
-use crate::models::{Recording, RecordingChangeset};
+use crate::models::{Coach, Recording, RecordingChangeset, Review};
 use anyhow::anyhow;
 use diesel::prelude::*;
 use serde::Deserialize;
@@ -67,13 +68,13 @@ impl QueueHandler for S3BucketHandler {
         .ok_or_else(|| anyhow!("No file found in s3 key"))?;
 
       let video_key = format!("originals/{}", file.split('_').collect::<Vec<_>>()[0]);
-      let recording = Recording::find_by_video_key(&video_key);
+      let recording_query = Recording::find_by_video_key(&video_key);
 
       if folder == "originals" {
         self
           .db_conn
           .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-            diesel::update(recording)
+            diesel::update(recording_query)
               .set(RecordingChangeset::default().state(RecordingState::Uploaded))
               .execute(conn)
           })
@@ -91,7 +92,7 @@ impl QueueHandler for S3BucketHandler {
         self
           .db_conn
           .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-            diesel::update(recording)
+            diesel::update(recording_query)
               .set(
                 RecordingChangeset::default()
                   .state(RecordingState::Processed)
@@ -102,6 +103,43 @@ impl QueueHandler for S3BucketHandler {
           .await
           .map_err(QueueHandlerError::from)?;
 
+        let recording = self
+          .db_conn
+          .run(move |conn| Recording::find_by_video_key(&video_key).first::<Recording>(conn))
+          .await
+          .map_err(QueueHandlerError::from)?;
+
+        let reviews = self
+          .db_conn
+          .run(move |conn| Review::filter_by_recording_id(&recording.id).load::<Review>(conn))
+          .await
+          .map_err(QueueHandlerError::from)?;
+
+        let coach_ids = reviews
+          .iter()
+          .map(|review| review.coach_id)
+          .collect::<Vec<_>>();
+
+        let coaches = self
+          .db_conn
+          .run(move |conn| Coach::filter_by_ids(coach_ids).load::<Coach>(conn))
+          .await
+          .map_err(QueueHandlerError::from)?;
+
+        for review in reviews {
+          let coach = coaches
+            .iter()
+            .find(|coach| coach.id == review.coach_id)
+            .ok_or_else(|| anyhow!("No coach found for review"))?;
+
+          if coach.emails_enabled && review.state == ReviewState::AwaitingReview {
+            emails::notifications::coach_has_reviews(&self.config, coach)
+              .deliver()
+              .await
+              .map_err(anyhow::Error::from)?;
+          }
+        }
+
         continue;
       }
 
@@ -109,7 +147,7 @@ impl QueueHandler for S3BucketHandler {
         self
           .db_conn
           .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-            diesel::update(recording)
+            diesel::update(recording_query)
               .set(RecordingChangeset::default().thumbnail_key(Some(record.s3.object.key)))
               .execute(conn)
           })

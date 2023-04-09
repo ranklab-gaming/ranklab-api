@@ -1,18 +1,16 @@
 use super::StripeEventHandler;
-use crate::aws;
 use crate::clients::StripeClient;
 use crate::config::Config;
-use crate::data_types::ReviewState;
-use crate::emails::{Email, Recipient};
+use crate::data_types::{RecordingState, ReviewState};
 use crate::fairings::sqs::QueueHandlerError;
 use crate::guards::DbConn;
-use crate::models::{Coach, Review, ReviewChangeset};
+use crate::models::{Coach, Recording, Review, ReviewChangeset};
 use crate::stripe::TaxTransaction;
+use crate::{aws, emails};
 use anyhow::anyhow;
 use diesel::prelude::*;
 use rusoto_core::{HttpClient, Region};
 use rusoto_stepfunctions::StepFunctionsClient;
-use serde_json::json;
 use stripe::{
   EventObject, EventType, Expandable, PaymentIntent, UpdatePaymentIntent, WebhookEvent,
 };
@@ -69,6 +67,13 @@ impl Direct {
       })
       .await?;
 
+    let recording_id = review.recording_id;
+
+    let recording: Recording = self
+      .db_conn
+      .run(move |conn| Recording::find_by_id(&recording_id).get_result::<Recording>(conn))
+      .await?;
+
     let coach_id = review.coach_id;
 
     if let Some(state_machine_arn) = &self.config.scheduled_tasks_state_machine_arn {
@@ -102,27 +107,11 @@ impl Direct {
       .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
       .await?;
 
-    if coach.emails_enabled {
-      let email = Email::new(
-        &self.config,
-        "notification".to_owned(),
-        json!({
-          "subject": "New recordings are waiting for your review",
-          "title": "There are new recordings available for review!",
-          "body": "Go to your dashboard to start analyzing them.",
-          "cta" : "View Available Recordings",
-          "cta_url" : format!("{}/coach/dashboard", self.config.web_host),
-          "unsubscribe_url": format!("{}/coach/account?tab=notifications", self.config.web_host)
-        }),
-        vec![Recipient::new(
-          coach.email.clone(),
-          json!({
-            "name": coach.name,
-          }),
-        )],
-      );
-
-      email.deliver().await.map_err(anyhow::Error::from)?;
+    if coach.emails_enabled && recording.state == RecordingState::Processed {
+      emails::notifications::coach_has_reviews(&self.config, &coach)
+        .deliver()
+        .await
+        .map_err(anyhow::Error::from)?;
     }
 
     Ok(())

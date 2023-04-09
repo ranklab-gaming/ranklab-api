@@ -184,4 +184,10 @@ impl Review {
       .await
       .unwrap()
   }
+
+  pub fn filter_by_recording_id(
+    recording_id: &Uuid,
+  ) -> Filter<reviews::table, Eq<reviews::recording_id, Uuid>> {
+    reviews::table.filter(reviews::recording_id.eq(*recording_id))
+  }
 }
