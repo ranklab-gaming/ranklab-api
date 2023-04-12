@@ -6,8 +6,6 @@ use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::recordings;
 use crate::views::RecordingView;
 use diesel::prelude::*;
-use lazy_static::lazy_static;
-use regex::Regex;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -21,21 +19,14 @@ use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
-lazy_static! {
-  static ref MIME_TYPE_REGEX: Regex = Regex::new(r"^video/.*$").unwrap();
-}
-
 #[derive(Deserialize, JsonSchema, Validate)]
 pub struct CreateRecordingRequest {
-  #[validate(range(min = 1usize, max = 4294967296usize))]
-  size: usize,
-  #[validate(regex = "self::MIME_TYPE_REGEX")]
-  mime_type: String,
   #[validate(length(min = 1))]
   title: String,
   skill_level: i16,
   #[validate(length(min = 1), custom = "games::validate_id")]
   game_id: String,
+  metadata: Option<serde_json::Value>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -74,7 +65,10 @@ pub async fn create(
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 
-  let key = format!("originals/{}", Uuid::new_v4());
+  let key = recording
+    .metadata
+    .as_ref()
+    .map(|_| format!("originals/{}", Uuid::new_v4()));
 
   let recording: Recording = db_conn
     .run(move |conn| {
@@ -85,8 +79,8 @@ pub async fn create(
             .game_id(recording.game_id.clone())
             .title(recording.title.clone())
             .skill_level(recording.skill_level)
-            .video_key(Some(key))
-            .mime_type(recording.mime_type.clone()),
+            .video_key(key)
+            .metadata(recording.metadata.clone()),
         )
         .get_result::<Recording>(conn)
         .unwrap()
