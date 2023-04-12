@@ -18,6 +18,7 @@ pub struct RecordingView {
   pub title: String,
   pub skill_level: i16,
   pub state: RecordingState,
+  pub metadata: Option<serde_json::Value>,
 }
 
 impl From<Recording> for RecordingView {
@@ -41,6 +42,7 @@ impl RecordingView {
       skill_level: recording.skill_level,
       state: recording.state,
       thumbnail_key: recording.thumbnail_key,
+      metadata: recording.metadata,
     }
   }
 }

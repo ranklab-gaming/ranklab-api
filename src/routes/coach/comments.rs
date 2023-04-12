@@ -52,7 +52,7 @@ pub async fn create(
         .values(
           CommentChangeset::default()
             .body(ammonia::clean(&comment.body))
-            .video_timestamp(comment.video_timestamp)
+            .video_timestamp(Some(comment.video_timestamp))
             .review_id(review.id)
             .coach_id(coach_id)
             .drawing(comment.drawing.clone()),

@@ -20,7 +20,8 @@ pub struct Comment {
   pub id: Uuid,
   pub review_id: Uuid,
   pub updated_at: chrono::NaiveDateTime,
-  pub video_timestamp: i32,
+  pub video_timestamp: Option<i32>,
+  pub metadata: Option<serde_json::Value>,
 }
 
 #[allow(clippy::type_complexity)]

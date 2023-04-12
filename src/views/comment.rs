@@ -10,9 +10,10 @@ pub struct CommentView {
   pub review_id: Uuid,
   pub coach_id: Uuid,
   pub body: String,
-  pub video_timestamp: i32,
+  pub video_timestamp: Option<i32>,
   pub drawing: String,
   pub preview: String,
+  pub metadata: Option<serde_json::Value>,
 }
 
 impl From<Comment> for CommentView {
@@ -27,6 +28,7 @@ impl From<Comment> for CommentView {
       video_timestamp: comment.video_timestamp,
       drawing: comment.drawing,
       preview,
+      metadata: comment.metadata,
     }
   }
 }

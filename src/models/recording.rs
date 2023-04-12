@@ -24,10 +24,11 @@ pub struct Recording {
   pub skill_level: i16,
   pub title: String,
   pub updated_at: chrono::NaiveDateTime,
-  pub video_key: String,
+  pub video_key: Option<String>,
   pub state: RecordingState,
   pub thumbnail_key: Option<String>,
   pub processed_video_key: Option<String>,
+  pub metadata: Option<serde_json::Value>,
 }
 
 impl Recording {

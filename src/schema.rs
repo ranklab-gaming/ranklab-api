@@ -49,7 +49,8 @@ diesel::table! {
         id -> Uuid,
         review_id -> Uuid,
         updated_at -> Timestamp,
-        video_timestamp -> Int4,
+        video_timestamp -> Nullable<Int4>,
+        metadata -> Nullable<Jsonb>,
     }
 }
 
@@ -93,10 +94,11 @@ diesel::table! {
         skill_level -> Int2,
         title -> Text,
         updated_at -> Timestamp,
-        video_key -> Text,
+        video_key -> Nullable<Text>,
         state -> RecordingState,
         thumbnail_key -> Nullable<Text>,
         processed_video_key -> Nullable<Text>,
+        metadata -> Nullable<Jsonb>,
     }
 }
 

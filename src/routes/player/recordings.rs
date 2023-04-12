@@ -85,7 +85,7 @@ pub async fn create(
             .game_id(recording.game_id.clone())
             .title(recording.title.clone())
             .skill_level(recording.skill_level)
-            .video_key(key)
+            .video_key(Some(key))
             .mime_type(recording.mime_type.clone()),
         )
         .get_result::<Recording>(conn)
@@ -93,9 +93,12 @@ pub async fn create(
     })
     .await;
 
-  let url = create_upload_url(config, &recording);
+  let url = recording
+    .video_key
+    .as_ref()
+    .map(|video_key| create_upload_url(config, video_key));
 
-  Response::success(RecordingView::new(recording, Some(url)))
+  Response::success(RecordingView::new(recording, url))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -112,15 +115,18 @@ pub async fn get(
     })
     .await?;
 
-  let url = create_upload_url(config, &recording);
+  let url = recording
+    .video_key
+    .as_ref()
+    .map(|video_key| create_upload_url(config, video_key));
 
-  Response::success(RecordingView::new(recording, Some(url)))
+  Response::success(RecordingView::new(recording, url))
 }
 
-fn create_upload_url(config: &Config, recording: &Recording) -> String {
+fn create_upload_url(config: &Config, recording_video_key: &String) -> String {
   let req = PutObjectRequest {
     bucket: config.s3_bucket.to_owned(),
-    key: recording.video_key.to_owned(),
+    key: recording_video_key.to_owned(),
     acl: Some("public-read".to_string()),
     ..Default::default()
   };
