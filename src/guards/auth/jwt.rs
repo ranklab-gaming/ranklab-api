@@ -79,10 +79,8 @@ impl<T: FromJwt> AuthFromRequest for Jwt<T> {
     let db_conn = req.guard::<DbConn>().await.unwrap();
     let web_host = config.as_ref().unwrap().web_host.clone();
 
-    let oidc_configuration_url = format!(
-      "{}{}",
-      web_host, "/api/oidc/.well-known/openid-configuration"
-    );
+    let oidc_configuration_url =
+      format!("{}{}", web_host, "/oidc/.well-known/openid-configuration");
 
     let oidc_configuration = reqwest::get(&oidc_configuration_url)
       .await
