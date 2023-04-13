@@ -19,4 +19,5 @@ pub struct Config {
   pub scheduled_tasks_state_machine_arn: Option<String>,
   pub intercom_access_token: Option<String>,
   pub intercom_verification_secret: Option<String>,
+  pub enable_oidc: Option<bool>,
 }

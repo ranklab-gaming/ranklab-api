@@ -52,10 +52,13 @@ async fn rocket() -> Rocket<Build> {
     figment = figment.merge(("databases.default.url", database_url));
   }
 
-  let web_host: String = figment.extract_inner("web_host").unwrap();
-  let oidc_cache = oidc::init_cache(&web_host).await.unwrap();
+  let oidc_enabled = figment
+    .extract_inner::<bool>("oidc_enabled")
+    .unwrap_or(true);
 
-  rocket::custom(figment)
+  let web_host: String = figment.extract_inner("web_host").unwrap();
+
+  let mut app = rocket::custom(figment)
     .attach(fairings::Sentry::fairing())
     .attach(fairings::Sqs::fairing())
     .attach(DbConn::fairing())
@@ -63,48 +66,52 @@ async fn rocket() -> Rocket<Build> {
     .attach(AdHoc::on_request("Accept JSON", |req, _| {
       Box::pin(async move { req.replace_header(Accept::JSON) })
     }))
-    .attach(AdHoc::config::<Config>())
-    .manage(oidc_cache)
-    .mount(
-      "/",
-      openapi_get_routes![
-        coach::account::create,
-        coach::account::get,
-        coach::account::update,
-        coach::comments::create,
-        coach::comments::delete,
-        coach::comments::list,
-        coach::comments::update,
-        coach::reviews::get,
-        coach::reviews::list,
-        coach::reviews::update,
-        coach::stripe_account_links::create,
-        coach::stripe_country_specs::list,
-        coach::stripe_login_links::create,
-        game::create,
-        game::list,
-        index::get_health,
-        player::account::create,
-        player::account::get,
-        player::account::update,
-        player::coaches::get,
-        player::coaches::list,
-        player::comments::list,
-        player::recordings::create,
-        player::recordings::get,
-        player::recordings::list,
-        player::reviews::create,
-        player::reviews::delete,
-        player::reviews::get,
-        player::reviews::list,
-        player::reviews::update,
-        player::stripe_billing_details::get,
-        player::stripe_billing_details::update,
-        player::stripe_billing_portal_sessions::create,
-        player::stripe_payment_methods::list,
-        session::create,
-        session::reset_password,
-        session::update_password
-      ],
-    )
+    .attach(AdHoc::config::<Config>());
+
+  if oidc_enabled {
+    app = app.manage(oidc::init_cache(&web_host).await);
+  }
+
+  app.mount(
+    "/",
+    openapi_get_routes![
+      coach::account::create,
+      coach::account::get,
+      coach::account::update,
+      coach::comments::create,
+      coach::comments::delete,
+      coach::comments::list,
+      coach::comments::update,
+      coach::reviews::get,
+      coach::reviews::list,
+      coach::reviews::update,
+      coach::stripe_account_links::create,
+      coach::stripe_country_specs::list,
+      coach::stripe_login_links::create,
+      game::create,
+      game::list,
+      index::get_health,
+      player::account::create,
+      player::account::get,
+      player::account::update,
+      player::coaches::get,
+      player::coaches::list,
+      player::comments::list,
+      player::recordings::create,
+      player::recordings::get,
+      player::recordings::list,
+      player::reviews::create,
+      player::reviews::delete,
+      player::reviews::get,
+      player::reviews::list,
+      player::reviews::update,
+      player::stripe_billing_details::get,
+      player::stripe_billing_details::update,
+      player::stripe_billing_portal_sessions::create,
+      player::stripe_payment_methods::list,
+      session::create,
+      session::reset_password,
+      session::update_password
+    ],
+  )
 }
