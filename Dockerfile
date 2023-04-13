@@ -9,7 +9,7 @@ RUN apk add --update-cache \
 WORKDIR /usr/src/
 RUN cargo new ranklab-api
 WORKDIR /usr/src/ranklab-api
-COPY rust-toolchain Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock ./
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN cargo build --release
 COPY src ./src
