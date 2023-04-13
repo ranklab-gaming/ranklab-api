@@ -69,7 +69,7 @@ async fn rocket() -> Rocket<Build> {
     .attach(AdHoc::config::<Config>());
 
   if oidc_enabled {
-    app = app.manage(oidc::init_cache(&web_host).await);
+    app = app.manage(oidc::init_cache(&web_host).await.unwrap());
   }
 
   app.mount(
