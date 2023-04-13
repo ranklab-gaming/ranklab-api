@@ -6,10 +6,34 @@ use crate::models::{Coach, Player};
 use diesel::prelude::*;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
+use rocket::tokio::sync::Mutex;
 use rocket::{Request, State};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+struct Cache {
+  oidc_configuration: Mutex<Option<OidcConfiguration>>,
+  jwks: Mutex<Option<Jwks>>,
+}
+
+static CACHE: Lazy<Cache> = Lazy::new(|| Cache {
+  oidc_configuration: Mutex::new(None),
+  jwks: Mutex::new(None),
+});
+
+async fn fetch_oidc_configuration(web_host: &str) -> Result<OidcConfiguration, reqwest::Error> {
+  let oidc_configuration_url = format!("{}{}", web_host, "/oidc/.well-known/openid-configuration");
+  reqwest::get(&oidc_configuration_url)
+    .await?
+    .json::<OidcConfiguration>()
+    .await
+}
+
+async fn fetch_jwks(jwks_uri: &str) -> Result<Jwks, reqwest::Error> {
+  reqwest::get(jwks_uri).await?.json::<Jwks>().await
+}
 
 lazy_static! {
   static ref JWT_REGEX: Regex = Regex::new(r"Bearer (?P<jwt>.*)").unwrap();
@@ -79,22 +103,21 @@ impl<T: FromJwt> AuthFromRequest for Jwt<T> {
     let db_conn = req.guard::<DbConn>().await.unwrap();
     let web_host = config.as_ref().unwrap().web_host.clone();
 
-    let oidc_configuration_url =
-      format!("{}{}", web_host, "/oidc/.well-known/openid-configuration");
+    let oidc_configuration = {
+      let mut cache = CACHE.oidc_configuration.lock().await;
+      if cache.is_none() {
+        *cache = Some(fetch_oidc_configuration(&web_host).await.unwrap());
+      }
+      cache.as_ref().unwrap().clone()
+    };
 
-    let oidc_configuration = reqwest::get(&oidc_configuration_url)
-      .await
-      .unwrap()
-      .json::<OidcConfiguration>()
-      .await
-      .unwrap();
-
-    let jwks = reqwest::get(&oidc_configuration.jwks_uri)
-      .await
-      .unwrap()
-      .json::<Jwks>()
-      .await
-      .unwrap();
+    let jwks = {
+      let mut cache = CACHE.jwks.lock().await;
+      if cache.is_none() {
+        *cache = Some(fetch_jwks(&oidc_configuration.jwks_uri).await.unwrap());
+      }
+      cache.as_ref().unwrap().clone()
+    };
 
     let authorization = req
       .headers()

@@ -2069,6 +2069,7 @@ dependencies = [
  "jsonwebtoken",
  "lazy_static",
  "okapi",
+ "once_cell",
  "rand 0.8.5",
  "regex",
  "reqwest",
