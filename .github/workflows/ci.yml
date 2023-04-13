@@ -62,6 +62,7 @@ jobs:
             ${{ steps.ecr-login.outputs.registry }}/${{ env.app-name }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}
             ghcr.io/${{ github.repository }}:latest
+          build-args: --progress=plain
       - name: Download latest ECS task definition
         id: download-task
         run: |
