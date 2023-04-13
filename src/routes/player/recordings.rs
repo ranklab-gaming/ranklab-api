@@ -65,10 +65,10 @@ pub async fn create(
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 
-  let key = recording
-    .metadata
-    .as_ref()
-    .map(|_| format!("originals/{}", Uuid::new_v4()));
+  let key = match recording.metadata {
+    Some(_) => None,
+    None => Some(format!("originals/{}", Uuid::new_v4())),
+  };
 
   let recording: Recording = db_conn
     .run(move |conn| {
