@@ -5,9 +5,9 @@ use diesel::pg::PgConnection;
 use diesel::Connection;
 use diesel_migrations::*;
 use ranklab_api::config::Config;
-use ranklab_api::fairings;
 use ranklab_api::guards::DbConn;
 use ranklab_api::routes::*;
+use ranklab_api::{fairings, oidc};
 use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
 use rocket::figment::Profile;
@@ -34,7 +34,7 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 }
 
 #[launch]
-fn rocket() -> Rocket<Build> {
+async fn rocket() -> Rocket<Build> {
   let env_suffix = if DEFAULT_PROFILE == DEBUG_PROFILE {
     "development".to_owned()
   } else {
@@ -52,6 +52,9 @@ fn rocket() -> Rocket<Build> {
     figment = figment.merge(("databases.default.url", database_url));
   }
 
+  let web_host: String = figment.extract_inner("web_host").unwrap();
+  let oidc_cache = oidc::init_cache(&web_host).await.unwrap();
+
   rocket::custom(figment)
     .attach(fairings::Sentry::fairing())
     .attach(fairings::Sqs::fairing())
@@ -61,6 +64,7 @@ fn rocket() -> Rocket<Build> {
       Box::pin(async move { req.replace_header(Accept::JSON) })
     }))
     .attach(AdHoc::config::<Config>())
+    .manage(oidc_cache)
     .mount(
       "/",
       openapi_get_routes![
