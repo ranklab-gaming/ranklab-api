@@ -5,4 +5,5 @@ url = "postgres://postgres:postgres@postgres:5432/app"
 url = "postgres://postgres:postgres@postgres:5432/app_test"
 
 [release]
+log_level = "normal"
 address = "0.0.0.0"
