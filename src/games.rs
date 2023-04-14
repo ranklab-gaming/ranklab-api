@@ -16,7 +16,7 @@ lazy_static! {
     valorant::valorant(),
     hearthstone::hearthstone(),
     r6s::r6s(),
-    // chess::chess()
+    chess::chess()
   ];
 }
 
