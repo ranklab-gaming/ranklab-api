@@ -14,7 +14,6 @@ use validator::Validate;
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateCommentRequest {
-  #[validate(length(min = 1))]
   body: String,
   video_timestamp: i32,
   review_id: Uuid,
@@ -23,7 +22,6 @@ pub struct CreateCommentRequest {
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct UpdateCommentRequest {
-  #[validate(length(min = 1))]
   body: String,
   drawing: String,
 }
