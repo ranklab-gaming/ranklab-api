@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::data_types::RecordingState;
 use crate::games;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Player, Recording, RecordingChangeset};
@@ -70,6 +71,11 @@ pub async fn create(
     None => Some(format!("originals/{}", Uuid::new_v4())),
   };
 
+  let state = match recording.metadata {
+    Some(_) => RecordingState::Processed,
+    None => RecordingState::Created,
+  };
+
   let recording: Recording = db_conn
     .run(move |conn| {
       diesel::insert_into(recordings::table)
@@ -80,7 +86,8 @@ pub async fn create(
             .title(recording.title.clone())
             .skill_level(recording.skill_level)
             .video_key(key)
-            .metadata(recording.metadata.clone()),
+            .metadata(recording.metadata.clone())
+            .state(state),
         )
         .get_result::<Recording>(conn)
         .unwrap()
