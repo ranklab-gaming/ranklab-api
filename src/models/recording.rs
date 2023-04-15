@@ -19,7 +19,6 @@ pub struct Recording {
   pub created_at: chrono::NaiveDateTime,
   pub game_id: String,
   pub id: Uuid,
-  pub mime_type: String,
   pub player_id: Uuid,
   pub skill_level: i16,
   pub title: String,

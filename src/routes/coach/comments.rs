@@ -15,9 +15,10 @@ use validator::Validate;
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateCommentRequest {
   body: String,
-  video_timestamp: i32,
+  video_timestamp: Option<i32>,
   review_id: Uuid,
   drawing: String,
+  metadata: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
@@ -50,10 +51,11 @@ pub async fn create(
         .values(
           CommentChangeset::default()
             .body(ammonia::clean(&comment.body))
-            .video_timestamp(Some(comment.video_timestamp))
+            .video_timestamp(comment.video_timestamp)
             .review_id(review.id)
             .coach_id(coach_id)
-            .drawing(comment.drawing.clone()),
+            .drawing(comment.drawing.clone())
+            .metadata(comment.metadata.clone()),
         )
         .get_result::<Comment>(conn)
         .unwrap()

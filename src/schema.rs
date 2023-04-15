@@ -89,7 +89,6 @@ diesel::table! {
         created_at -> Timestamp,
         game_id -> Text,
         id -> Uuid,
-        mime_type -> Text,
         player_id -> Uuid,
         skill_level -> Int2,
         title -> Text,
