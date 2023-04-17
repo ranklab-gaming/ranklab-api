@@ -49,8 +49,7 @@ diesel::table! {
         id -> Uuid,
         review_id -> Uuid,
         updated_at -> Timestamp,
-        video_timestamp -> Nullable<Int4>,
-        metadata -> Nullable<Jsonb>,
+        metadata -> Jsonb,
     }
 }
 
