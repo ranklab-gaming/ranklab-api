@@ -10,7 +10,6 @@ pub struct CommentView {
   pub review_id: Uuid,
   pub coach_id: Uuid,
   pub body: String,
-  pub drawing: String,
   pub preview: String,
   pub metadata: serde_json::Value,
 }
@@ -24,7 +23,6 @@ impl From<Comment> for CommentView {
       review_id: comment.review_id,
       coach_id: comment.coach_id,
       body: comment.body,
-      drawing: comment.drawing,
       preview,
       metadata: comment.metadata,
     }

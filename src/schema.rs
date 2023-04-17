@@ -45,7 +45,6 @@ diesel::table! {
         body -> Text,
         coach_id -> Uuid,
         created_at -> Timestamp,
-        drawing -> Text,
         id -> Uuid,
         review_id -> Uuid,
         updated_at -> Timestamp,

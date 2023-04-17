@@ -15,7 +15,6 @@ pub struct Comment {
   pub body: String,
   pub coach_id: Uuid,
   pub created_at: chrono::NaiveDateTime,
-  pub drawing: String,
   pub id: Uuid,
   pub review_id: Uuid,
   pub updated_at: chrono::NaiveDateTime,

@@ -16,14 +16,13 @@ use validator::Validate;
 pub struct CreateCommentRequest {
   body: String,
   review_id: Uuid,
-  drawing: String,
   metadata: serde_json::Value,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct UpdateCommentRequest {
   body: String,
-  drawing: String,
+  metadata: serde_json::Value,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -52,7 +51,6 @@ pub async fn create(
             .body(ammonia::clean(&comment.body))
             .review_id(review.id)
             .coach_id(coach_id)
-            .drawing(comment.drawing.clone())
             .metadata(comment.metadata.clone()),
         )
         .get_result::<Comment>(conn)
@@ -88,7 +86,7 @@ pub async fn update(
         .set(
           CommentChangeset::default()
             .body(comment.body.clone())
-            .drawing(comment.drawing.clone()),
+            .metadata(comment.metadata.clone()),
         )
         .get_result::<Comment>(conn)
         .unwrap()
