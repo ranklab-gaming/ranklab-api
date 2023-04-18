@@ -43,8 +43,6 @@ pub struct UpdateCoachRequest {
   name: String,
   #[validate(email)]
   email: String,
-  #[validate(length(min = 1), custom = "crate::games::validate_id")]
-  game_id: String,
   #[validate(length(min = 1))]
   bio: String,
   #[validate(range(min = 1, max = 10000))]
@@ -81,7 +79,6 @@ pub async fn update(
             .name(account.name.clone())
             .bio(account.bio.clone())
             .price(account.price)
-            .game_id(account.game_id.clone())
             .emails_enabled(account.emails_enabled)
             .slug(slugify!(&account.name)),
         )

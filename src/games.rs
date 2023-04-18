@@ -28,6 +28,13 @@ pub fn find(id: &str) -> Option<&'static Game> {
   all().iter().find(|g| g.id == id)
 }
 
+pub fn filter(ids: Vec<&str>) -> Vec<&'static Game> {
+  all()
+    .iter()
+    .filter(|g| ids.contains(&g.id.as_str()))
+    .collect()
+}
+
 pub fn validate_id(id: &str) -> Result<(), ValidationError> {
   match crate::games::find(id) {
     Some(_) => Ok(()),
