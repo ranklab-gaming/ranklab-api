@@ -9,17 +9,8 @@ use stripe::CustomerId;
 #[derive(Deserialize, JsonSchema)]
 pub struct TaxCalculation {
   pub id: String,
+  pub tax_amount_exclusive: i64,
   pub amount_total: i64,
-}
-
-#[derive(Deserialize, JsonSchema, Clone, Copy)]
-pub struct TaxCalculationLineItem {
-  pub amount_tax: i64,
-}
-
-#[derive(Deserialize, JsonSchema)]
-struct TaxCalculationLineItemResponse {
-  data: Vec<TaxCalculationLineItem>,
 }
 
 impl TaxCalculation {
@@ -53,20 +44,18 @@ impl TaxCalculation {
 
     Ok(tax_calculation)
   }
-}
 
-impl TaxCalculationLineItem {
   pub async fn retrieve(config: &Config, tax_calculation_id: String) -> Result<Self, RequestError> {
     let client = reqwest::Client::new();
 
     let request = client.get(format!(
-      "https://api.stripe.com/v1/tax/calculations/{}/line_items",
+      "https://api.stripe.com/v1/tax/calculations/{}",
       tax_calculation_id
     ));
 
     let response = build_request(request, config).send().await?;
-    let json = response.json::<TaxCalculationLineItemResponse>().await?;
+    let json = response.json::<TaxCalculation>().await?;
 
-    Ok(json.data[0])
+    Ok(json)
   }
 }
