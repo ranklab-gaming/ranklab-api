@@ -5,7 +5,7 @@ use crate::models::{Coach, Player, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::{coaches, reviews};
-use crate::stripe::{RequestError, TaxCalculation};
+use crate::stripe::{RequestError, TaxCalculation, TaxCalculationLineItem};
 use crate::views::{ReviewView, ReviewViewOptions};
 use diesel::prelude::*;
 use rocket::http::Status;
@@ -123,7 +123,7 @@ pub async fn get(
     let payment_intent = review.get_payment_intent(&stripe).await;
     let tax_calculation_id = &payment_intent.metadata["tax_calculation_id"];
 
-    let tax_calculation = TaxCalculation::retrieve(config, tax_calculation_id.to_string())
+    let tax_calculation = TaxCalculationLineItem::retrieve(config, tax_calculation_id.to_string())
       .await
       .unwrap();
 

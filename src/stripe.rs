@@ -1,5 +1,5 @@
 mod tax;
-pub use tax::calculations::TaxCalculation;
+pub use tax::calculations::{TaxCalculation, TaxCalculationLineItem};
 pub use tax::transactions::TaxTransaction;
 
 use crate::config::Config;
