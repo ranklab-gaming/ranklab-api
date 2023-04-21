@@ -65,7 +65,20 @@ impl TaxCalculationLineItem {
     ));
 
     let response = build_request(request, config).send().await?;
-    let json = response.json::<TaxCalculationLineItemResponse>().await?;
+
+    let json = match response.error_for_status() {
+      Ok(response) => response
+        .json::<TaxCalculationLineItemResponse>()
+        .await
+        .unwrap(),
+      Err(err) => {
+        if err.status() == Some(reqwest::StatusCode::NOT_FOUND) {
+          return Err(RequestError::NotFound(err));
+        }
+
+        return Err(err.into());
+      }
+    };
 
     Ok(json.data[0])
   }

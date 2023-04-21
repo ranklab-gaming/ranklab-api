@@ -18,7 +18,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use stripe::{
   CancelPaymentIntent, CreatePaymentIntent, CreateRefund, Currency, Expandable,
-  PaymentIntentCancellationReason, PaymentIntentId,
+  PaymentIntentCancellationReason, PaymentIntentId, UpdatePaymentIntent,
 };
 use uuid::Uuid;
 
@@ -103,8 +103,15 @@ pub async fn get(
   stripe: Stripe,
   config: &State<Config>,
 ) -> QueryResponse<ReviewView> {
+  let player = auth.into_deep_inner();
+  let player_id = player.id;
+  let customer_id = player
+    .stripe_customer_id
+    .parse::<stripe::CustomerId>()
+    .unwrap();
+
   let review = db_conn
-    .run(move |conn| Review::find_for_player(&id, &auth.into_deep_inner().id).first::<Review>(conn))
+    .run(move |conn| Review::find_for_player(&id, &player_id).first::<Review>(conn))
     .await?;
 
   let coach_id = review.coach_id;
@@ -123,9 +130,34 @@ pub async fn get(
     let payment_intent = review.get_payment_intent(&stripe).await;
     let tax_calculation_id = &payment_intent.metadata["tax_calculation_id"];
 
-    let tax_calculation = TaxCalculationLineItem::retrieve(config, tax_calculation_id.to_string())
-      .await
-      .unwrap();
+    let tax_calculation =
+      match TaxCalculationLineItem::retrieve(config, tax_calculation_id.to_string()).await {
+        Ok(tax_calculation) => tax_calculation,
+        Err(RequestError::NotFound(_)) => {
+          let tax_calculation = TaxCalculation::create(config, &customer_id, coach.price.into())
+            .await
+            .unwrap();
+
+          let tax_calculation_id = tax_calculation.id.clone();
+
+          let payment_intent = review.get_payment_intent(&stripe).await;
+
+          let mut payment_intent_params = UpdatePaymentIntent::new();
+          let mut payment_intent_metadata = payment_intent.metadata.clone();
+
+          payment_intent_metadata.insert("tax_calculation_id".to_string(), tax_calculation.id);
+          payment_intent_params.metadata = Some(payment_intent_metadata);
+
+          stripe::PaymentIntent::update(&stripe, &payment_intent.id, payment_intent_params)
+            .await
+            .unwrap();
+
+          TaxCalculationLineItem::retrieve(config, tax_calculation_id)
+            .await
+            .unwrap()
+        }
+        Err(err) => panic!("Error retrieving tax calculation: {:?}", err),
+      };
 
     Response::success(ReviewView::new(
       review,
@@ -196,6 +228,7 @@ pub async fn create(
     .map_err(|err| match err {
       RequestError::BadRequest(_) => MutationError::Status(Status::UnprocessableEntity),
       RequestError::ServerError(err) => MutationError::InternalServerError(err.into()),
+      RequestError::NotFound(_) => MutationError::Status(Status::NotFound),
     })?;
 
   let mut payment_intent_params =

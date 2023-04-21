@@ -10,6 +10,8 @@ pub enum RequestError {
   BadRequest(reqwest::Error),
   #[error(transparent)]
   ServerError(#[from] reqwest::Error),
+  #[error("Not found: {0}")]
+  NotFound(reqwest::Error),
 }
 
 pub fn build_request(request: reqwest::RequestBuilder, config: &Config) -> reqwest::RequestBuilder {
