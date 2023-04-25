@@ -3,5 +3,5 @@ set -e
 
 aws s3 cp s3://ranklab-development-secrets/.env.api .env.development
 aws s3 cp s3://ranklab-test-secrets/.env.api .env.test --profile test
-./bin/diesel setup
 cargo build
+./bin/diesel setup
