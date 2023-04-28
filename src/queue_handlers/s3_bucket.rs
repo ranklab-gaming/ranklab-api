@@ -143,7 +143,7 @@ impl QueueHandler for S3BucketHandler {
         continue;
       }
 
-      if file.ends_with(".jpg") {
+      if file.ends_with("1.jpg") {
         self
           .db_conn
           .run::<_, diesel::result::QueryResult<_>>(move |conn| {
