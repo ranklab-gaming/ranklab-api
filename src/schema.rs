@@ -2,12 +2,30 @@
 
 pub mod sql_types {
     #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "avatar_state"))]
+    pub struct AvatarState;
+
+    #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "recording_state"))]
     pub struct RecordingState;
 
     #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "review_state"))]
     pub struct ReviewState;
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::AvatarState;
+
+    avatars (id) {
+        id -> Uuid,
+        image_key -> Text,
+        processed_image_key -> Nullable<Text>,
+        state -> AvatarState,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
 }
 
 diesel::table! {
@@ -37,6 +55,7 @@ diesel::table! {
         updated_at -> Timestamp,
         emails_enabled -> Bool,
         slug -> Text,
+        avatar_id -> Nullable<Uuid>,
     }
 }
 
@@ -116,6 +135,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(coaches -> avatars (avatar_id));
 diesel::joinable!(comments -> coaches (coach_id));
 diesel::joinable!(comments -> reviews (review_id));
 diesel::joinable!(one_time_tokens -> coaches (coach_id));
@@ -126,6 +146,7 @@ diesel::joinable!(reviews -> players (player_id));
 diesel::joinable!(reviews -> recordings (recording_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    avatars,
     coach_invitations,
     coaches,
     comments,

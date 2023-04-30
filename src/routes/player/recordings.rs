@@ -68,7 +68,7 @@ pub async fn create(
 
   let key = match recording.metadata {
     Some(_) => None,
-    None => Some(format!("originals/{}", Uuid::new_v4())),
+    None => Some(format!("recordings/originals/{}", Uuid::new_v4())),
   };
 
   let state = match recording.metadata {

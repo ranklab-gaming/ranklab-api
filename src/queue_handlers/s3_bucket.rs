@@ -57,103 +57,121 @@ impl QueueHandler for S3BucketHandler {
     let message_body: SqsMessageBody = serde_json::from_str(&body).map_err(anyhow::Error::from)?;
 
     for record in message_body.records {
-      let parts = record.s3.object.key.split('/').collect::<Vec<_>>();
+      let mut parts = record
+        .s3
+        .object
+        .key
+        .split('/')
+        .collect::<Vec<_>>()
+        .into_iter();
 
-      let folder = *parts
-        .first()
+      let file_type = parts
+        .next()
+        .ok_or_else(|| anyhow!("No file type found in s3 key"))?;
+
+      let folder = parts
+        .next()
         .ok_or_else(|| anyhow!("No folder found in s3 key"))?;
 
-      let file = *parts
-        .get(1)
+      let file = parts
+        .next()
         .ok_or_else(|| anyhow!("No file found in s3 key"))?;
 
-      let video_key = format!("originals/{}", file.split('_').collect::<Vec<_>>()[0]);
-      let recording_query = Recording::find_by_video_key(&video_key);
+      if file_type == "recordings" {
+        let video_key = format!(
+          "recordings/originals/{}",
+          file.split('_').collect::<Vec<_>>()[0]
+        );
 
-      if folder == "originals" {
-        self
-          .db_conn
-          .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-            diesel::update(recording_query)
-              .set(RecordingChangeset::default().state(RecordingState::Uploaded))
-              .execute(conn)
-          })
-          .await
-          .map_err(QueueHandlerError::from)?;
+        let recording_query = Recording::find_by_video_key(&video_key);
 
-        continue;
-      }
+        if folder == "originals" {
+          self
+            .db_conn
+            .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+              diesel::update(recording_query)
+                .set(RecordingChangeset::default().state(RecordingState::Uploaded))
+                .execute(conn)
+            })
+            .await
+            .map_err(QueueHandlerError::from)?;
 
-      if folder != "processed" {
-        continue;
-      }
-
-      if file.ends_with(".mp4") {
-        self
-          .db_conn
-          .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-            diesel::update(recording_query)
-              .set(
-                RecordingChangeset::default()
-                  .state(RecordingState::Processed)
-                  .processed_video_key(Some(record.s3.object.key)),
-              )
-              .execute(conn)
-          })
-          .await
-          .map_err(QueueHandlerError::from)?;
-
-        let recording = self
-          .db_conn
-          .run(move |conn| Recording::find_by_video_key(&video_key).first::<Recording>(conn))
-          .await
-          .map_err(QueueHandlerError::from)?;
-
-        let reviews = self
-          .db_conn
-          .run(move |conn| Review::filter_by_recording_id(&recording.id).load::<Review>(conn))
-          .await
-          .map_err(QueueHandlerError::from)?;
-
-        let coach_ids = reviews
-          .iter()
-          .map(|review| review.coach_id)
-          .collect::<Vec<_>>();
-
-        let coaches = self
-          .db_conn
-          .run(move |conn| Coach::filter_by_ids(coach_ids).load::<Coach>(conn))
-          .await
-          .map_err(QueueHandlerError::from)?;
-
-        for review in reviews {
-          let coach = coaches
-            .iter()
-            .find(|coach| coach.id == review.coach_id)
-            .ok_or_else(|| anyhow!("No coach found for review"))?;
-
-          if coach.emails_enabled && review.state == ReviewState::AwaitingReview {
-            emails::notifications::coach_has_reviews(&self.config, coach)
-              .deliver()
-              .await
-              .map_err(anyhow::Error::from)?;
-          }
+          continue;
         }
 
-        continue;
-      }
+        if folder != "processed" {
+          continue;
+        }
 
-      if file.ends_with("1.jpg") {
-        self
-          .db_conn
-          .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-            diesel::update(recording_query)
-              .set(RecordingChangeset::default().thumbnail_key(Some(record.s3.object.key)))
-              .execute(conn)
-          })
-          .await
-          .map_err(QueueHandlerError::from)?;
+        if file.ends_with(".mp4") {
+          self
+            .db_conn
+            .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+              diesel::update(recording_query)
+                .set(
+                  RecordingChangeset::default()
+                    .state(RecordingState::Processed)
+                    .processed_video_key(Some(record.s3.object.key)),
+                )
+                .execute(conn)
+            })
+            .await
+            .map_err(QueueHandlerError::from)?;
 
+          let recording = self
+            .db_conn
+            .run(move |conn| Recording::find_by_video_key(&video_key).first::<Recording>(conn))
+            .await
+            .map_err(QueueHandlerError::from)?;
+
+          let reviews = self
+            .db_conn
+            .run(move |conn| Review::filter_by_recording_id(&recording.id).load::<Review>(conn))
+            .await
+            .map_err(QueueHandlerError::from)?;
+
+          let coach_ids = reviews
+            .iter()
+            .map(|review| review.coach_id)
+            .collect::<Vec<_>>();
+
+          let coaches = self
+            .db_conn
+            .run(move |conn| Coach::filter_by_ids(coach_ids).load::<Coach>(conn))
+            .await
+            .map_err(QueueHandlerError::from)?;
+
+          for review in reviews {
+            let coach = coaches
+              .iter()
+              .find(|coach| coach.id == review.coach_id)
+              .ok_or_else(|| anyhow!("No coach found for review"))?;
+
+            if coach.emails_enabled && review.state == ReviewState::AwaitingReview {
+              emails::notifications::coach_has_reviews(&self.config, coach)
+                .deliver()
+                .await
+                .map_err(anyhow::Error::from)?;
+            }
+          }
+
+          continue;
+        }
+
+        if file.ends_with("1.jpg") {
+          self
+            .db_conn
+            .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+              diesel::update(recording_query)
+                .set(RecordingChangeset::default().thumbnail_key(Some(record.s3.object.key)))
+                .execute(conn)
+            })
+            .await
+            .map_err(QueueHandlerError::from)?;
+
+          continue;
+        }
+      } else {
         continue;
       }
     }

@@ -28,6 +28,7 @@ pub struct Coach {
   pub updated_at: chrono::NaiveDateTime,
   pub emails_enabled: bool,
   pub slug: String,
+  pub avatar_id: Option<Uuid>,
 }
 
 impl Coach {
