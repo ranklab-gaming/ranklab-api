@@ -15,12 +15,12 @@ use uuid::Uuid;
 )]
 #[builder_struct_attr(diesel(table_name = avatars))]
 pub struct Avatar {
-  pub created_at: chrono::NaiveDateTime,
   pub id: Uuid,
-  pub updated_at: chrono::NaiveDateTime,
   pub image_key: String,
-  pub state: AvatarState,
   pub processed_image_key: Option<String>,
+  pub state: AvatarState,
+  pub created_at: chrono::NaiveDateTime,
+  pub updated_at: chrono::NaiveDateTime,
 }
 
 impl Avatar {

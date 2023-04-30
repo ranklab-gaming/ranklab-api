@@ -1,16 +1,21 @@
 use crate::config::Config;
-use crate::data_types::{RecordingState, ReviewState};
+use crate::data_types::{AvatarState, RecordingState, ReviewState};
 use crate::emails;
 use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
-use crate::models::{Coach, Recording, RecordingChangeset, Review};
+use crate::models::{
+  Avatar, AvatarChangeset, Coach, CoachChangeset, Recording, RecordingChangeset, Review,
+};
 use anyhow::anyhow;
 use diesel::prelude::*;
 use serde::Deserialize;
+use std::collections::HashMap;
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 struct RecordS3Object {
   key: String,
+  metadata: Option<HashMap<String, String>>,
 }
 
 #[derive(Deserialize)]
@@ -171,8 +176,63 @@ impl QueueHandler for S3BucketHandler {
 
           continue;
         }
-      } else {
+
         continue;
+      }
+
+      if file_type == "avatars" {
+        let image_key = format!("avatars/originals/{}", file);
+        let avatar_query = Avatar::find_by_image_key(&image_key);
+
+        if folder == "originals" {
+          self
+            .db_conn
+            .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+              diesel::update(avatar_query)
+                .set(AvatarChangeset::default().state(AvatarState::Uploaded))
+                .execute(conn)
+            })
+            .await
+            .map_err(QueueHandlerError::from)?;
+
+          continue;
+        }
+
+        if folder != "processed" {
+          continue;
+        }
+
+        let coach_id = record
+          .s3
+          .object
+          .metadata
+          .as_ref()
+          .and_then(|md| Uuid::parse_str(md.get("coach_id")?).ok())
+          .ok_or_else(|| anyhow!("No coach id found in s3 metadata"))?;
+
+        let avatar: Avatar = self
+          .db_conn
+          .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+            diesel::update(avatar_query)
+              .set(
+                AvatarChangeset::default()
+                  .state(AvatarState::Processed)
+                  .processed_image_key(Some(record.s3.object.key)),
+              )
+              .get_result(conn)
+          })
+          .await
+          .map_err(QueueHandlerError::from)?;
+
+        self
+          .db_conn
+          .run(move |conn| {
+            diesel::update(Coach::find_by_id(&coach_id))
+              .set(CoachChangeset::default().avatar_id(Some(avatar.id)))
+              .execute(conn)
+          })
+          .await
+          .map_err(QueueHandlerError::from)?;
       }
     }
 

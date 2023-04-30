@@ -1,4 +1,5 @@
 use crate::intercom;
+use crate::models::Avatar;
 use crate::{config::Config, models::Coach};
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -19,16 +20,17 @@ pub struct CoachView {
   pub emails_enabled: bool,
   pub intercom_hash: Option<String>,
   pub slug: String,
+  pub avatar_image_key: Option<String>,
 }
 
 impl From<Coach> for CoachView {
   fn from(coach: Coach) -> Self {
-    CoachView::new(coach, None)
+    CoachView::new(coach, None, None)
   }
 }
 
 impl CoachView {
-  pub fn new(coach: Coach, config: Option<&Config>) -> Self {
+  pub fn new(coach: Coach, config: Option<&Config>, avatar: Option<Avatar>) -> Self {
     let intercom_hash =
       config.and_then(|config| intercom::generate_user_hash(&coach.email, config));
 
@@ -45,6 +47,7 @@ impl CoachView {
       emails_enabled: coach.emails_enabled,
       slug: coach.slug,
       intercom_hash,
+      avatar_image_key: avatar.map(|avatar| avatar.processed_image_key).flatten(),
     }
   }
 }

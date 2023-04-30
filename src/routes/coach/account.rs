@@ -1,7 +1,7 @@
 use crate::auth::{generate_token, Account};
 use crate::config::Config;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
-use crate::models::{Coach, CoachChangeset, CoachInvitation, CoachInvitationChangeset};
+use crate::models::{Avatar, Coach, CoachChangeset, CoachInvitation, CoachInvitationChangeset};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::routes::session::CreateSessionResponse;
 use crate::schema::coaches;
@@ -52,8 +52,22 @@ pub struct UpdateCoachRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/coach/account")]
-pub async fn get(auth: Auth<Jwt<Coach>>, config: &State<Config>) -> QueryResponse<CoachView> {
-  Response::success(CoachView::new(auth.into_deep_inner(), Some(config)))
+pub async fn get(
+  auth: Auth<Jwt<Coach>>,
+  config: &State<Config>,
+  db_conn: DbConn,
+) -> QueryResponse<CoachView> {
+  let coach = auth.into_deep_inner();
+
+  let avatar: Option<Avatar> = match coach.avatar_id {
+    Some(avatar_id) => db_conn
+      .run(move |conn| Avatar::find_by_id(&avatar_id).get_result::<Avatar>(conn))
+      .await
+      .ok(),
+    None => None,
+  };
+
+  Response::success(CoachView::new(coach, Some(config), avatar))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -106,7 +120,7 @@ pub async fn update(
       _ => MutationError::InternalServerError(err.into()),
     })?;
 
-  Response::success(CoachView::new(coach, Some(config)))
+  Response::success(CoachView::new(coach, Some(config), None))
 }
 
 #[openapi(tag = "Ranklab")]

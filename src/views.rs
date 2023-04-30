@@ -1,3 +1,4 @@
+mod avatar;
 mod coach;
 mod comment;
 mod game;
@@ -5,6 +6,7 @@ mod player;
 mod recording;
 mod review;
 
+pub use avatar::AvatarView;
 pub use coach::CoachView;
 pub use comment::CommentView;
 pub use game::GameView;

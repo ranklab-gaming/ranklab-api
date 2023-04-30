@@ -1,9 +1,10 @@
 use crate::guards::{Auth, DbConn, Jwt};
-use crate::models::{Coach, Player};
+use crate::models::{Avatar, Coach, Player};
 use crate::response::{QueryResponse, Response};
 use crate::views::CoachView;
 use diesel::prelude::*;
 use rocket_okapi::openapi;
+use uuid::Uuid;
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/coaches")]
@@ -12,7 +13,33 @@ pub async fn list(auth: Auth<Jwt<Player>>, db_conn: DbConn) -> QueryResponse<Vec
     .run(move |conn| Coach::filter_by_game_id(&auth.into_deep_inner().game_id).load(conn))
     .await?;
 
-  Response::success(coaches.into_iter().map(Into::into).collect())
+  let avatar_ids = coaches
+    .iter()
+    .filter_map(|coach| coach.avatar_id)
+    .collect::<Vec<Uuid>>();
+
+  let avatars: Vec<Avatar> = db_conn
+    .run(move |conn| Avatar::filter_by_ids(avatar_ids).load::<Avatar>(conn))
+    .await?;
+
+  let coach_views: Vec<CoachView> = coaches
+    .clone()
+    .into_iter()
+    .map(|coach| {
+      let avatar_id = coach.avatar_id;
+
+      CoachView::new(
+        coach,
+        None,
+        avatars
+          .iter()
+          .find(|avatar| Some(avatar.id) == avatar_id)
+          .cloned(),
+      )
+    })
+    .collect();
+
+  Response::success(coach_views)
 }
 
 #[openapi(tag = "Ranklab")]
@@ -26,5 +53,13 @@ pub async fn get(
     .run(move |conn| Coach::find_by_slug(&slug).first::<Coach>(conn))
     .await?;
 
-  Response::success(coach.into())
+  let avatar = match coach.avatar_id {
+    Some(avatar_id) => db_conn
+      .run(move |conn| Avatar::find_by_id(&avatar_id).get_result::<Avatar>(conn))
+      .await
+      .ok(),
+    None => None,
+  };
+
+  Response::success(CoachView::new(coach, None, avatar))
 }

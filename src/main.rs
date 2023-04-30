@@ -67,6 +67,8 @@ async fn rocket() -> Rocket<Build> {
     .mount(
       "/",
       openapi_get_routes![
+        coach::avatars::create,
+        coach::avatars::delete,
         coach::account::create,
         coach::account::get,
         coach::account::update,
