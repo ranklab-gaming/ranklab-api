@@ -181,7 +181,11 @@ impl QueueHandler for S3BucketHandler {
       }
 
       if file_type == "avatars" {
-        let image_key = format!("avatars/originals/{}", file);
+        let image_key = format!(
+          "avatars/originals/{}",
+          file.split('.').collect::<Vec<_>>()[0]
+        );
+
         let avatar_query = Avatar::find_by_image_key(&image_key);
 
         if folder == "originals" {
@@ -207,7 +211,7 @@ impl QueueHandler for S3BucketHandler {
           .object
           .metadata
           .as_ref()
-          .and_then(|md| Uuid::parse_str(md.get("coach_id")?).ok())
+          .and_then(|metadata| Uuid::parse_str(metadata.get("coach-id")?).ok())
           .ok_or_else(|| anyhow!("No coach id found in s3 metadata"))?;
 
         let avatar: Avatar = self

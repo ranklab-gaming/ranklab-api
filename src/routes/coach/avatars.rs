@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::config::Config;
 use crate::guards::{Auth, DbConn, Jwt};
-use crate::models::{Avatar, AvatarChangeset, Coach, Player};
+use crate::models::{Avatar, AvatarChangeset, Coach};
 use crate::response::{MutationResponse, Response, StatusResponse};
 use crate::schema::avatars;
 use crate::views::AvatarView;
@@ -27,7 +27,7 @@ pub struct CreateAvatarRequest {}
 pub async fn create(
   config: &State<Config>,
   db_conn: DbConn,
-  auth: Auth<Jwt<Player>>,
+  auth: Auth<Jwt<Coach>>,
   _avatar: Json<CreateAvatarRequest>,
 ) -> MutationResponse<AvatarView> {
   let coach = auth.into_deep_inner();
@@ -44,7 +44,7 @@ pub async fn create(
 
   let mut metadata = HashMap::new();
 
-  metadata.insert("coach_id".to_string(), coach.id.to_string());
+  metadata.insert("coach-id".to_string(), coach.id.to_string());
 
   let req = PutObjectRequest {
     bucket: config.s3_bucket.to_owned(),
