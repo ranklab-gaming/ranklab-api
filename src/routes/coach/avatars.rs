@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::config::Config;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Avatar, AvatarChangeset, Coach};
@@ -36,21 +34,16 @@ pub async fn create(
   let avatar: Avatar = db_conn
     .run(move |conn| {
       diesel::insert_into(avatars::table)
-        .values(AvatarChangeset::default().image_key(key))
+        .values(AvatarChangeset::default().image_key(key).coach_id(coach.id))
         .get_result::<Avatar>(conn)
         .unwrap()
     })
     .await;
 
-  let mut metadata = HashMap::new();
-
-  metadata.insert("coach-id".to_string(), coach.id.to_string());
-
   let req = PutObjectRequest {
     bucket: config.s3_bucket.to_owned(),
     key: avatar.image_key.to_owned(),
     acl: Some("public-read".to_string()),
-    metadata: Some(metadata),
     ..Default::default()
   };
 

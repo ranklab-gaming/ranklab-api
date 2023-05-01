@@ -21,6 +21,7 @@ pub struct Avatar {
   pub state: AvatarState,
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime,
+  pub coach_id: Uuid,
 }
 
 impl Avatar {
@@ -36,5 +37,9 @@ impl Avatar {
 
   pub fn find_by_id(id: &Uuid) -> FindBy<avatars::table, avatars::id, Uuid> {
     avatars::table.filter(avatars::id.eq(*id))
+  }
+
+  pub fn find_by_coach_id(id: &Uuid) -> FindBy<avatars::table, avatars::coach_id, Uuid> {
+    avatars::table.filter(avatars::coach_id.eq(*id))
   }
 }

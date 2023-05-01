@@ -9,13 +9,10 @@ use crate::models::{
 use anyhow::anyhow;
 use diesel::prelude::*;
 use serde::Deserialize;
-use std::collections::HashMap;
-use uuid::Uuid;
 
 #[derive(Deserialize)]
 struct RecordS3Object {
   key: String,
-  metadata: Option<HashMap<String, String>>,
 }
 
 #[derive(Deserialize)]
@@ -83,162 +80,183 @@ impl QueueHandler for S3BucketHandler {
         .ok_or_else(|| anyhow!("No file found in s3 key"))?;
 
       if file_type == "recordings" {
-        let video_key = format!(
-          "recordings/originals/{}",
-          file.split('_').collect::<Vec<_>>()[0]
-        );
-
-        let recording_query = Recording::find_by_video_key(&video_key);
-
-        if folder == "originals" {
-          self
-            .db_conn
-            .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-              diesel::update(recording_query)
-                .set(RecordingChangeset::default().state(RecordingState::Uploaded))
-                .execute(conn)
-            })
-            .await
-            .map_err(QueueHandlerError::from)?;
-
-          continue;
-        }
-
-        if folder != "processed" {
-          continue;
-        }
-
-        if file.ends_with(".mp4") {
-          self
-            .db_conn
-            .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-              diesel::update(recording_query)
-                .set(
-                  RecordingChangeset::default()
-                    .state(RecordingState::Processed)
-                    .processed_video_key(Some(record.s3.object.key)),
-                )
-                .execute(conn)
-            })
-            .await
-            .map_err(QueueHandlerError::from)?;
-
-          let recording = self
-            .db_conn
-            .run(move |conn| Recording::find_by_video_key(&video_key).first::<Recording>(conn))
-            .await
-            .map_err(QueueHandlerError::from)?;
-
-          let reviews = self
-            .db_conn
-            .run(move |conn| Review::filter_by_recording_id(&recording.id).load::<Review>(conn))
-            .await
-            .map_err(QueueHandlerError::from)?;
-
-          let coach_ids = reviews
-            .iter()
-            .map(|review| review.coach_id)
-            .collect::<Vec<_>>();
-
-          let coaches = self
-            .db_conn
-            .run(move |conn| Coach::filter_by_ids(coach_ids).load::<Coach>(conn))
-            .await
-            .map_err(QueueHandlerError::from)?;
-
-          for review in reviews {
-            let coach = coaches
-              .iter()
-              .find(|coach| coach.id == review.coach_id)
-              .ok_or_else(|| anyhow!("No coach found for review"))?;
-
-            if coach.emails_enabled && review.state == ReviewState::AwaitingReview {
-              emails::notifications::coach_has_reviews(&self.config, coach)
-                .deliver()
-                .await
-                .map_err(anyhow::Error::from)?;
-            }
-          }
-
-          continue;
-        }
-
-        if file.ends_with("1.jpg") {
-          self
-            .db_conn
-            .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-              diesel::update(recording_query)
-                .set(RecordingChangeset::default().thumbnail_key(Some(record.s3.object.key)))
-                .execute(conn)
-            })
-            .await
-            .map_err(QueueHandlerError::from)?;
-
-          continue;
-        }
-
-        continue;
+        return self.handle_recording_uploaded(&record, folder, file).await;
       }
 
       if file_type == "avatars" {
-        let image_key = format!(
-          "avatars/originals/{}",
-          file.split('.').collect::<Vec<_>>()[0]
-        );
-
-        let avatar_query = Avatar::find_by_image_key(&image_key);
-
-        if folder == "originals" {
-          self
-            .db_conn
-            .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-              diesel::update(avatar_query)
-                .set(AvatarChangeset::default().state(AvatarState::Uploaded))
-                .execute(conn)
-            })
-            .await
-            .map_err(QueueHandlerError::from)?;
-
-          continue;
-        }
-
-        if folder != "processed" {
-          continue;
-        }
-
-        let coach_id = record
-          .s3
-          .object
-          .metadata
-          .as_ref()
-          .and_then(|metadata| Uuid::parse_str(metadata.get("coach-id")?).ok())
-          .ok_or_else(|| anyhow!("No coach id found in s3 metadata"))?;
-
-        let avatar: Avatar = self
-          .db_conn
-          .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-            diesel::update(avatar_query)
-              .set(
-                AvatarChangeset::default()
-                  .state(AvatarState::Processed)
-                  .processed_image_key(Some(record.s3.object.key)),
-              )
-              .get_result(conn)
-          })
-          .await
-          .map_err(QueueHandlerError::from)?;
-
-        self
-          .db_conn
-          .run(move |conn| {
-            diesel::update(Coach::find_by_id(&coach_id))
-              .set(CoachChangeset::default().avatar_id(Some(avatar.id)))
-              .execute(conn)
-          })
-          .await
-          .map_err(QueueHandlerError::from)?;
+        self.handle_avatar_uploaded(&record, folder, file).await?;
       }
     }
+
+    Ok(())
+  }
+}
+
+impl S3BucketHandler {
+  async fn handle_recording_uploaded(
+    &self,
+    record: &Record,
+    folder: &str,
+    file: &str,
+  ) -> Result<(), QueueHandlerError> {
+    let video_key = format!(
+      "recordings/originals/{}",
+      file.split('_').collect::<Vec<_>>()[0]
+    );
+
+    let recording_query = Recording::find_by_video_key(&video_key);
+
+    if folder == "originals" {
+      self
+        .db_conn
+        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+          diesel::update(recording_query)
+            .set(RecordingChangeset::default().state(RecordingState::Uploaded))
+            .execute(conn)
+        })
+        .await
+        .map_err(QueueHandlerError::from)?;
+
+      return Ok(());
+    }
+
+    if folder != "processed" {
+      return Ok(());
+    }
+
+    if file.ends_with(".mp4") {
+      let processed_video_key = Some(record.s3.object.key.clone());
+
+      self
+        .db_conn
+        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+          diesel::update(recording_query)
+            .set(
+              RecordingChangeset::default()
+                .state(RecordingState::Processed)
+                .processed_video_key(processed_video_key),
+            )
+            .execute(conn)
+        })
+        .await
+        .map_err(QueueHandlerError::from)?;
+
+      let recording = self
+        .db_conn
+        .run(move |conn| Recording::find_by_video_key(&video_key).first::<Recording>(conn))
+        .await
+        .map_err(QueueHandlerError::from)?;
+
+      let reviews = self
+        .db_conn
+        .run(move |conn| Review::filter_by_recording_id(&recording.id).load::<Review>(conn))
+        .await
+        .map_err(QueueHandlerError::from)?;
+
+      let coach_ids = reviews
+        .iter()
+        .map(|review| review.coach_id)
+        .collect::<Vec<_>>();
+
+      let coaches = self
+        .db_conn
+        .run(move |conn| Coach::filter_by_ids(coach_ids).load::<Coach>(conn))
+        .await
+        .map_err(QueueHandlerError::from)?;
+
+      for review in reviews {
+        let coach = coaches
+          .iter()
+          .find(|coach| coach.id == review.coach_id)
+          .ok_or_else(|| anyhow!("No coach found for review"))?;
+
+        if coach.emails_enabled && review.state == ReviewState::AwaitingReview {
+          emails::notifications::coach_has_reviews(&self.config, coach)
+            .deliver()
+            .await
+            .map_err(anyhow::Error::from)?;
+        }
+      }
+
+      return Ok(());
+    }
+
+    if file.ends_with("1.jpg") {
+      let thumbnail_key = Some(record.s3.object.key.clone());
+
+      self
+        .db_conn
+        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+          diesel::update(recording_query)
+            .set(RecordingChangeset::default().thumbnail_key(thumbnail_key))
+            .execute(conn)
+        })
+        .await
+        .map_err(QueueHandlerError::from)?;
+    }
+
+    Ok(())
+  }
+
+  async fn handle_avatar_uploaded(
+    &self,
+    record: &Record,
+    folder: &str,
+    file: &str,
+  ) -> Result<(), QueueHandlerError> {
+    let image_key = format!(
+      "avatars/originals/{}",
+      file.split('.').collect::<Vec<_>>()[0]
+    );
+
+    let avatar: Avatar = self
+      .db_conn
+      .run(move |conn| Avatar::find_by_image_key(&image_key).first::<Avatar>(conn))
+      .await?;
+
+    if folder == "originals" {
+      self
+        .db_conn
+        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+          diesel::update(&avatar)
+            .set(AvatarChangeset::default().state(AvatarState::Uploaded))
+            .execute(conn)
+        })
+        .await
+        .map_err(QueueHandlerError::from)?;
+
+      return Ok(());
+    }
+
+    if folder != "processed" {
+      return Ok(());
+    }
+
+    let processed_image_key = Some(record.s3.object.key.clone());
+
+    let avatar: Avatar = self
+      .db_conn
+      .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+        diesel::update(&avatar)
+          .set(
+            AvatarChangeset::default()
+              .state(AvatarState::Processed)
+              .processed_image_key(processed_image_key),
+          )
+          .get_result(conn)
+      })
+      .await
+      .map_err(QueueHandlerError::from)?;
+
+    self
+      .db_conn
+      .run(move |conn| {
+        diesel::update(Coach::find_by_id(&avatar.coach_id))
+          .set(CoachChangeset::default().avatar_id(Some(avatar.id)))
+          .execute(conn)
+      })
+      .await
+      .map_err(QueueHandlerError::from)?;
 
     Ok(())
   }

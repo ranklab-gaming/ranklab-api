@@ -25,6 +25,7 @@ diesel::table! {
         state -> AvatarState,
         created_at -> Timestamp,
         updated_at -> Timestamp,
+        coach_id -> Uuid,
     }
 }
 
@@ -135,7 +136,6 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(coaches -> avatars (avatar_id));
 diesel::joinable!(comments -> coaches (coach_id));
 diesel::joinable!(comments -> reviews (review_id));
 diesel::joinable!(one_time_tokens -> coaches (coach_id));
