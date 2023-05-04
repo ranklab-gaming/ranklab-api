@@ -181,7 +181,7 @@ impl S3BucketHandler {
       return Ok(());
     }
 
-    if file.ends_with("1.jpg") {
+    if file.ends_with(".jpg") {
       let thumbnail_key = Some(record.s3.object.key.clone());
 
       self
