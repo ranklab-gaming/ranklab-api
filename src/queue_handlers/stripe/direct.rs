@@ -82,7 +82,13 @@ impl Direct {
         rusoto_stepfunctions::StartExecutionInput {
           state_machine_arn: state_machine_arn.clone(),
           input: Some(
-            serde_json::json!({ "input": { "reviewId": review.id.to_string() } }).to_string(),
+            serde_json::json!({
+              "input": {
+                "reviewId": review.id.to_string(),
+                "instanceId": self.config.instance_id
+              }
+            })
+            .to_string(),
           ),
           name: None,
           trace_header: None,

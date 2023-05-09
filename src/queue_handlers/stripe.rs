@@ -48,11 +48,39 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
     self.handler.url()
   }
 
+  async fn instance_id(
+    &self,
+    message: &rusoto_sqs::Message,
+    profile: &rocket::figment::Profile,
+  ) -> Result<Option<String>, QueueHandlerError> {
+    let webhook = self.parse_webhook(message, profile)?;
+
+    let metadata = match webhook.data.object {
+      stripe::EventObject::Account(account) => Some(account.metadata),
+      stripe::EventObject::Charge(charge) => Some(charge.metadata),
+      stripe::EventObject::PaymentIntent(payment_intent) => Some(payment_intent.metadata),
+      _ => None,
+    };
+
+    Ok(metadata.and_then(|metadata| metadata.get("instance_id").map(|s| s.to_string())))
+  }
+
   async fn handle(
     &self,
     message: &rusoto_sqs::Message,
     profile: &rocket::figment::Profile,
   ) -> Result<(), QueueHandlerError> {
+    let webhook = self.parse_webhook(message, profile)?;
+    self.handler.handle_event(webhook).await
+  }
+}
+
+impl<T: StripeEventHandler> StripeHandler<T> {
+  fn parse_webhook(
+    &self,
+    message: &rusoto_sqs::Message,
+    profile: &rocket::figment::Profile,
+  ) -> Result<WebhookEvent, QueueHandlerError> {
     let body = message
       .body
       .clone()
@@ -73,6 +101,6 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
       )));
     }
 
-    self.handler.handle_event(webhook).await
+    Ok(webhook)
   }
 }

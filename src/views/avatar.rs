@@ -12,16 +12,17 @@ pub struct AvatarView {
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime,
   pub state: AvatarState,
+  pub instance_id: Option<String>,
 }
 
 impl From<Avatar> for AvatarView {
   fn from(avatar: Avatar) -> Self {
-    AvatarView::new(avatar, None)
+    AvatarView::new(avatar, None, None)
   }
 }
 
 impl AvatarView {
-  pub fn new(avatar: Avatar, upload_url: Option<String>) -> Self {
+  pub fn new(avatar: Avatar, upload_url: Option<String>, instance_id: Option<String>) -> Self {
     AvatarView {
       id: avatar.id,
       image_key: avatar.processed_image_key,
@@ -29,6 +30,7 @@ impl AvatarView {
       created_at: avatar.created_at,
       updated_at: avatar.updated_at,
       state: avatar.state,
+      instance_id,
     }
   }
 }

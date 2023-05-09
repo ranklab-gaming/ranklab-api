@@ -237,6 +237,11 @@ pub async fn create(
   let mut payment_intent_metadata = HashMap::new();
 
   payment_intent_metadata.insert("tax_calculation_id".to_string(), tax_calculation.id);
+
+  if let Some(instance_id) = config.instance_id.as_ref() {
+    payment_intent_metadata.insert("instance_id".to_owned(), instance_id.to_owned());
+  }
+
   payment_intent_params.customer = Some(customer_id);
   payment_intent_params.metadata = Some(payment_intent_metadata);
 

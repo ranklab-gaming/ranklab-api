@@ -18,16 +18,21 @@ pub struct RecordingView {
   pub skill_level: i16,
   pub state: RecordingState,
   pub metadata: Option<serde_json::Value>,
+  pub instance_id: Option<String>,
 }
 
 impl From<Recording> for RecordingView {
   fn from(recording: Recording) -> Self {
-    RecordingView::new(recording, None)
+    RecordingView::new(recording, None, None)
   }
 }
 
 impl RecordingView {
-  pub fn new(recording: Recording, upload_url: Option<String>) -> Self {
+  pub fn new(
+    recording: Recording,
+    upload_url: Option<String>,
+    instance_id: Option<String>,
+  ) -> Self {
     RecordingView {
       id: recording.id,
       player_id: recording.player_id,
@@ -41,6 +46,7 @@ impl RecordingView {
       state: recording.state,
       thumbnail_key: recording.thumbnail_key,
       metadata: recording.metadata,
+      instance_id,
     }
   }
 }

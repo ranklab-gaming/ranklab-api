@@ -5,3 +5,5 @@ aws s3 cp s3://ranklab-development-secrets/.env.api .env.development
 aws s3 cp s3://ranklab-test-secrets/.env.api .env.test --profile test
 cargo build
 ./bin/diesel setup
+echo "RANKLAB_INSTANCE_ID=$(openssl rand -hex 16)" >> .env.development
+echo "RANKLAB_INSTANCE_ID=$(openssl rand -hex 16)" >> .env.test

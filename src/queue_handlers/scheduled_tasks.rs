@@ -16,6 +16,8 @@ use stripe::CreateRefund;
 struct SqsMessageBody {
   #[serde(rename = "reviewId")]
   review_id: uuid::Uuid,
+  #[serde(rename = "instanceId")]
+  instance_id: Option<String>,
 }
 
 pub struct ScheduledTasksHandler {
@@ -40,17 +42,21 @@ impl QueueHandler for ScheduledTasksHandler {
     self.config.scheduled_tasks_queue.as_ref().unwrap().clone()
   }
 
+  async fn instance_id(
+    &self,
+    message: &rusoto_sqs::Message,
+    _profile: &rocket::figment::Profile,
+  ) -> Result<Option<String>, QueueHandlerError> {
+    let message_body = self.parse_message(message)?;
+    Ok(message_body.instance_id)
+  }
+
   async fn handle(
     &self,
     message: &rusoto_sqs::Message,
     _profile: &rocket::figment::Profile,
   ) -> Result<(), QueueHandlerError> {
-    let body = message
-      .body
-      .clone()
-      .ok_or_else(|| anyhow!("No body found in sqs message"))?;
-
-    let message_body: SqsMessageBody = serde_json::from_str(&body).map_err(anyhow::Error::from)?;
+    let message_body = self.parse_message(message)?;
 
     let review = self
       .db_conn
@@ -113,5 +119,21 @@ impl QueueHandler for ScheduledTasksHandler {
     }
 
     Ok(())
+  }
+}
+
+impl ScheduledTasksHandler {
+  fn parse_message(
+    &self,
+    message: &rusoto_sqs::Message,
+  ) -> Result<SqsMessageBody, QueueHandlerError> {
+    let body = message
+      .body
+      .clone()
+      .ok_or_else(|| anyhow!("No body found in sqs message"))?;
+
+    let message_body: SqsMessageBody = serde_json::from_str(&body).map_err(anyhow::Error::from)?;
+
+    Ok(message_body)
   }
 }

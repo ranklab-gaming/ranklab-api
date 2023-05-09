@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::config::Config;
 use crate::data_types::RecordingState;
 use crate::games;
@@ -99,7 +101,11 @@ pub async fn create(
     .as_ref()
     .map(|video_key| create_upload_url(config, video_key));
 
-  Response::success(RecordingView::new(recording, url))
+  Response::success(RecordingView::new(
+    recording,
+    url,
+    config.instance_id.clone(),
+  ))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -121,14 +127,21 @@ pub async fn get(
     .as_ref()
     .map(|video_key| create_upload_url(config, video_key));
 
-  Response::success(RecordingView::new(recording, url))
+  Response::success(RecordingView::new(recording, url, None))
 }
 
 fn create_upload_url(config: &Config, recording_video_key: &String) -> String {
+  let mut metadata = HashMap::new();
+
+  if let Some(instance_id) = config.instance_id.as_ref() {
+    metadata.insert("instance-id".to_string(), instance_id.to_string());
+  }
+
   let req = PutObjectRequest {
     bucket: config.s3_bucket.to_owned(),
     key: recording_video_key.to_owned(),
     acl: Some("public-read".to_string()),
+    metadata: Some(metadata),
     ..Default::default()
   };
 

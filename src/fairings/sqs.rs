@@ -6,8 +6,11 @@ use crate::queue_handlers::{S3BucketHandler, ScheduledTasksHandler, StripeHandle
 use anyhow::anyhow;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
-use rusoto_core::{HttpClient, Region};
-use rusoto_sqs::{DeleteMessageRequest, ReceiveMessageRequest, Sqs, SqsClient};
+use rusoto_core::{HttpClient, Region, RusotoError};
+use rusoto_sqs::{
+  ChangeMessageVisibilityError, ChangeMessageVisibilityRequest, DeleteMessageRequest,
+  ReceiveMessageRequest, Sqs, SqsClient,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum QueueHandlerError {
@@ -21,6 +24,11 @@ pub enum QueueHandlerError {
 pub trait QueueHandler: Send + Sync {
   fn new(db_conn: DbConn, config: Config) -> Self;
   fn url(&self) -> String;
+  async fn instance_id(
+    &self,
+    message: &rusoto_sqs::Message,
+    profile: &rocket::figment::Profile,
+  ) -> Result<Option<String>, QueueHandlerError>;
   async fn handle(
     &self,
     message: &rusoto_sqs::Message,
@@ -54,6 +62,7 @@ impl SqsFairing {
     let profile = rocket.config().profile.clone();
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
+    let instance_id = config.instance_id.clone();
     let fairing = self.clone();
 
     tokio::spawn(async move {
@@ -69,7 +78,10 @@ impl SqsFairing {
       );
 
       loop {
-        match fairing.poll(&handler, &client, &profile).await {
+        match fairing
+          .poll(&handler, &client, &profile, &instance_id)
+          .await
+        {
           Ok(_) => (),
           Err(e) => {
             error!("[sqs] {:?}", e);
@@ -85,6 +97,7 @@ impl SqsFairing {
     handler: &T,
     client: &SqsClient,
     profile: &rocket::figment::Profile,
+    instance_id: &Option<String>,
   ) -> anyhow::Result<()> {
     let receive_request = ReceiveMessageRequest {
       queue_url: handler.url(),
@@ -97,6 +110,29 @@ impl SqsFairing {
     if let Some(messages) = response.messages {
       for message in messages {
         info!("[sqs] Received message: {:?}", message.message_id);
+
+        let message_instance_id = handler.instance_id(&message, profile).await?;
+
+        if message_instance_id != *instance_id {
+          info!(
+            "[sqs] Message {:?} is for instance {:?}, skipping",
+            message.message_id, message_instance_id
+          );
+
+          self
+            .change_message_visibility(
+              client,
+              &handler.url(),
+              &message
+                .receipt_handle
+                .clone()
+                .ok_or_else(|| anyhow!("Receipt handle missing from message"))?,
+              0,
+            )
+            .await?;
+
+          continue;
+        }
 
         match handler.handle(&message, profile).await {
           Err(QueueHandlerError::Ignorable(e)) => {
@@ -124,6 +160,23 @@ impl SqsFairing {
       }
     };
 
+    Ok(())
+  }
+
+  async fn change_message_visibility(
+    &self,
+    sqs_client: &SqsClient,
+    queue_url: &str,
+    receipt_handle: &str,
+    visibility_timeout: i64,
+  ) -> Result<(), RusotoError<ChangeMessageVisibilityError>> {
+    let req = ChangeMessageVisibilityRequest {
+      queue_url: queue_url.to_owned(),
+      receipt_handle: receipt_handle.to_owned(),
+      visibility_timeout,
+    };
+
+    sqs_client.change_message_visibility(req).await?;
     Ok(())
   }
 }

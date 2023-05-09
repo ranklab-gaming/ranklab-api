@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::config::Config;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Avatar, AvatarChangeset, Coach};
@@ -40,10 +42,17 @@ pub async fn create(
     })
     .await;
 
+  let mut metadata = HashMap::new();
+
+  if let Some(instance_id) = config.instance_id.as_ref() {
+    metadata.insert("instance-id".to_string(), instance_id.to_string());
+  }
+
   let req = PutObjectRequest {
     bucket: config.s3_bucket.to_owned(),
     key: avatar.image_key.to_owned(),
     acl: Some("public-read".to_string()),
+    metadata: Some(metadata),
     ..Default::default()
   };
 
@@ -58,7 +67,11 @@ pub async fn create(
     &Default::default(),
   );
 
-  Response::success(AvatarView::new(avatar, Some(url)))
+  Response::success(AvatarView::new(
+    avatar,
+    Some(url),
+    config.instance_id.clone(),
+  ))
 }
 
 #[openapi(tag = "Ranklab")]

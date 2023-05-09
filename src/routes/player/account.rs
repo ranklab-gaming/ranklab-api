@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::net::SocketAddr;
 
 use crate::auth::{generate_token, Account};
@@ -83,6 +84,14 @@ pub async fn create(
   params.tax = Some(stripe::CreateCustomerTax {
     ip_address: Some(ip_address.ip().to_string()),
   });
+
+  let mut metadata = HashMap::new();
+
+  if let Some(instance_id) = config.instance_id.as_ref() {
+    metadata.insert("instance_id".to_owned(), instance_id.to_owned());
+  }
+
+  params.metadata = Some(metadata);
 
   let stripe = stripe
     .into_inner()

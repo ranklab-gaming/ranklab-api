@@ -1,13 +1,16 @@
 use crate::config::Config;
 use crate::data_types::{AvatarState, RecordingState, ReviewState};
-use crate::emails;
 use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
 use crate::models::{
   Avatar, AvatarChangeset, Coach, CoachChangeset, Recording, RecordingChangeset, Review,
 };
+use crate::{aws, emails};
 use anyhow::anyhow;
 use diesel::prelude::*;
+use rusoto_core::HttpClient;
+use rusoto_s3::{GetObjectRequest, S3Client, S3};
+use rusoto_signature::Region;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -34,16 +37,66 @@ struct SqsMessageBody {
 pub struct S3BucketHandler {
   db_conn: DbConn,
   config: Config,
+  client: S3Client,
 }
 
 #[async_trait]
 impl QueueHandler for S3BucketHandler {
   fn new(db_conn: DbConn, config: Config) -> Self {
-    Self { db_conn, config }
+    let mut builder = hyper::Client::builder();
+    let aws_access_key_id = config.aws_access_key_id.clone();
+    let aws_secret_key = config.aws_secret_key.clone();
+
+    builder.pool_max_idle_per_host(0);
+
+    let client = S3Client::new_with(
+      HttpClient::from_builder(builder, hyper_tls::HttpsConnector::new()),
+      aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
+      Region::EuWest2,
+    );
+
+    Self {
+      db_conn,
+      config,
+      client,
+    }
   }
 
   fn url(&self) -> String {
     self.config.s3_bucket_queue.clone()
+  }
+
+  async fn instance_id(
+    &self,
+    message: &rusoto_sqs::Message,
+    _profile: &rocket::figment::Profile,
+  ) -> Result<Option<String>, QueueHandlerError> {
+    let message_body = self.parse_message(message)?;
+
+    let key = message_body
+      .records
+      .first()
+      .ok_or_else(|| anyhow!("No records found in sqs message"))?
+      .s3
+      .object
+      .key
+      .clone();
+
+    let object = self
+      .client
+      .get_object(GetObjectRequest {
+        bucket: self.config.s3_bucket.clone(),
+        key: key.clone(),
+        ..Default::default()
+      })
+      .await
+      .map_err(anyhow::Error::from)?;
+
+    let instance_id: Option<String> = object
+      .metadata
+      .and_then(|metadata| metadata.get("instance-id").cloned());
+
+    Ok(instance_id)
   }
 
   async fn handle(
@@ -51,12 +104,7 @@ impl QueueHandler for S3BucketHandler {
     message: &rusoto_sqs::Message,
     _profile: &rocket::figment::Profile,
   ) -> Result<(), QueueHandlerError> {
-    let body = message
-      .body
-      .clone()
-      .ok_or_else(|| anyhow!("No body found in sqs message"))?;
-
-    let message_body: SqsMessageBody = serde_json::from_str(&body).map_err(anyhow::Error::from)?;
+    let message_body = self.parse_message(message)?;
 
     for record in message_body.records {
       let mut parts = record
@@ -259,5 +307,21 @@ impl S3BucketHandler {
       .map_err(QueueHandlerError::from)?;
 
     Ok(())
+  }
+}
+
+impl S3BucketHandler {
+  fn parse_message(
+    &self,
+    message: &rusoto_sqs::Message,
+  ) -> Result<SqsMessageBody, QueueHandlerError> {
+    let body = message
+      .body
+      .clone()
+      .ok_or_else(|| anyhow!("No body found in sqs message"))?;
+
+    let message_body: SqsMessageBody = serde_json::from_str(&body).map_err(anyhow::Error::from)?;
+
+    Ok(message_body)
   }
 }
