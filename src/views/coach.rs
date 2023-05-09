@@ -47,7 +47,7 @@ impl CoachView {
       emails_enabled: coach.emails_enabled,
       slug: coach.slug,
       intercom_hash,
-      avatar_image_key: avatar.map(|avatar| avatar.processed_image_key).flatten(),
+      avatar_image_key: avatar.and_then(|avatar| avatar.processed_image_key),
     }
   }
 }
