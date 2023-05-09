@@ -82,7 +82,11 @@ impl SqsFairing {
           .poll(&handler, &client, &profile, &instance_id)
           .await
         {
-          Ok(_) => (),
+          Ok(should_delay_poll) => {
+            if should_delay_poll {
+              tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            }
+          }
           Err(e) => {
             error!("[sqs] {:?}", e);
             sentry::capture_error(e.root_cause());
@@ -98,7 +102,7 @@ impl SqsFairing {
     client: &SqsClient,
     profile: &rocket::figment::Profile,
     instance_id: &Option<String>,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<bool> {
     let receive_request = ReceiveMessageRequest {
       queue_url: handler.url(),
       wait_time_seconds: Some(20),
@@ -106,6 +110,7 @@ impl SqsFairing {
     };
 
     let response = client.receive_message(receive_request).await?;
+    let mut should_delay_poll = false;
 
     if let Some(messages) = response.messages {
       for message in messages {
@@ -131,6 +136,8 @@ impl SqsFairing {
             )
             .await?;
 
+          should_delay_poll = true;
+
           continue;
         }
 
@@ -139,7 +146,7 @@ impl SqsFairing {
             if profile == rocket::config::Config::RELEASE_PROFILE {
               return Err(e);
             } else {
-              return Ok(());
+              return Ok(should_delay_poll);
             }
           }
           Err(e) => return Err(e.into()),
@@ -160,7 +167,7 @@ impl SqsFairing {
       }
     };
 
-    Ok(())
+    Ok(should_delay_poll)
   }
 
   async fn change_message_visibility(
