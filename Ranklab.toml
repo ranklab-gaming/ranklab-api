@@ -6,4 +6,4 @@ auth_client_secret = "276b920ca3cb252d071150c66e779dc227d9dc18cb93823df720be0736
 [test]
 host = "http://ranklab-api:8000"
 web_host = "http://ranklab-test:3000"
-auth_client_secret = "276b920ca3cb252d071150c66e779dc227d9dc18cb93823df720be0736ad64871060f614b61a59900eab480fb1353983fecaa626c246afa4f0c4d6c35aab237a"
+auth_client_secret = "6e7e3219183d7e8b1bc12a483b2a6c85bae30f12968c9d35ffa7841ae79e30ed24eab115f8e5705facd9ba3b038ceb17f811495407254a4c178968413514f92e"

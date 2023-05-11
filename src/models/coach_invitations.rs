@@ -1,6 +1,6 @@
 use crate::schema::coach_invitations;
 use derive_builder::Builder;
-use diesel::helper_types::FindBy;
+use diesel::helper_types::{And, Eq, Filter, IsNull};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -23,7 +23,14 @@ pub struct CoachInvitation {
 impl CoachInvitation {
   pub fn find_by_value(
     value: &str,
-  ) -> FindBy<coach_invitations::table, coach_invitations::value, String> {
-    coach_invitations::table.filter(coach_invitations::value.eq(value.to_string()))
+  ) -> Filter<
+    coach_invitations::table,
+    And<Eq<coach_invitations::value, String>, IsNull<coach_invitations::used_at>>,
+  > {
+    coach_invitations::table.filter(
+      coach_invitations::value
+        .eq(value.to_string())
+        .and(coach_invitations::used_at.is_null()),
+    )
   }
 }
