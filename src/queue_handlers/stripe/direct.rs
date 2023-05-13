@@ -114,11 +114,7 @@ impl Direct {
       .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
       .await?;
 
-    if profile == "test" {
-      return Ok(());
-    }
-
-    if coach.emails_enabled && recording.state == RecordingState::Processed {
+    if coach.emails_enabled && recording.state == RecordingState::Processed && profile != "test" {
       emails::notifications::coach_has_reviews(&self.config, &coach)
         .deliver()
         .await

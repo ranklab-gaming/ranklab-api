@@ -115,11 +115,9 @@ impl QueueHandler for ScheduledTasksHandler {
         )],
       );
 
-      if profile == "test" {
-        return Ok(());
+      if profile != "test" {
+        email.deliver().await.map_err(anyhow::Error::from)?;
       }
-
-      email.deliver().await.map_err(anyhow::Error::from)?;
     }
 
     Ok(())

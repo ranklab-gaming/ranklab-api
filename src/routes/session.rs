@@ -165,11 +165,9 @@ pub async fn reset_password(
     )],
   );
 
-  if profile == "test" {
-    return response;
+  if profile != "test" {
+    reset_password_email.deliver().await.unwrap();
   }
-
-  reset_password_email.deliver().await.unwrap();
 
   response
 }

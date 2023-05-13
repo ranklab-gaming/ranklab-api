@@ -7,6 +7,7 @@ use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::views::{ReviewView, ReviewViewOptions};
 use diesel::prelude::*;
+use rocket::figment::Provider;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -140,11 +141,13 @@ pub async fn update(
   auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
   config: &State<Config>,
+  rocket_config: &rocket::Config,
 ) -> MutationResponse<ReviewView> {
   if let Err(errors) = review.validate() {
     return Response::validation_error(errors);
   }
 
+  let profile = rocket_config.profile().unwrap();
   let coach = auth.into_deep_inner();
   let coach_id = coach.id;
 
@@ -194,7 +197,9 @@ pub async fn update(
         )],
       );
 
-      email.deliver().await.unwrap();
+      if profile != "test" {
+        email.deliver().await.unwrap();
+      }
 
       return Response::success(ReviewView::new(
         updated_review,

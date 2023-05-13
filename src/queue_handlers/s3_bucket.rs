@@ -215,17 +215,14 @@ impl S3BucketHandler {
         .await
         .map_err(QueueHandlerError::from)?;
 
-      if profile == "test" {
-        return Ok(());
-      }
-
       for review in reviews {
         let coach = coaches
           .iter()
           .find(|coach| coach.id == review.coach_id)
           .ok_or_else(|| anyhow!("No coach found for review"))?;
 
-        if coach.emails_enabled && review.state == ReviewState::AwaitingReview {
+        if coach.emails_enabled && review.state == ReviewState::AwaitingReview && profile != "test"
+        {
           emails::notifications::coach_has_reviews(&self.config, coach)
             .deliver()
             .await
