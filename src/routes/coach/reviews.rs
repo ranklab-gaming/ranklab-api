@@ -250,7 +250,9 @@ pub async fn update(
         )],
       );
 
-      email.deliver().await.unwrap();
+      if profile != "test" {
+        email.deliver().await.unwrap();
+      }
 
       return Response::success(ReviewView::new(
         updated_review,
