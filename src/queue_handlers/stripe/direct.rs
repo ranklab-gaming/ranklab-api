@@ -26,6 +26,7 @@ impl Direct {
   async fn handle_payment_intent_succeeded(
     &self,
     webhook: WebhookEvent,
+    profile: &rocket::figment::Profile,
   ) -> Result<(), QueueHandlerError> {
     let mut payment_intent = match &webhook.data.object {
       EventObject::PaymentIntent(payment_intent) => payment_intent.clone(),
@@ -113,6 +114,10 @@ impl Direct {
       .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
       .await?;
 
+    if profile == "test" {
+      return Ok(());
+    }
+
     if coach.emails_enabled && recording.state == RecordingState::Processed {
       emails::notifications::coach_has_reviews(&self.config, &coach)
         .deliver()
@@ -197,9 +202,15 @@ impl StripeEventHandler for Direct {
     self.config.stripe_direct_webhooks_secret.clone()
   }
 
-  async fn handle_event(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
+  async fn handle_event(
+    &self,
+    webhook: WebhookEvent,
+    profile: &rocket::figment::Profile,
+  ) -> Result<(), QueueHandlerError> {
     match webhook.event_type {
-      EventType::PaymentIntentSucceeded => self.handle_payment_intent_succeeded(webhook).await,
+      EventType::PaymentIntentSucceeded => {
+        self.handle_payment_intent_succeeded(webhook, profile).await
+      }
       EventType::ChargeRefunded => self.handle_charge_refunded(webhook).await,
       _ => Ok(()),
     }

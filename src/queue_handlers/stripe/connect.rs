@@ -55,7 +55,11 @@ impl StripeEventHandler for Connect {
     self.config.stripe_connect_webhooks_secret.clone()
   }
 
-  async fn handle_event(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError> {
+  async fn handle_event(
+    &self,
+    webhook: WebhookEvent,
+    _profile: &rocket::figment::Profile,
+  ) -> Result<(), QueueHandlerError> {
     match webhook.event_type {
       EventType::AccountUpdated => self.handle_account_updated(&webhook).await,
       _ => Ok(()),

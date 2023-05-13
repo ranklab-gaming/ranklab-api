@@ -27,7 +27,11 @@ pub trait StripeEventHandler {
   fn new(db_conn: DbConn, config: Config, client: StripeClient) -> Self;
   fn url(&self) -> String;
   fn secret(&self) -> String;
-  async fn handle_event(&self, webhook: WebhookEvent) -> Result<(), QueueHandlerError>;
+  async fn handle_event(
+    &self,
+    webhook: WebhookEvent,
+    profile: &rocket::figment::Profile,
+  ) -> Result<(), QueueHandlerError>;
 }
 
 pub struct StripeHandler<T: StripeEventHandler> {
@@ -71,7 +75,7 @@ impl<T: StripeEventHandler + Sync + Send> QueueHandler for StripeHandler<T> {
     profile: &rocket::figment::Profile,
   ) -> Result<(), QueueHandlerError> {
     let webhook = self.parse_webhook(message, profile)?;
-    self.handler.handle_event(webhook).await
+    self.handler.handle_event(webhook, profile).await
   }
 }
 

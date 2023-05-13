@@ -11,6 +11,7 @@ use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::Utc;
 use diesel::prelude::*;
 use rand::distributions::{Alphanumeric, DistString};
+use rocket::figment::Provider;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -87,7 +88,9 @@ pub async fn reset_password(
   reset_password: Json<ResetPasswordRequest>,
   config: &State<Config>,
   db_conn: DbConn,
+  rocket_config: &rocket::Config,
 ) -> MutationResponse<StatusResponse> {
+  let profile = rocket_config.profile().unwrap();
   let email = reset_password.email.clone();
   let response = Response::status(Status::Ok);
 
@@ -161,6 +164,10 @@ pub async fn reset_password(
       }),
     )],
   );
+
+  if profile == "test" {
+    return response;
+  }
 
   reset_password_email.deliver().await.unwrap();
 

@@ -54,7 +54,7 @@ impl QueueHandler for ScheduledTasksHandler {
   async fn handle(
     &self,
     message: &rusoto_sqs::Message,
-    _profile: &rocket::figment::Profile,
+    profile: &rocket::figment::Profile,
   ) -> Result<(), QueueHandlerError> {
     let message_body = self.parse_message(message)?;
 
@@ -114,6 +114,10 @@ impl QueueHandler for ScheduledTasksHandler {
           }),
         )],
       );
+
+      if profile == "test" {
+        return Ok(());
+      }
 
       email.deliver().await.map_err(anyhow::Error::from)?;
     }

@@ -102,7 +102,7 @@ impl QueueHandler for S3BucketHandler {
   async fn handle(
     &self,
     message: &rusoto_sqs::Message,
-    _profile: &rocket::figment::Profile,
+    profile: &rocket::figment::Profile,
   ) -> Result<(), QueueHandlerError> {
     let message_body = self.parse_message(message)?;
 
@@ -128,7 +128,9 @@ impl QueueHandler for S3BucketHandler {
         .ok_or_else(|| anyhow!("No file found in s3 key"))?;
 
       if file_type == "recordings" {
-        return self.handle_recording_uploaded(&record, folder, file).await;
+        return self
+          .handle_recording_uploaded(&record, folder, file, profile)
+          .await;
       }
 
       if file_type == "avatars" {
@@ -146,6 +148,7 @@ impl S3BucketHandler {
     record: &Record,
     folder: &str,
     file: &str,
+    profile: &rocket::figment::Profile,
   ) -> Result<(), QueueHandlerError> {
     let video_key = format!(
       "recordings/originals/{}",
@@ -211,6 +214,10 @@ impl S3BucketHandler {
         .run(move |conn| Coach::filter_by_ids(coach_ids).load::<Coach>(conn))
         .await
         .map_err(QueueHandlerError::from)?;
+
+      if profile == "test" {
+        return Ok(());
+      }
 
       for review in reviews {
         let coach = coaches
