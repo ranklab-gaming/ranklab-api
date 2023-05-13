@@ -10,14 +10,11 @@ use ranklab_api::routes::*;
 use ranklab_api::{fairings, oidc};
 use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
-use rocket::figment::Profile;
 use rocket::http::Accept;
 use rocket::{Build, Rocket};
 use rocket_okapi::openapi_get_routes;
 use std::env;
 
-const DEFAULT_PROFILE: Profile = rocket::config::Config::DEFAULT_PROFILE;
-const DEBUG_PROFILE: Profile = rocket::config::Config::DEBUG_PROFILE;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
@@ -35,16 +32,22 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 async fn rocket() -> Rocket<Build> {
-  let env_suffix = if DEFAULT_PROFILE == DEBUG_PROFILE {
-    "development".to_owned()
-  } else {
-    DEFAULT_PROFILE.to_string()
+  let rocket_env = match env::var("ROCKET_PROFILE") {
+    Ok(env) => env,
+    Err(_) => rocket::config::Config::DEFAULT_PROFILE.to_string(),
+  };
+
+  let env_suffix = match rocket_env.as_str() {
+    "debug" => "development",
+    "release" => "production",
+    _ => rocket_env.as_str(),
   };
 
   dotenv::from_filename(format!(".env.{}", env_suffix)).ok();
   dotenv::dotenv().ok();
 
   let mut figment = rocket::Config::figment()
+    .select(rocket_env)
     .merge(Toml::file("Ranklab.toml").nested())
     .merge(Env::prefixed("RANKLAB_").global());
 
