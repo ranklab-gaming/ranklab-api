@@ -21,6 +21,7 @@ FROM alpine:latest
 RUN apk add --update-cache \
     libgcc \
     libpq \
+    curl \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /root/app
@@ -28,3 +29,4 @@ COPY diesel.toml Ranklab.toml Rocket.toml ./
 COPY --from=builder /usr/src/ranklab-api/target/release/ranklab-api ./
 EXPOSE 8000
 ENTRYPOINT ["/root/app/ranklab-api"]
+HEALTHCHECK --interval=3s --retries=10 CMD curl -f http://localhost:8000/ || exit 1
