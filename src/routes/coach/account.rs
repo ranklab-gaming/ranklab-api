@@ -313,7 +313,7 @@ pub async fn create(
     )],
   );
 
-  if profile != "test" {
+  if profile == rocket::config::Config::RELEASE_PROFILE {
     coach_signup_email.deliver().await.unwrap();
   }
 
