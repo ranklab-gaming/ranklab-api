@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::auth::{generate_token, Account};
 use crate::config::Config;
+use crate::emails::{Email, Recipient};
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Avatar, Coach, CoachChangeset, CoachInvitation, CoachInvitationChangeset};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
@@ -12,11 +13,13 @@ use bcrypt::{hash, DEFAULT_COST};
 use chrono::Utc;
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind;
+use rocket::figment::Provider;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde::{self, Deserialize};
+use serde_json::json;
 use sha2::{Digest, Sha256};
 use slugify::slugify;
 use validator::{Validate, ValidationError, ValidationErrors};
@@ -133,12 +136,14 @@ pub async fn create(
   db_conn: DbConn,
   stripe: Stripe,
   config: &State<Config>,
+  rocket_config: &rocket::Config,
 ) -> MutationResponse<CreateSessionResponse> {
   if let Err(errors) = coach.validate() {
     return Response::validation_error(errors);
   }
 
   let mut params = stripe::CreateAccount::new();
+  let profile = rocket_config.profile().unwrap();
 
   params.type_ = Some(stripe::AccountType::Express);
   params.country = Some(&coach.country);
@@ -284,8 +289,33 @@ pub async fn create(
     })
     .await;
 
+  let slug = coach.slug.clone();
+  let name = coach.name.clone();
+  let email = coach.email.clone();
   let account = Account::Coach(coach);
   let token = generate_token(&account, config);
+
+  let coach_signup_email = Email::new(
+    config,
+    "notification".to_owned(),
+    json!({
+      "subject": "A coach has signed up!",
+      "title": format!("{} has signed up to Ranklab", name),
+      "body": format!("Their email is: {}", email),
+      "cta" : "Go to Profile",
+      "cta_url" : format!("{}/r/{}", config.web_host, slug),
+    }),
+    vec![Recipient::new(
+      "admin@ranklab.gg".to_owned(),
+      json!({
+        "name": "Ranklab",
+      }),
+    )],
+  );
+
+  if profile != "test" {
+    coach_signup_email.deliver().await.unwrap();
+  }
 
   Response::success(CreateSessionResponse { token })
 }
