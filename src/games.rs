@@ -1,5 +1,9 @@
+pub mod apex;
 pub mod chess;
+pub mod csgo;
+pub mod dota2;
 pub mod hearthstone;
+pub mod lol;
 pub mod overwatch;
 pub mod r6s;
 pub mod test;
@@ -12,11 +16,15 @@ use validator::ValidationError;
 lazy_static! {
   static ref GAMES: Vec<Game> = vec![
     test::test(),
-    overwatch::overwatch(),
-    valorant::valorant(),
+    apex::apex(),
+    chess::chess(),
+    csgo::csgo(),
+    dota2::dota2(),
     hearthstone::hearthstone(),
+    lol::lol(),
+    overwatch::overwatch(),
     r6s::r6s(),
-    chess::chess()
+    valorant::valorant(),
   ];
 }
 
