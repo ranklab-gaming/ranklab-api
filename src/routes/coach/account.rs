@@ -306,7 +306,7 @@ pub async fn create(
       "cta_url" : format!("{}/r/{}", config.web_host, slug),
     }),
     vec![Recipient::new(
-      "admin@ranklab.gg".to_owned(),
+      "sales@ranklab.gg".to_owned(),
       json!({
         "name": "Ranklab",
       }),
