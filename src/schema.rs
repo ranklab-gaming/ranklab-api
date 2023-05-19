@@ -47,6 +47,7 @@ diesel::table! {
         emails_enabled -> Bool,
         slug -> Text,
         avatar_id -> Nullable<Uuid>,
+        approved -> Bool,
     }
 }
 

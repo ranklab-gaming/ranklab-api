@@ -15,12 +15,13 @@ pub struct CoachView {
   pub game_id: String,
   pub price: i32,
   pub country: String,
-  pub reviews_enabled: bool,
+  pub details_submitted: bool,
   pub payouts_enabled: bool,
   pub emails_enabled: bool,
   pub intercom_hash: Option<String>,
   pub slug: String,
   pub avatar_image_key: Option<String>,
+  pub approved: bool,
 }
 
 impl From<Coach> for CoachView {
@@ -43,7 +44,8 @@ impl CoachView {
       price: coach.price,
       country: coach.country,
       payouts_enabled: coach.stripe_payouts_enabled,
-      reviews_enabled: coach.stripe_details_submitted,
+      details_submitted: coach.stripe_details_submitted,
+      approved: coach.approved,
       emails_enabled: coach.emails_enabled,
       slug: coach.slug,
       intercom_hash,

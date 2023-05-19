@@ -252,7 +252,8 @@ pub async fn create(
             .price(coach.price)
             .game_id(coach.game_id.clone())
             .country(coach.country.clone())
-            .slug(slugify!(&coach.name)),
+            .slug(slugify!(&coach.name))
+            .approved(profile == "test"),
         )
         .get_result(conn)
     })
