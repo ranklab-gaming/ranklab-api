@@ -238,6 +238,7 @@ pub async fn create(
     )));
 
   let account = stripe::Account::create(&stripe, params).await.unwrap();
+  let approved = profile == "test";
 
   let coach: Coach = db_conn
     .run(move |conn| {
@@ -253,7 +254,7 @@ pub async fn create(
             .game_id(coach.game_id.clone())
             .country(coach.country.clone())
             .slug(slugify!(&coach.name))
-            .approved(profile == "test"),
+            .approved(approved),
         )
         .get_result(conn)
     })
