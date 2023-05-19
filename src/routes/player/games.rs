@@ -1,11 +1,8 @@
 use crate::config::Config;
-use crate::guards::DbConn;
 use crate::intercom::contacts::Contact;
 use crate::intercom::RequestError;
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response, StatusResponse};
-use crate::schema::coaches::game_id;
 use crate::views::GameView;
-use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -17,24 +14,8 @@ use validator::Validate;
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/games")]
-pub async fn list(db_conn: DbConn) -> QueryResponse<Vec<GameView>> {
-  let game_ids = db_conn
-    .run(move |conn| {
-      crate::schema::coaches::table
-        .select(game_id)
-        .distinct()
-        .load::<String>(conn)
-    })
-    .await?;
-
-  let game_id_strs: Vec<&str> = game_ids.iter().map(|s| s.as_str()).collect();
-
-  Response::success(
-    crate::games::filter(game_id_strs)
-      .iter()
-      .map(|g| Into::into(*g))
-      .collect(),
-  )
+pub async fn list() -> QueryResponse<Vec<GameView>> {
+  Response::success(crate::games::all().iter().map(|g| g.into()).collect())
 }
 
 #[derive(Deserialize, JsonSchema, Validate)]
