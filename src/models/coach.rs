@@ -29,6 +29,7 @@ pub struct Coach {
   pub emails_enabled: bool,
   pub slug: String,
   pub avatar_id: Option<Uuid>,
+  pub approved: bool,
 }
 
 impl Coach {
@@ -57,14 +58,11 @@ impl Coach {
   #[allow(clippy::type_complexity)]
   pub fn filter_by_game_id(
     game_id: &str,
-  ) -> Filter<
-    coaches::table,
-    And<Eq<coaches::game_id, String>, Eq<coaches::stripe_details_submitted, bool>>,
-  > {
+  ) -> Filter<coaches::table, And<Eq<coaches::game_id, String>, Eq<coaches::approved, bool>>> {
     coaches::table.filter(
       coaches::game_id
         .eq(game_id.to_string())
-        .and(coaches::stripe_details_submitted.eq(true)),
+        .and(coaches::approved.eq(true)),
     )
   }
 
@@ -74,16 +72,13 @@ impl Coach {
     game_id: &str,
   ) -> Filter<
     coaches::table,
-    And<
-      And<Eq<coaches::id, Uuid>, Eq<coaches::game_id, String>>,
-      Eq<coaches::stripe_details_submitted, bool>,
-    >,
+    And<And<Eq<coaches::id, Uuid>, Eq<coaches::game_id, String>>, Eq<coaches::approved, bool>>,
   > {
     coaches::table.filter(
       coaches::id
         .eq(*coach_id)
         .and(coaches::game_id.eq(game_id.to_string()))
-        .and(coaches::stripe_details_submitted.eq(true)),
+        .and(coaches::approved.eq(true)),
     )
   }
 }
