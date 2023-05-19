@@ -4,13 +4,12 @@ use crate::auth::{generate_token, Account};
 use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
-use crate::models::{Avatar, Coach, CoachChangeset, CoachInvitation, CoachInvitationChangeset};
+use crate::models::{Avatar, Coach, CoachChangeset};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::routes::session::CreateSessionResponse;
 use crate::schema::coaches;
 use crate::views::CoachView;
 use bcrypt::{hash, DEFAULT_COST};
-use chrono::Utc;
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind;
 use rocket::figment::Provider;
@@ -131,7 +130,6 @@ pub async fn update(
 #[openapi(tag = "Ranklab")]
 #[post("/coach/account", data = "<coach>")]
 pub async fn create(
-  auth: Auth<CoachInvitation>,
   coach: Json<CreateCoachRequest>,
   db_conn: DbConn,
   stripe: Stripe,
@@ -279,15 +277,6 @@ pub async fn create(
       }
       _ => MutationError::InternalServerError(err.into()),
     })?;
-
-  db_conn
-    .run(move |conn| {
-      diesel::update(&auth.into_inner())
-        .set(CoachInvitationChangeset::default().used_at(Some(Utc::now().naive_utc())))
-        .get_result::<CoachInvitation>(conn)
-        .unwrap()
-    })
-    .await;
 
   let slug = coach.slug.clone();
   let name = coach.name.clone();

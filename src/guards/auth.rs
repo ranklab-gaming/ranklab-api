@@ -1,4 +1,4 @@
-use crate::models::{CoachInvitation, OneTimeToken};
+use crate::models::OneTimeToken;
 use okapi::openapi3::*;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket_okapi::gen::OpenApiGenerator;
@@ -6,7 +6,7 @@ use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 mod jwt;
 mod ott;
 pub use jwt::{FromJwt, Jwt};
-pub use ott::{CoachInvitationParams, OneTimeTokenParams};
+pub use ott::OneTimeTokenParams;
 use rocket::http::Status;
 use thiserror::Error;
 
@@ -86,34 +86,6 @@ impl<'a> OpenApiFromRequest<'a> for Auth<OneTimeToken> {
     required: bool,
   ) -> rocket_okapi::Result<RequestHeaderInput> {
     let schema = gen.json_schema::<OneTimeTokenParams>();
-
-    Ok(RequestHeaderInput::Parameter(Parameter {
-      name: "auth".to_owned(),
-      location: "query".to_owned(),
-      description: None,
-      required,
-      deprecated: false,
-      allow_empty_value: false,
-      value: ParameterValue::Schema {
-        style: None,
-        explode: None,
-        allow_reserved: false,
-        schema,
-        example: None,
-        examples: None,
-      },
-      extensions: Object::default(),
-    }))
-  }
-}
-
-impl<'a> OpenApiFromRequest<'a> for Auth<CoachInvitation> {
-  fn from_request_input(
-    gen: &mut OpenApiGenerator,
-    _name: String,
-    required: bool,
-  ) -> rocket_okapi::Result<RequestHeaderInput> {
-    let schema = gen.json_schema::<CoachInvitationParams>();
 
     Ok(RequestHeaderInput::Parameter(Parameter {
       name: "auth".to_owned(),

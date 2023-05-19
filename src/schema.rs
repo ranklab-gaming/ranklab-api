@@ -30,16 +30,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    coach_invitations (id) {
-        created_at -> Timestamp,
-        id -> Uuid,
-        updated_at -> Timestamp,
-        used_at -> Nullable<Timestamp>,
-        value -> Text,
-    }
-}
-
-diesel::table! {
     coaches (id) {
         bio -> Text,
         country -> Text,
@@ -147,7 +137,6 @@ diesel::joinable!(reviews -> recordings (recording_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     avatars,
-    coach_invitations,
     coaches,
     comments,
     one_time_tokens,
