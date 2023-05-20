@@ -36,12 +36,7 @@ pub async fn create(
   let avatar: Avatar = db_conn
     .run(move |conn| {
       diesel::insert_into(avatars::table)
-        .values(
-          AvatarChangeset::default()
-            .image_key(key)
-            .coach_id(coach.id)
-            .id(Uuid::new_v4()),
-        )
+        .values(AvatarChangeset::default().image_key(key).coach_id(coach.id))
         .get_result::<Avatar>(conn)
         .unwrap()
     })
