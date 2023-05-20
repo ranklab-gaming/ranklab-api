@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 
 use crate::auth::{generate_token, Account};
 use crate::config::Config;
+use crate::emails::{Email, Recipient};
 use crate::games;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Player, PlayerChangeset};
@@ -13,6 +14,7 @@ use crate::views::PlayerView;
 use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind;
+use rocket::figment::Provider;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -20,6 +22,7 @@ use rocket_okapi::openapi;
 use schemars::JsonSchema;
 use serde;
 use serde::Deserialize;
+use serde_json::json;
 use sha2::{Digest, Sha256};
 use validator::{Validate, ValidationError, ValidationErrors};
 
@@ -62,7 +65,10 @@ pub async fn create(
   stripe: Stripe,
   config: &State<Config>,
   ip_address: SocketAddr,
+  rocket_config: &rocket::Config,
 ) -> MutationResponse<CreateSessionResponse> {
+  let profile = rocket_config.profile().unwrap();
+
   if let Err(errors) = player.validate() {
     return Response::validation_error(errors);
   }
@@ -131,8 +137,30 @@ pub async fn create(
       _ => MutationError::InternalServerError(err.into()),
     })?;
 
+  let name = player.name.clone();
+  let email = player.email.clone();
   let account = Account::Player(player);
   let token = generate_token(&account, config);
+
+  let player_signup_email = Email::new(
+    config,
+    "notification".to_owned(),
+    json!({
+      "subject": "A player has signed up!",
+      "title": format!("{} has signed up to Ranklab", name),
+      "body": format!("Their email is: {}", email),
+    }),
+    vec![Recipient::new(
+      "sales@ranklab.gg".to_owned(),
+      json!({
+        "name": "Ranklab",
+      }),
+    )],
+  );
+
+  if profile == rocket::config::Config::RELEASE_PROFILE {
+    player_signup_email.deliver().await.unwrap();
+  }
 
   Response::success(CreateSessionResponse { token })
 }
