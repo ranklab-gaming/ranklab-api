@@ -1,0 +1,2 @@
+ALTER TABLE avatars ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE avatars ALTER COLUMN id SET DEFAULT gen_random_uuid();
