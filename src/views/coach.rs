@@ -22,6 +22,7 @@ pub struct CoachView {
   pub slug: String,
   pub avatar_image_key: Option<String>,
   pub approved: bool,
+  pub bio_text: String,
 }
 
 impl From<Coach> for CoachView {
@@ -34,6 +35,8 @@ impl CoachView {
   pub fn new(coach: Coach, config: Option<&Config>, avatar: Option<Avatar>) -> Self {
     let intercom_hash =
       config.and_then(|config| intercom::generate_user_hash(&coach.email, config));
+
+    let bio = coach.bio.clone();
 
     CoachView {
       id: coach.id,
@@ -50,6 +53,7 @@ impl CoachView {
       slug: coach.slug,
       intercom_hash,
       avatar_image_key: avatar.and_then(|avatar| avatar.processed_image_key),
+      bio_text: html2text::from_read(bio.as_bytes(), 100),
     }
   }
 }

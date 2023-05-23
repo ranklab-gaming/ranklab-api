@@ -238,7 +238,7 @@ pub async fn create(
     )));
 
   let account = stripe::Account::create(&stripe, params).await.unwrap();
-  let approved = profile == "test";
+  let approved = profile != rocket::config::Config::RELEASE_PROFILE;
 
   let coach: Coach = db_conn
     .run(move |conn| {
