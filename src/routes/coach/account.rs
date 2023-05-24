@@ -37,7 +37,7 @@ pub struct CreateCoachRequest {
   game_id: String,
   #[validate(length(min = 1))]
   country: String,
-  #[validate(range(min = 100, max = 100000))]
+  #[validate(range(min = 100, max = 50000))]
   price: i32,
 }
 
