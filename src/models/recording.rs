@@ -1,4 +1,4 @@
-use crate::data_types::RecordingState;
+use crate::data_types::MediaState;
 use crate::schema::recordings;
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, EqAny, Filter, FindBy};
@@ -24,10 +24,10 @@ pub struct Recording {
   pub title: String,
   pub updated_at: chrono::NaiveDateTime,
   pub video_key: Option<String>,
-  pub state: RecordingState,
   pub thumbnail_key: Option<String>,
   pub processed_video_key: Option<String>,
   pub metadata: Option<serde_json::Value>,
+  pub state: MediaState,
 }
 
 impl Recording {
@@ -74,12 +74,12 @@ impl Recording {
     player_id: &Uuid,
   ) -> Filter<
     recordings::table,
-    And<Eq<recordings::player_id, Uuid>, NotEq<recordings::state, RecordingState>>,
+    And<Eq<recordings::player_id, Uuid>, NotEq<recordings::state, MediaState>>,
   > {
     recordings::table.filter(
       recordings::player_id
         .eq(*player_id)
-        .and(recordings::state.ne(RecordingState::Created)),
+        .and(recordings::state.ne(MediaState::Created)),
     )
   }
 

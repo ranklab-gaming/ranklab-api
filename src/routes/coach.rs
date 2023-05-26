@@ -1,4 +1,5 @@
 pub mod account;
+pub mod audios;
 pub mod avatars;
 pub mod comments;
 pub mod games;

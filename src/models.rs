@@ -1,3 +1,4 @@
+mod audio;
 mod avatar;
 mod coach;
 mod comment;
@@ -7,6 +8,7 @@ mod player;
 mod recording;
 mod review;
 
+pub use audio::{Audio, AudioChangeset};
 pub use avatar::{Avatar, AvatarChangeset};
 pub use coach::{Coach, CoachChangeset};
 pub use comment::{Comment, CommentChangeset};

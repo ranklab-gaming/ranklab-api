@@ -1,9 +1,10 @@
 use crate::config::Config;
-use crate::data_types::{AvatarState, RecordingState, ReviewState};
+use crate::data_types::{MediaState, ReviewState};
 use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
 use crate::models::{
-  Avatar, AvatarChangeset, Coach, CoachChangeset, Recording, RecordingChangeset, Review,
+  Audio, AudioChangeset, Avatar, AvatarChangeset, Coach, CoachChangeset, Recording,
+  RecordingChangeset, Review,
 };
 use crate::{aws, emails};
 use anyhow::anyhow;
@@ -136,6 +137,10 @@ impl QueueHandler for S3BucketHandler {
       if file_type == "avatars" {
         self.handle_avatar_uploaded(&record, folder, file).await?;
       }
+
+      if file_type == "audios" {
+        self.handle_audio_uploaded(&record, folder, file).await?;
+      }
     }
 
     Ok(())
@@ -162,7 +167,7 @@ impl S3BucketHandler {
         .db_conn
         .run::<_, diesel::result::QueryResult<_>>(move |conn| {
           diesel::update(recording_query)
-            .set(RecordingChangeset::default().state(RecordingState::Uploaded))
+            .set(RecordingChangeset::default().state(MediaState::Uploaded))
             .execute(conn)
         })
         .await
@@ -184,7 +189,7 @@ impl S3BucketHandler {
           diesel::update(recording_query)
             .set(
               RecordingChangeset::default()
-                .state(RecordingState::Processed)
+                .state(MediaState::Processed)
                 .processed_video_key(processed_video_key),
             )
             .execute(conn)
@@ -271,7 +276,7 @@ impl S3BucketHandler {
         .db_conn
         .run::<_, diesel::result::QueryResult<_>>(move |conn| {
           diesel::update(&avatar)
-            .set(AvatarChangeset::default().state(AvatarState::Uploaded))
+            .set(AvatarChangeset::default().state(MediaState::Uploaded))
             .execute(conn)
         })
         .await
@@ -292,7 +297,7 @@ impl S3BucketHandler {
         diesel::update(&avatar)
           .set(
             AvatarChangeset::default()
-              .state(AvatarState::Processed)
+              .state(MediaState::Processed)
               .processed_image_key(processed_image_key),
           )
           .get_result(conn)
@@ -305,6 +310,61 @@ impl S3BucketHandler {
       .run(move |conn| {
         diesel::update(Coach::find_by_id(&avatar.coach_id))
           .set(CoachChangeset::default().avatar_id(Some(avatar.id)))
+          .execute(conn)
+      })
+      .await
+      .map_err(QueueHandlerError::from)?;
+
+    Ok(())
+  }
+
+  async fn handle_audio_uploaded(
+    &self,
+    record: &Record,
+    folder: &str,
+    file: &str,
+  ) -> Result<(), QueueHandlerError> {
+    let audio_key = format!(
+      "audios/originals/{}",
+      file.split('.').collect::<Vec<_>>()[0]
+    );
+
+    let audio_query = Audio::find_by_audio_key(&audio_key);
+
+    if folder == "originals" {
+      let audio: Audio = self
+        .db_conn
+        .run(move |conn| audio_query.first::<Audio>(conn))
+        .await?;
+
+      self
+        .db_conn
+        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+          diesel::update(&audio)
+            .set(AudioChangeset::default().state(MediaState::Uploaded))
+            .execute(conn)
+        })
+        .await
+        .map_err(QueueHandlerError::from)?;
+
+      return Ok(());
+    }
+
+    if folder != "processed" {
+      return Ok(());
+    }
+
+    let processed_audio_key = Some(record.s3.object.key.clone());
+
+    self
+      .db_conn
+      .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+        diesel::update(audio_query)
+          .set(
+            AudioChangeset::default()
+              .state(MediaState::Processed)
+              .processed_audio_key(processed_audio_key),
+          )
           .execute(conn)
       })
       .await

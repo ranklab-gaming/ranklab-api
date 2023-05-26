@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::data_types::{RecordingState, ReviewState};
+use crate::data_types::{MediaState, ReviewState};
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
 use crate::models::{Coach, Player, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
@@ -214,7 +214,7 @@ pub async fn create(
     .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
     .await?;
 
-  if recording.state == RecordingState::Created {
+  if recording.state == MediaState::Created {
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 

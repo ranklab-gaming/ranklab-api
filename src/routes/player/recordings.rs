@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::config::Config;
-use crate::data_types::RecordingState;
+use crate::data_types::MediaState;
 use crate::games;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Player, Recording, RecordingChangeset};
@@ -74,8 +74,8 @@ pub async fn create(
   };
 
   let state = match recording.metadata {
-    Some(_) => RecordingState::Processed,
-    None => RecordingState::Created,
+    Some(_) => MediaState::Processed,
+    None => MediaState::Created,
   };
 
   let recording: Recording = db_conn

@@ -1,4 +1,4 @@
-use crate::{data_types::AvatarState, models::Avatar};
+use crate::{data_types::MediaState, models::Avatar};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -11,7 +11,7 @@ pub struct AvatarView {
   pub upload_url: Option<String>,
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime,
-  pub state: AvatarState,
+  pub state: MediaState,
   pub instance_id: Option<String>,
 }
 

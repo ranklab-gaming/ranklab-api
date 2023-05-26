@@ -1,4 +1,4 @@
-use crate::data_types::AvatarState;
+use crate::data_types::MediaState;
 use crate::schema::avatars;
 use derive_builder::Builder;
 use diesel::dsl::{EqAny, Filter, FindBy};
@@ -18,10 +18,10 @@ pub struct Avatar {
   pub id: Uuid,
   pub image_key: String,
   pub processed_image_key: Option<String>,
-  pub state: AvatarState,
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime,
   pub coach_id: Uuid,
+  pub state: MediaState,
 }
 
 impl Avatar {

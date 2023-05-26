@@ -1,5 +1,5 @@
 use crate::guards::{Auth, DbConn, Jwt};
-use crate::models::{Coach, Comment, CommentChangeset, Review};
+use crate::models::{Audio, Coach, Comment, CommentChangeset, Review};
 use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::comments;
 use crate::views::CommentView;
@@ -17,12 +17,14 @@ pub struct CreateCommentRequest {
   body: String,
   review_id: Uuid,
   metadata: serde_json::Value,
+  audio_id: Option<Uuid>,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct UpdateCommentRequest {
   body: String,
   metadata: serde_json::Value,
+  audio_id: Option<Uuid>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -43,6 +45,17 @@ pub async fn create(
     .run(move |conn| Review::find_draft_for_coach(&review_id, &coach_id).first(conn))
     .await?;
 
+  let mut audio: Option<Audio> = None;
+  let review_id = review.id;
+
+  if let Some(audio_id) = comment.audio_id {
+    audio = Some(
+      db_conn
+        .run(move |conn| Audio::find_for_review_id(&audio_id, &review_id).first::<Audio>(conn))
+        .await?,
+    );
+  }
+
   let comment: CommentView = db_conn
     .run(move |conn| {
       diesel::insert_into(comments::table)
@@ -51,7 +64,8 @@ pub async fn create(
             .body(ammonia::clean(&comment.body))
             .review_id(review.id)
             .coach_id(coach_id)
-            .metadata(comment.metadata.clone()),
+            .metadata(comment.metadata.clone())
+            .audio_id(audio.map(|a| a.id)),
         )
         .get_result::<Comment>(conn)
         .unwrap()
@@ -80,13 +94,25 @@ pub async fn update(
     .run(move |conn| Comment::find_for_coach(&id, &coach_id).first::<Comment>(conn))
     .await?;
 
+  let mut audio: Option<Audio> = None;
+  let review_id = existing_comment.review_id;
+
+  if let Some(audio_id) = comment.audio_id {
+    audio = Some(
+      db_conn
+        .run(move |conn| Audio::find_for_review_id(&audio_id, &review_id).first::<Audio>(conn))
+        .await?,
+    );
+  }
+
   let updated_comment: CommentView = db_conn
     .run(move |conn| {
       diesel::update(&existing_comment)
         .set(
           CommentChangeset::default()
             .body(comment.body.clone())
-            .metadata(comment.metadata.clone()),
+            .metadata(comment.metadata.clone())
+            .audio_id(audio.map(|a| a.id)),
         )
         .get_result::<Comment>(conn)
         .unwrap()
@@ -129,15 +155,34 @@ pub async fn list(
   auth: Auth<Jwt<Coach>>,
   db_conn: DbConn,
 ) -> QueryResponse<Vec<CommentView>> {
-  let comments: Vec<CommentView> = db_conn
+  let review_id = params.review_id;
+
+  let comments: Vec<Comment> = db_conn
     .run(move |conn| {
-      Comment::filter_by_review_for_coach(&params.review_id, &auth.into_deep_inner().id)
+      Comment::filter_by_review_for_coach(&review_id, &auth.into_deep_inner().id)
         .load::<Comment>(conn)
         .unwrap()
     })
-    .await
+    .await;
+
+  let audios = db_conn
+    .run(move |conn| {
+      Audio::filter_by_review_id(&params.review_id)
+        .load::<Audio>(conn)
+        .unwrap()
+    })
+    .await;
+
+  let comments = comments
     .into_iter()
-    .map(Into::into)
+    .map(|comment| {
+      let audio = audios
+        .iter()
+        .find(|audio| Some(audio.id) == comment.audio_id)
+        .cloned();
+
+      CommentView::new(comment, audio)
+    })
     .collect();
 
   Response::success(comments)

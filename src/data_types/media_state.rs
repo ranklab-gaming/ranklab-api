@@ -3,8 +3,8 @@ use rocket_okapi::JsonSchema;
 use serde::Serialize;
 
 #[derive(DbEnum, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, JsonSchema)]
-#[ExistingTypePath = "crate::schema::sql_types::AvatarState"]
-pub enum AvatarState {
+#[ExistingTypePath = "crate::schema::sql_types::MediaState"]
+pub enum MediaState {
   Created,
   Uploaded,
   Processed,

@@ -1,4 +1,4 @@
-use crate::data_types::{RecordingState, ReviewState};
+use crate::data_types::{MediaState, ReviewState};
 use crate::models::{Coach, Recording};
 use crate::schema::{recordings, reviews};
 use derive_builder::Builder;
@@ -95,7 +95,7 @@ impl Review {
           InnerJoin<reviews::table, recordings::table>,
           <reviews::table as diesel::Table>::AllColumns,
         >,
-        Eq<recordings::state, RecordingState>,
+        Eq<recordings::state, MediaState>,
       >,
       And<Eq<reviews::coach_id, Uuid>, EqAny<reviews::state, Vec<ReviewState>>>,
     >,
@@ -115,7 +115,7 @@ impl Review {
       .inner_join(recordings::table)
       .select(reviews::all_columns)
       .filter(
-        recordings::state.eq(RecordingState::Processed).and(
+        recordings::state.eq(MediaState::Processed).and(
           reviews::coach_id
             .eq(coach.id)
             .and(reviews::state.eq_any(states)),
@@ -156,7 +156,7 @@ impl Review {
     >,
     And<
       Or<
-        And<Eq<recordings::state, RecordingState>, Eq<reviews::coach_id, Uuid>>,
+        And<Eq<recordings::state, MediaState>, Eq<reviews::coach_id, Uuid>>,
         Eq<reviews::state, ReviewState>,
       >,
       Eq<reviews::id, Uuid>,
@@ -167,7 +167,7 @@ impl Review {
       .select(reviews::all_columns)
       .filter(
         recordings::state
-          .eq(RecordingState::Processed)
+          .eq(MediaState::Processed)
           .and(reviews::coach_id.eq(*coach_id))
           .or(reviews::state.eq(ReviewState::AwaitingReview))
           .and(reviews::id.eq(*id)),

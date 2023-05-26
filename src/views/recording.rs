@@ -1,4 +1,4 @@
-use crate::{data_types::RecordingState, models::Recording};
+use crate::{data_types::MediaState, models::Recording};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -16,7 +16,7 @@ pub struct RecordingView {
   pub game_id: String,
   pub title: String,
   pub skill_level: i16,
-  pub state: RecordingState,
+  pub state: MediaState,
   pub metadata: Option<serde_json::Value>,
   pub instance_id: Option<String>,
 }

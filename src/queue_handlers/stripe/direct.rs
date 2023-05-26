@@ -1,7 +1,7 @@
 use super::StripeEventHandler;
 use crate::clients::StripeClient;
 use crate::config::Config;
-use crate::data_types::{RecordingState, ReviewState};
+use crate::data_types::{MediaState, ReviewState};
 use crate::fairings::sqs::QueueHandlerError;
 use crate::guards::DbConn;
 use crate::models::{Coach, Recording, Review, ReviewChangeset};
@@ -114,7 +114,7 @@ impl Direct {
       .run(move |conn| Coach::find_by_id(&coach_id).first(conn))
       .await?;
 
-    if coach.emails_enabled && recording.state == RecordingState::Processed && profile != "test" {
+    if coach.emails_enabled && recording.state == MediaState::Processed && profile != "test" {
       emails::notifications::coach_has_reviews(&self.config, &coach)
         .deliver()
         .await

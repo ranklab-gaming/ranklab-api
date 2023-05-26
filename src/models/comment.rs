@@ -19,6 +19,7 @@ pub struct Comment {
   pub review_id: Uuid,
   pub updated_at: chrono::NaiveDateTime,
   pub metadata: serde_json::Value,
+  pub audio_id: Option<Uuid>,
 }
 
 #[allow(clippy::type_complexity)]

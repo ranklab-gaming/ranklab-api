@@ -1,4 +1,4 @@
-use crate::models::Comment;
+use crate::models::{Audio, Comment};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -12,10 +12,17 @@ pub struct CommentView {
   pub body: String,
   pub preview: String,
   pub metadata: serde_json::Value,
+  pub audio: Option<Audio>,
 }
 
 impl From<Comment> for CommentView {
   fn from(comment: Comment) -> Self {
+    CommentView::new(comment, None)
+  }
+}
+
+impl CommentView {
+  pub fn new(comment: Comment, audio: Option<Audio>) -> Self {
     let preview = html2text::from_read(comment.body.as_bytes(), 100);
 
     CommentView {
@@ -25,6 +32,7 @@ impl From<Comment> for CommentView {
       body: comment.body,
       preview,
       metadata: comment.metadata,
+      audio,
     }
   }
 }

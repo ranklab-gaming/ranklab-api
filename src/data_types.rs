@@ -1,7 +1,5 @@
-mod avatar_state;
-mod recording_state;
+mod media_state;
 mod review_state;
 
-pub use avatar_state::AvatarState;
-pub use recording_state::RecordingState;
+pub use media_state::MediaState;
 pub use review_state::ReviewState;

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::config::Config;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Avatar, AvatarChangeset, Coach};
-use crate::response::{MutationResponse, Response, StatusResponse};
+use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::avatars;
 use crate::views::AvatarView;
 use diesel::prelude::*;
@@ -90,4 +90,14 @@ pub async fn delete(db_conn: DbConn, auth: Auth<Jwt<Coach>>) -> MutationResponse
   }
 
   Response::status(Status::NoContent)
+}
+
+#[openapi(tag = "Ranklab")]
+#[get("/coach/avatars/<id>")]
+pub async fn get(id: Uuid, db_conn: DbConn) -> QueryResponse<AvatarView> {
+  let avatar = db_conn
+    .run(move |conn| Avatar::find_by_id(&id).first::<Avatar>(conn))
+    .await?;
+
+  Response::success(AvatarView::new(avatar, None, None))
 }
