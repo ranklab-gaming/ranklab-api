@@ -65,7 +65,11 @@ async fn rocket() -> Rocket<Build> {
       Box::pin(async move { req.replace_header(Accept::JSON) })
     }))
     .attach(AdHoc::config::<Config>())
-    .manage(oidc::init_cache(&web_host).await.unwrap())
+    .manage(
+      oidc::init_cache(&web_host, &rocket_profile.into())
+        .await
+        .unwrap(),
+    )
     .mount(
       "/",
       openapi_get_routes![

@@ -1,3 +1,4 @@
+use rocket::figment::Profile;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -38,21 +39,34 @@ pub struct OidcCache {
   pub jwks: Jwks,
 }
 
-async fn fetch_oidc_configuration(web_host: &str) -> Result<OidcConfiguration, reqwest::Error> {
+async fn fetch_oidc_configuration(
+  client: &reqwest::Client,
+  web_host: &str,
+) -> Result<OidcConfiguration, reqwest::Error> {
   let oidc_configuration_url = format!("{}{}", web_host, "/oidc/.well-known/openid-configuration");
-  reqwest::get(&oidc_configuration_url)
+
+  client
+    .get(&oidc_configuration_url)
+    .send()
     .await?
     .json::<OidcConfiguration>()
     .await
 }
 
-async fn fetch_jwks(jwks_uri: &str) -> Result<Jwks, reqwest::Error> {
-  reqwest::get(jwks_uri).await?.json::<Jwks>().await
+async fn fetch_jwks(client: &reqwest::Client, jwks_uri: &str) -> Result<Jwks, reqwest::Error> {
+  client.get(jwks_uri).send().await?.json::<Jwks>().await
 }
 
-pub async fn init_cache(web_host: &str) -> Result<OidcCache, reqwest::Error> {
-  let oidc_configuration = fetch_oidc_configuration(web_host).await?;
-  let jwks = fetch_jwks(&oidc_configuration.jwks_uri).await?;
+pub async fn init_cache(web_host: &str, profile: &Profile) -> Result<OidcCache, reqwest::Error> {
+  let client = reqwest::Client::builder()
+    .danger_accept_invalid_certs(
+      profile == rocket::Config::DEBUG_PROFILE && web_host.starts_with("https"),
+    )
+    .build()
+    .unwrap();
+
+  let oidc_configuration = fetch_oidc_configuration(&client, web_host).await?;
+  let jwks = fetch_jwks(&client, &oidc_configuration.jwks_uri).await?;
 
   Ok(OidcCache {
     oidc_configuration,
