@@ -56,7 +56,9 @@ pub async fn create(
     );
   }
 
-  let comment: CommentView = db_conn
+  let audio_id = audio.as_ref().map(|audio| audio.id);
+
+  let comment: Comment = db_conn
     .run(move |conn| {
       diesel::insert_into(comments::table)
         .values(
@@ -65,15 +67,14 @@ pub async fn create(
             .review_id(review.id)
             .coach_id(coach_id)
             .metadata(comment.metadata.clone())
-            .audio_id(audio.map(|a| a.id)),
+            .audio_id(audio_id),
         )
         .get_result::<Comment>(conn)
         .unwrap()
     })
-    .await
-    .into();
+    .await;
 
-  Response::success(comment)
+  Response::success(CommentView::new(comment, audio))
 }
 
 #[openapi(tag = "Ranklab")]
