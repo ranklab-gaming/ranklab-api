@@ -7,7 +7,7 @@ use uuid::Uuid;
 #[serde(rename = "Audio")]
 pub struct AudioView {
   pub id: Uuid,
-  pub audio_key: String,
+  pub audio_key: Option<String>,
   pub upload_url: Option<String>,
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime,
@@ -25,7 +25,7 @@ impl AudioView {
   pub fn new(audio: Audio, upload_url: Option<String>, instance_id: Option<String>) -> Self {
     AudioView {
       id: audio.id,
-      audio_key: audio.audio_key,
+      audio_key: audio.processed_audio_key,
       upload_url,
       created_at: audio.created_at,
       updated_at: audio.updated_at,

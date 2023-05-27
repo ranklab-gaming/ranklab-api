@@ -326,7 +326,7 @@ impl S3BucketHandler {
   ) -> Result<(), QueueHandlerError> {
     let audio_key = format!(
       "audios/originals/{}",
-      file.split('.').collect::<Vec<_>>()[0]
+      file.split('_').collect::<Vec<_>>()[0]
     );
 
     let audio_query = Audio::find_by_audio_key(&audio_key);

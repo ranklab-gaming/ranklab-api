@@ -105,22 +105,23 @@ pub async fn update(
     );
   }
 
-  let updated_comment: CommentView = db_conn
+  let audio_id = audio.as_ref().map(|audio| audio.id);
+
+  let updated_comment: Comment = db_conn
     .run(move |conn| {
       diesel::update(&existing_comment)
         .set(
           CommentChangeset::default()
             .body(comment.body.clone())
             .metadata(comment.metadata.clone())
-            .audio_id(audio.map(|a| a.id)),
+            .audio_id(audio_id),
         )
         .get_result::<Comment>(conn)
         .unwrap()
     })
-    .await
-    .into();
+    .await;
 
-  Response::success(updated_comment)
+  Response::success(CommentView::new(updated_comment, audio))
 }
 
 #[openapi(tag = "Ranklab")]

@@ -3,6 +3,8 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
 
+use super::AudioView;
+
 #[derive(Serialize, JsonSchema)]
 #[serde(rename = "Comment")]
 pub struct CommentView {
@@ -12,7 +14,7 @@ pub struct CommentView {
   pub body: String,
   pub preview: String,
   pub metadata: serde_json::Value,
-  pub audio: Option<Audio>,
+  pub audio: Option<AudioView>,
 }
 
 impl From<Comment> for CommentView {
@@ -32,7 +34,7 @@ impl CommentView {
       body: comment.body,
       preview,
       metadata: comment.metadata,
-      audio,
+      audio: audio.map(AudioView::from),
     }
   }
 }
