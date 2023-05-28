@@ -1,12 +1,11 @@
-use std::collections::HashMap;
-
 use crate::config::Config;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Audio, AudioChangeset, Coach, Review};
-use crate::response::{MutationResponse, QueryResponse, Response};
+use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::audios;
 use crate::views::AudioView;
 use diesel::prelude::*;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -16,6 +15,7 @@ use rusoto_s3::util::PreSignedRequest;
 use rusoto_s3::PutObjectRequest;
 use schemars::JsonSchema;
 use serde::Deserialize;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Deserialize, JsonSchema)]
@@ -91,4 +91,22 @@ pub async fn create(
   );
 
   Response::success(AudioView::new(audio, Some(url), config.instance_id.clone()))
+}
+
+#[openapi(tag = "Ranklab")]
+#[delete("/coach/audios/<id>")]
+pub async fn delete(
+  db_conn: DbConn,
+  _auth: Auth<Jwt<Coach>>,
+  id: Uuid,
+) -> MutationResponse<StatusResponse> {
+  db_conn
+    .run(move |conn| {
+      diesel::delete(Audio::find_by_id(&id))
+        .execute(conn)
+        .unwrap()
+    })
+    .await;
+
+  Response::status(Status::NoContent)
 }

@@ -78,6 +78,7 @@ async fn rocket() -> Rocket<Build> {
         coach::account::update,
         coach::audios::create,
         coach::audios::get,
+        coach::audios::delete,
         coach::avatars::create,
         coach::avatars::delete,
         coach::avatars::get,
