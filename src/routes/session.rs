@@ -122,10 +122,7 @@ async fn create_with_token(
     &DecodingKey::from_secret(config.auth_client_secret.as_ref()),
     &validation,
   )
-  .map_err(|e| {
-    println!("Error decoding token: {:?}", e);
-    MutationError::Status(Status::UnprocessableEntity)
-  })?;
+  .map_err(|_| MutationError::Status(Status::UnprocessableEntity))?;
 
   let email = jwt.claims.sub;
 
