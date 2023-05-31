@@ -10,6 +10,7 @@ use crate::schema::one_time_tokens;
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::Utc;
 use diesel::prelude::*;
+use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use rand::distributions::{Alphanumeric, DistString};
 use rocket::figment::Provider;
 use rocket::http::Status;
@@ -20,10 +21,32 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct Claims {
+  sub: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct PasswordCredentials {
+  pub email: String,
+  pub password: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct TokenCredentials {
+  pub token: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Credentials {
+  Password(PasswordCredentials),
+  Token(TokenCredentials),
+}
+
 #[derive(Deserialize, JsonSchema)]
 pub struct CreateSessionRequest {
-  email: String,
-  password: String,
+  credentials: Credentials,
   user_type: UserType,
 }
 
@@ -43,24 +66,24 @@ pub struct UpdatePasswordRequest {
   password: String,
 }
 
-#[openapi(tag = "Ranklab")]
-#[post("/sessions", data = "<session>")]
-pub async fn create(
-  session: Json<CreateSessionRequest>,
+async fn create_with_password(
+  user_type: UserType,
+  credentials: &PasswordCredentials,
   config: &State<Config>,
   db_conn: DbConn,
 ) -> MutationResponse<CreateSessionResponse> {
-  let session_password = session.password.clone();
+  let session_password = credentials.password.clone();
+  let email = credentials.email.clone();
 
-  let account = match session.user_type {
+  let account = match user_type {
     UserType::Coach => Account::Coach(
       db_conn
-        .run(move |conn| Coach::find_by_email(&session.email).get_result::<Coach>(conn))
+        .run(move |conn| Coach::find_by_email(&email).get_result::<Coach>(conn))
         .await?,
     ),
     UserType::Player => Account::Player(
       db_conn
-        .run(move |conn| Player::find_by_email(&session.email).get_result::<Player>(conn))
+        .run(move |conn| Player::find_by_email(&email).get_result::<Player>(conn))
         .await?,
     ),
   };
@@ -80,6 +103,63 @@ pub async fn create(
   let token = generate_token(&account, config);
 
   Response::success(CreateSessionResponse { token })
+}
+
+async fn create_with_token(
+  user_type: UserType,
+  credentials: &TokenCredentials,
+  config: &State<Config>,
+  db_conn: DbConn,
+) -> MutationResponse<CreateSessionResponse> {
+  let token = credentials.token.clone();
+  let mut validation = Validation::new(Algorithm::HS256);
+
+  validation.set_issuer(&[config.web_host.clone()]);
+  validation.validate_exp = true;
+
+  let jwt = decode::<Claims>(
+    &token,
+    &DecodingKey::from_secret(config.auth_client_secret.as_ref()),
+    &validation,
+  )
+  .map_err(|e| {
+    println!("Error decoding token: {:?}", e);
+    MutationError::Status(Status::UnprocessableEntity)
+  })?;
+
+  let email = jwt.claims.sub;
+
+  let account = match user_type {
+    UserType::Coach => Account::Coach(
+      db_conn
+        .run(move |conn| Coach::find_by_email(&email).get_result::<Coach>(conn))
+        .await?,
+    ),
+    UserType::Player => Account::Player(
+      db_conn
+        .run(move |conn| Player::find_by_email(&email).get_result::<Player>(conn))
+        .await?,
+    ),
+  };
+
+  let token = generate_token(&account, config);
+
+  Response::success(CreateSessionResponse { token })
+}
+
+#[openapi(tag = "Ranklab")]
+#[post("/sessions", data = "<session>")]
+pub async fn create(
+  session: Json<CreateSessionRequest>,
+  config: &State<Config>,
+  db_conn: DbConn,
+) -> MutationResponse<CreateSessionResponse> {
+  match &session.credentials {
+    Credentials::Password(password) => {
+      create_with_password(session.user_type, password, config, db_conn).await
+    }
+    Credentials::Token(token) => create_with_token(session.user_type, token, config, db_conn).await,
+  }
 }
 
 #[openapi(tag = "Ranklab")]
