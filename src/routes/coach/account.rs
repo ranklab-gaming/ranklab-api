@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use crate::auth::{generate_token, Account};
+use crate::auth::{decode_token_credentials, generate_token, Account, Credentials};
 use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
@@ -13,6 +11,7 @@ use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind;
 use rocket::figment::Provider;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
@@ -21,16 +20,14 @@ use serde::{self, Deserialize};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use slugify::slugify;
+use std::collections::HashMap;
 use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Deserialize, Validate, JsonSchema)]
 pub struct CreateCoachRequest {
   #[validate(length(min = 2))]
   name: String,
-  #[validate(email)]
-  email: String,
-  #[validate(length(min = 8))]
-  password: String,
+  credentials: Credentials,
   #[validate(length(min = 30))]
   bio: String,
   #[validate(length(min = 1), custom = "crate::games::validate_id")]
@@ -45,8 +42,6 @@ pub struct CreateCoachRequest {
 pub struct UpdateCoachRequest {
   #[validate(length(min = 2))]
   name: String,
-  #[validate(email)]
-  email: String,
   #[validate(length(min = 1))]
   bio: String,
   #[validate(range(min = 1, max = 10000))]
@@ -93,7 +88,6 @@ pub async fn update(
       diesel::update(&coach)
         .set(
           CoachChangeset::default()
-            .email(account.email.clone())
             .name(account.name.clone())
             .bio(account.bio.clone())
             .price(account.price)
@@ -145,7 +139,21 @@ pub async fn create(
 
   params.type_ = Some(stripe::AccountType::Express);
   params.country = Some(&coach.country);
-  params.email = Some(&coach.email);
+
+  let email = match &coach.credentials {
+    Credentials::Password(credentials) => credentials.email.clone(),
+    Credentials::Token(credentials) => decode_token_credentials(&credentials, config)
+      .ok_or_else(|| MutationError::Status(Status::UnprocessableEntity))?
+      .sub
+      .clone(),
+  };
+
+  let password = match &coach.credentials {
+    Credentials::Password(credentials) => Some(credentials.password.clone()),
+    Credentials::Token(_) => None,
+  };
+
+  params.email = Some(&email);
 
   params.capabilities = Some(stripe::CreateAccountCapabilities {
     transfers: Some(stripe::CreateAccountCapabilitiesTransfers {
@@ -234,7 +242,7 @@ pub async fn create(
   let stripe = stripe
     .into_inner()
     .with_strategy(stripe::RequestStrategy::Idempotent(hex::encode(
-      Sha256::digest(coach.email.as_bytes()),
+      Sha256::digest(email.as_bytes()),
     )));
 
   let account = stripe::Account::create(&stripe, params).await.unwrap();
@@ -245,8 +253,8 @@ pub async fn create(
       diesel::insert_into(coaches::table)
         .values(
           CoachChangeset::default()
-            .email(coach.email.clone())
-            .password(hash(coach.password.clone(), DEFAULT_COST).unwrap())
+            .email(email.clone())
+            .password(password.map(|password| hash(password.clone(), DEFAULT_COST).unwrap()))
             .stripe_account_id(account.id.to_string())
             .name(coach.name.clone())
             .bio(coach.bio.clone())

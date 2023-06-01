@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 
-use crate::auth::{generate_token, Account};
+use crate::auth::{decode_token_credentials, generate_token, Account, Credentials};
 use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::games;
@@ -30,8 +30,6 @@ use validator::{Validate, ValidationError, ValidationErrors};
 pub struct UpdatePlayerRequest {
   #[validate(length(min = 2))]
   name: String,
-  #[validate(email)]
-  email: String,
   #[validate(length(min = 1), custom = "crate::games::validate_id")]
   game_id: String,
   skill_level: i16,
@@ -42,10 +40,7 @@ pub struct UpdatePlayerRequest {
 pub struct CreatePlayerRequest {
   #[validate(length(min = 2))]
   name: String,
-  #[validate(email)]
-  email: String,
-  #[validate(length(min = 8))]
-  password: String,
+  credentials: Credentials,
   #[validate(length(min = 1), custom = "crate::games::validate_id")]
   game_id: String,
   skill_level: i16,
@@ -85,7 +80,20 @@ pub async fn create(
 
   let mut params = stripe::CreateCustomer::new();
 
-  params.email = Some(&player.email);
+  let email = match &player.credentials {
+    Credentials::Password(credentials) => credentials.email.clone(),
+    Credentials::Token(credentials) => decode_token_credentials(&credentials, config)
+      .ok_or_else(|| MutationError::Status(Status::UnprocessableEntity))?
+      .sub
+      .clone(),
+  };
+
+  let password = match &player.credentials {
+    Credentials::Password(credentials) => Some(credentials.password.clone()),
+    Credentials::Token(_) => None,
+  };
+
+  params.email = Some(&email);
 
   params.tax = Some(stripe::CreateCustomerTax {
     ip_address: Some(ip_address.ip().to_string()),
@@ -102,7 +110,7 @@ pub async fn create(
   let stripe = stripe
     .into_inner()
     .with_strategy(stripe::RequestStrategy::Idempotent(hex::encode(
-      Sha256::digest(player.email.as_bytes()),
+      Sha256::digest(email.as_bytes()),
     )));
 
   let customer = stripe::Customer::create(&stripe, params).await.unwrap();
@@ -112,8 +120,8 @@ pub async fn create(
       diesel::insert_into(players::table)
         .values(
           PlayerChangeset::default()
-            .password(hash(player.password.clone(), DEFAULT_COST).unwrap())
-            .email(player.email.clone())
+            .password(password.map(|password| hash(password.clone(), DEFAULT_COST).unwrap()))
+            .email(email.clone())
             .name(player.name.clone())
             .game_id(player.game_id.clone())
             .skill_level(player.skill_level)
@@ -193,7 +201,6 @@ pub async fn update(
       diesel::update(&player)
         .set(
           PlayerChangeset::default()
-            .email(account.email.clone())
             .name(account.name.clone())
             .game_id(account.game_id.clone())
             .skill_level(account.skill_level)

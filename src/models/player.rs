@@ -17,7 +17,7 @@ pub struct Player {
   pub game_id: String,
   pub id: Uuid,
   pub name: String,
-  pub password: String,
+  pub password: Option<String>,
   pub skill_level: i16,
   pub stripe_customer_id: String,
   pub updated_at: chrono::NaiveDateTime,

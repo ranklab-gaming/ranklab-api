@@ -20,7 +20,7 @@ pub struct Coach {
   pub game_id: String,
   pub id: Uuid,
   pub name: String,
-  pub password: String,
+  pub password: Option<String>,
   pub price: i32,
   pub stripe_account_id: String,
   pub stripe_details_submitted: bool,
