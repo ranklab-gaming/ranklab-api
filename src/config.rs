@@ -20,4 +20,5 @@ pub struct Config {
   pub intercom_access_token: Option<String>,
   pub intercom_verification_secret: Option<String>,
   pub instance_id: Option<String>,
+  pub whisper_api_key: Option<String>,
 }

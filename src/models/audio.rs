@@ -24,6 +24,7 @@ pub struct Audio {
   pub audio_key: String,
   pub processed_audio_key: Option<String>,
   pub state: MediaState,
+  pub transcript: Option<String>,
 }
 
 impl Audio {

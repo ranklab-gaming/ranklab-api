@@ -13,6 +13,7 @@ pub struct AudioView {
   pub updated_at: chrono::NaiveDateTime,
   pub state: MediaState,
   pub instance_id: Option<String>,
+  pub transcript: Option<String>,
 }
 
 impl From<Audio> for AudioView {
@@ -31,6 +32,7 @@ impl AudioView {
       updated_at: audio.updated_at,
       state: audio.state,
       instance_id,
+      transcript: audio.transcript,
     }
   }
 }

@@ -9,8 +9,10 @@ use crate::models::{
 use crate::{aws, emails};
 use anyhow::anyhow;
 use diesel::prelude::*;
+use reqwest::multipart;
+use rocket::tokio::io::AsyncReadExt;
 use rusoto_core::HttpClient;
-use rusoto_s3::{GetObjectRequest, S3Client, S3};
+use rusoto_s3::{GetObjectRequest, HeadObjectRequest, S3Client, S3};
 use rusoto_signature::Region;
 use serde::Deserialize;
 
@@ -39,6 +41,11 @@ pub struct S3BucketHandler {
   db_conn: DbConn,
   config: Config,
   client: S3Client,
+}
+
+#[derive(Deserialize)]
+pub struct WhisperApiResponse {
+  pub text: String,
 }
 
 #[async_trait]
@@ -85,7 +92,7 @@ impl QueueHandler for S3BucketHandler {
 
     let object = self
       .client
-      .get_object(GetObjectRequest {
+      .head_object(HeadObjectRequest {
         bucket: self.config.s3_bucket.clone(),
         key: key.clone(),
         ..Default::default()
@@ -355,6 +362,57 @@ impl S3BucketHandler {
     }
 
     let processed_audio_key = Some(record.s3.object.key.clone());
+    let mut transcript: Option<String> = None;
+
+    if let Some(whisper_api_key) = &self.config.whisper_api_key {
+      let processed_audio_file = self
+        .client
+        .get_object(GetObjectRequest {
+          bucket: self.config.s3_bucket.clone(),
+          key: record.s3.object.key.clone(),
+          ..Default::default()
+        })
+        .await
+        .map_err(|e| QueueHandlerError::from(anyhow!(e)))?;
+
+      let stream = processed_audio_file
+        .body
+        .ok_or_else(|| QueueHandlerError::from(anyhow!("no body found in s3 response")))?;
+
+      let mut bytes = Vec::new();
+
+      stream
+        .into_async_read()
+        .read_to_end(&mut bytes)
+        .await
+        .map_err(|e| QueueHandlerError::from(anyhow!("error reading s3 response body: {}", e)))?;
+
+      let reqwest = reqwest::Client::new();
+
+      let part = multipart::Part::bytes(bytes)
+        .file_name("audio.mp4")
+        .mime_str("audio/mp4")
+        .map_err(|e| QueueHandlerError::from(anyhow!(e)))?;
+
+      let form = multipart::Form::new()
+        .part("file", part)
+        .text("model", "whisper-1");
+
+      let response = reqwest
+        .post("https://api.openai.com/v1/audio/transcriptions")
+        .bearer_auth(whisper_api_key.clone())
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| QueueHandlerError::from(anyhow!(e)))?;
+
+      let json: WhisperApiResponse = response
+        .json()
+        .await
+        .map_err(|e| QueueHandlerError::from(anyhow!(e)))?;
+
+      transcript = Some(json.text);
+    }
 
     self
       .db_conn
@@ -363,7 +421,8 @@ impl S3BucketHandler {
           .set(
             AudioChangeset::default()
               .state(MediaState::Processed)
-              .processed_audio_key(processed_audio_key),
+              .processed_audio_key(processed_audio_key)
+              .transcript(transcript),
           )
           .execute(conn)
       })

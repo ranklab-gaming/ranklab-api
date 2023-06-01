@@ -22,6 +22,7 @@ diesel::table! {
         audio_key -> Text,
         processed_audio_key -> Nullable<Text>,
         state -> MediaState,
+        transcript -> Nullable<Text>,
     }
 }
 
