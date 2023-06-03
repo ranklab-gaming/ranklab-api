@@ -2,6 +2,7 @@ pub mod apex;
 pub mod chess;
 pub mod csgo;
 pub mod dota2;
+pub mod gym;
 pub mod hearthstone;
 pub mod lol;
 pub mod overwatch;
@@ -25,6 +26,7 @@ lazy_static! {
     overwatch::overwatch(),
     r6s::r6s(),
     valorant::valorant(),
+    gym::gym(),
   ];
 }
 
