@@ -110,7 +110,7 @@ pub async fn create(
   let stripe = stripe
     .into_inner()
     .with_strategy(stripe::RequestStrategy::Idempotent(hex::encode(
-      Sha256::digest(email.as_bytes()),
+      Sha256::digest(format!("player-{}", email).as_bytes()),
     )));
 
   let customer = stripe::Customer::create(&stripe, params).await.unwrap();

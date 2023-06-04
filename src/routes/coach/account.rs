@@ -242,7 +242,7 @@ pub async fn create(
   let stripe = stripe
     .into_inner()
     .with_strategy(stripe::RequestStrategy::Idempotent(hex::encode(
-      Sha256::digest(email.as_bytes()),
+      Sha256::digest(format!("coach-{}", email).as_bytes()),
     )));
 
   let account = stripe::Account::create(&stripe, params).await.unwrap();

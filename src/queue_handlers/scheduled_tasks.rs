@@ -72,7 +72,10 @@ impl QueueHandler for ScheduledTasksHandler {
         .client
         .as_ref()
         .clone()
-        .with_strategy(stripe::RequestStrategy::Idempotent(review.id.to_string()));
+        .with_strategy(stripe::RequestStrategy::Idempotent(format!(
+          "payment-intent-{}",
+          review.id
+        )));
 
       let payment_intent = review.get_payment_intent(&client).await;
       let mut create_refund = CreateRefund::new();

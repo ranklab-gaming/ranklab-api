@@ -285,10 +285,7 @@ pub async fn update(
   stripe: Stripe,
 ) -> MutationResponse<ReviewView> {
   let auth_id = auth.into_deep_inner().id;
-
-  let client = stripe
-    .into_inner()
-    .with_strategy(stripe::RequestStrategy::Idempotent(id.to_string()));
+  let client = stripe.into_inner();
 
   let existing_review: Review = db_conn
     .run(move |conn| Review::find_for_player(&id, &auth_id).first(conn))
@@ -311,6 +308,13 @@ pub async fn update(
       .run(move |conn| coaches::table.find(&review_coach_id).first(conn).unwrap())
       .await;
 
+    let transfer_client = client
+      .clone()
+      .with_strategy(stripe::RequestStrategy::Idempotent(format!(
+        "transfer-{}",
+        id
+      )));
+
     let mut transfer_params =
       stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id);
 
@@ -324,7 +328,7 @@ pub async fn update(
 
     transfer_params.source_transaction = Some(charge_id);
 
-    stripe::Transfer::create(&client, transfer_params)
+    stripe::Transfer::create(&transfer_client, transfer_params)
       .await
       .unwrap();
 
@@ -369,11 +373,18 @@ pub async fn update(
       return Response::mutation_error(Status::UnprocessableEntity);
     }
 
+    let refund_client = client
+      .clone()
+      .with_strategy(stripe::RequestStrategy::Idempotent(format!(
+        "refund-{}",
+        id
+      )));
+
     let mut create_refund = CreateRefund::new();
 
     create_refund.payment_intent = Some(payment_intent.id.clone());
 
-    stripe::Refund::create(&client, create_refund)
+    stripe::Refund::create(&refund_client, create_refund)
       .await
       .unwrap();
 

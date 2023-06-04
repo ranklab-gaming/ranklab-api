@@ -26,7 +26,10 @@ impl TaxTransaction {
     ];
 
     let response = build_request(request, config)
-      .header("Idempotency-Key", tax_transaction_id)
+      .header(
+        "Idempotency-Key",
+        format!("tax-transaction-{}", tax_transaction_id),
+      )
       .form(&body)
       .send()
       .await?;
@@ -59,7 +62,10 @@ impl TaxTransaction {
     ];
 
     let response = build_request(request, config)
-      .header("Idempotency-Key", tax_calculation_id)
+      .header(
+        "Idempotency-Key",
+        format!("tax-calculation-{}", tax_calculation_id),
+      )
       .form(&body)
       .send()
       .await?;
