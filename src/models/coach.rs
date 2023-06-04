@@ -30,6 +30,7 @@ pub struct Coach {
   pub slug: String,
   pub avatar_id: Option<Uuid>,
   pub approved: bool,
+  pub reviews_count: i32,
 }
 
 impl Coach {

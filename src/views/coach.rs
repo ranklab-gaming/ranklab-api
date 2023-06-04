@@ -23,6 +23,7 @@ pub struct CoachView {
   pub avatar_image_key: Option<String>,
   pub approved: bool,
   pub bio_text: String,
+  pub reviews_count: i32,
 }
 
 impl From<Coach> for CoachView {
@@ -54,6 +55,7 @@ impl CoachView {
       intercom_hash,
       avatar_image_key: avatar.and_then(|avatar| avatar.processed_image_key),
       bio_text: html2text::from_read(bio.as_bytes(), 100),
+      reviews_count: coach.reviews_count,
     }
   }
 }

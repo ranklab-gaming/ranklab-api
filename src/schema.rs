@@ -60,6 +60,7 @@ diesel::table! {
         slug -> Text,
         avatar_id -> Nullable<Uuid>,
         approved -> Bool,
+        reviews_count -> Int4,
     }
 }
 

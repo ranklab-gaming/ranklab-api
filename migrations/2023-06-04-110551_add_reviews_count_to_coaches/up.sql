@@ -1,0 +1,1 @@
+ALTER TABLE coaches ADD COLUMN reviews_count INT NOT NULL DEFAULT 0;

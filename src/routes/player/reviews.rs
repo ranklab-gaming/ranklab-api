@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::data_types::{MediaState, ReviewState};
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
-use crate::models::{Coach, Player, Recording, Review, ReviewChangeset};
+use crate::models::{Coach, CoachChangeset, Player, Recording, Review, ReviewChangeset};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::{coaches, reviews};
@@ -315,8 +315,8 @@ pub async fn update(
         id
       )));
 
-    let mut transfer_params =
-      stripe::CreateTransfer::new(stripe::Currency::USD, coach.stripe_account_id);
+    let stripe_account_id = coach.stripe_account_id.clone();
+    let mut transfer_params = stripe::CreateTransfer::new(stripe::Currency::USD, stripe_account_id);
 
     transfer_params.amount = Some((payment_intent.amount as f64 * 0.8) as i64);
 
@@ -341,12 +341,16 @@ pub async fn update(
       })
       .await;
 
-    let coach_id = updated_review.coach_id;
-    let recording_id = updated_review.recording_id;
+    let updated_coach = db_conn
+      .run(move |conn| {
+        diesel::update(&coach)
+          .set(CoachChangeset::default().reviews_count(coach.reviews_count + 1))
+          .get_result::<Coach>(conn)
+          .unwrap()
+      })
+      .await;
 
-    let coach = db_conn
-      .run(move |conn| Coach::find_by_id(&coach_id).first::<Coach>(conn))
-      .await?;
+    let recording_id = updated_review.recording_id;
 
     let recording = db_conn
       .run(move |conn| Recording::find_by_id(&recording_id).first::<Recording>(conn))
@@ -357,7 +361,7 @@ pub async fn update(
       ReviewViewOptions {
         payment_intent: None,
         tax_calculation: None,
-        coach: Some(coach),
+        coach: Some(updated_coach),
         player: None,
         recording: Some(recording),
       },
