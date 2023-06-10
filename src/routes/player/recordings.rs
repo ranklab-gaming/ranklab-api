@@ -2,21 +2,22 @@ use std::collections::HashMap;
 
 use crate::config::Config;
 use crate::data_types::MediaState;
-use crate::games;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Player, Recording, RecordingChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response};
 use crate::schema::recordings;
 use crate::views::RecordingView;
+use crate::{aws, games};
 use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
-use rusoto_core::Region;
+use rusoto_core::{HttpClient, Region};
 use rusoto_credential::AwsCredentials;
 use rusoto_s3::util::PreSignedRequest;
 use rusoto_s3::PutObjectRequest;
+use rusoto_sqs::{Sqs, SqsClient};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -95,6 +96,39 @@ pub async fn create(
         .unwrap()
     })
     .await;
+
+  let metadata = recording.metadata.clone();
+
+  if let Some(recorder_queue) = &config.recorder_queue {
+    if metadata
+      .and_then(|metadata| metadata.get("replay_code").cloned())
+      .is_some()
+    {
+      let mut builder = hyper::Client::builder();
+
+      builder.pool_max_idle_per_host(0);
+
+      let client = SqsClient::new_with(
+        HttpClient::from_builder(builder, hyper_tls::HttpsConnector::new()),
+        aws::CredentialsProvider::new(
+          config.aws_access_key_id.clone(),
+          config.aws_secret_key.clone(),
+        ),
+        Region::EuWest2,
+      );
+
+      let view = RecordingView::new(recording.clone(), None, config.instance_id.clone());
+      let message = serde_json::to_string(&view).unwrap();
+
+      let request = rusoto_sqs::SendMessageRequest {
+        message_body: message,
+        queue_url: recorder_queue.clone(),
+        ..Default::default()
+      };
+
+      client.send_message(request).await.unwrap();
+    }
+  }
 
   let url = recording
     .video_key
