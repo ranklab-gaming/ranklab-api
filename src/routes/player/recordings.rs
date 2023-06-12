@@ -69,14 +69,31 @@ pub async fn create(
     return Response::mutation_error(Status::UnprocessableEntity);
   }
 
-  let key = match recording.metadata {
-    Some(_) => None,
-    None => Some(format!("recordings/originals/{}", Uuid::new_v4())),
+  let metadata = recording.metadata.clone();
+
+  let is_chess = metadata
+    .clone()
+    .and_then(|metadata| metadata.get("chess").cloned())
+    .and_then(|chess| chess.get("pgn").cloned())
+    .is_some();
+
+  let is_overwatch = metadata
+    .and_then(|metadata| metadata.get("overwatch").cloned())
+    .and_then(|overwatch| overwatch.get("replay_code").cloned())
+    .is_some();
+
+  let key = if is_chess {
+    None
+  } else {
+    Some(format!("recordings/originals/{}", Uuid::new_v4()))
   };
 
-  let state = match recording.metadata {
-    Some(_) => MediaState::Processed,
-    None => MediaState::Created,
+  let state = if is_chess {
+    MediaState::Processed
+  } else if is_overwatch {
+    MediaState::Uploaded
+  } else {
+    MediaState::Created
   };
 
   let recording: Recording = db_conn
@@ -97,13 +114,8 @@ pub async fn create(
     })
     .await;
 
-  let metadata = recording.metadata.clone();
-
   if let Some(recorder_queue) = &config.recorder_queue {
-    if metadata
-      .and_then(|metadata| metadata.get("replay_code").cloned())
-      .is_some()
-    {
+    if is_overwatch {
       let mut builder = hyper::Client::builder();
 
       builder.pool_max_idle_per_host(0);
