@@ -129,11 +129,14 @@ pub async fn create(
         Region::EuWest2,
       );
 
-      let view = RecordingView::new(recording.clone(), None, config.instance_id.clone());
-      let message = serde_json::to_string(&view).unwrap();
+      let mut message = serde_json::to_value(&recording).unwrap();
+
+      if let Some(instance_id) = &config.instance_id {
+        message["instance_id"] = serde_json::Value::String(instance_id.clone());
+      }
 
       let request = rusoto_sqs::SendMessageRequest {
-        message_body: message,
+        message_body: message.to_string(),
         queue_url: recorder_queue.clone(),
         ..Default::default()
       };
