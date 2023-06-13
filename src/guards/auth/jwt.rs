@@ -1,4 +1,5 @@
 use super::{Auth, AuthError};
+use crate::auth::{Account, UserType};
 use crate::guards::auth::AuthFromRequest;
 use crate::guards::DbConn;
 use crate::models::{Coach, Player};
@@ -109,5 +110,21 @@ impl FromJwt for Player {
       .map_err(|_| AuthError::NotFound("player".to_string()))?;
 
     Ok(player)
+  }
+}
+
+#[async_trait]
+impl FromJwt for Account {
+  async fn from_jwt(jwt: &Claims, db_conn: &DbConn) -> Result<Self, AuthError> {
+    let user_type_str = jwt.sub.split(':').next().unwrap();
+
+    let user_type =
+      serde::Deserialize::deserialize(&serde_json::Value::String(user_type_str.to_string()))
+        .unwrap();
+
+    match user_type {
+      UserType::Coach => Ok(Account::Coach(Coach::from_jwt(jwt, db_conn).await?)),
+      UserType::Player => Ok(Account::Player(Player::from_jwt(jwt, db_conn).await?)),
+    }
   }
 }

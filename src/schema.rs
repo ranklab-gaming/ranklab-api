@@ -36,7 +36,6 @@ diesel::table! {
         processed_image_key -> Nullable<Text>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
-        coach_id -> Uuid,
         state -> MediaState,
     }
 }
@@ -101,6 +100,7 @@ diesel::table! {
         stripe_customer_id -> Text,
         updated_at -> Timestamp,
         emails_enabled -> Bool,
+        avatar_id -> Nullable<Uuid>,
     }
 }
 
@@ -142,11 +142,13 @@ diesel::table! {
 }
 
 diesel::joinable!(audios -> reviews (review_id));
+diesel::joinable!(coaches -> avatars (avatar_id));
 diesel::joinable!(comments -> audios (audio_id));
 diesel::joinable!(comments -> coaches (coach_id));
 diesel::joinable!(comments -> reviews (review_id));
 diesel::joinable!(one_time_tokens -> coaches (coach_id));
 diesel::joinable!(one_time_tokens -> players (player_id));
+diesel::joinable!(players -> avatars (avatar_id));
 diesel::joinable!(recordings -> players (player_id));
 diesel::joinable!(reviews -> coaches (coach_id));
 diesel::joinable!(reviews -> players (player_id));

@@ -1,3 +1,4 @@
+pub mod avatars;
 pub mod coach;
 pub mod index;
 pub mod player;

@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use crate::auth::Account;
 use crate::config::Config;
 use crate::guards::{Auth, DbConn, Jwt};
-use crate::models::{Avatar, AvatarChangeset, Coach};
+use crate::models::{Avatar, AvatarChangeset, Coach, CoachChangeset, Player, PlayerChangeset};
 use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::avatars;
 use crate::views::AvatarView;
@@ -23,24 +24,49 @@ use uuid::Uuid;
 pub struct CreateAvatarRequest {}
 
 #[openapi(tag = "Ranklab")]
-#[post("/coach/avatars", data = "<_avatar>")]
+#[post("/avatars", data = "<_avatar>")]
 pub async fn create(
   config: &State<Config>,
   db_conn: DbConn,
-  auth: Auth<Jwt<Coach>>,
+  auth: Auth<Jwt<Account>>,
   _avatar: Json<CreateAvatarRequest>,
 ) -> MutationResponse<AvatarView> {
-  let coach = auth.into_deep_inner();
+  let account = auth.into_deep_inner();
   let key = format!("avatars/originals/{}", Uuid::new_v4());
 
   let avatar: Avatar = db_conn
     .run(move |conn| {
       diesel::insert_into(avatars::table)
-        .values(AvatarChangeset::default().image_key(key).coach_id(coach.id))
+        .values(AvatarChangeset::default().image_key(key))
         .get_result::<Avatar>(conn)
         .unwrap()
     })
     .await;
+
+  let avatar_id = avatar.id;
+
+  match account {
+    Account::Coach(coach) => {
+      db_conn
+        .run(move |conn| {
+          diesel::update(Coach::find_by_id(&coach.id))
+            .set(CoachChangeset::default().avatar_id(Some(avatar_id)))
+            .get_result::<Coach>(conn)
+            .unwrap()
+        })
+        .await;
+    }
+    Account::Player(player) => {
+      db_conn
+        .run(move |conn| {
+          diesel::update(Player::find_by_id(&player.id))
+            .set(PlayerChangeset::default().avatar_id(Some(avatar_id)))
+            .get_result::<Player>(conn)
+            .unwrap()
+        })
+        .await;
+    }
+  }
 
   let mut metadata = HashMap::new();
 
@@ -75,14 +101,19 @@ pub async fn create(
 }
 
 #[openapi(tag = "Ranklab")]
-#[delete("/coach/avatars")]
-pub async fn delete(db_conn: DbConn, auth: Auth<Jwt<Coach>>) -> MutationResponse<StatusResponse> {
-  let coach = auth.into_deep_inner();
+#[delete("/avatars")]
+pub async fn delete(db_conn: DbConn, auth: Auth<Jwt<Account>>) -> MutationResponse<StatusResponse> {
+  let account = auth.into_deep_inner();
 
-  if let Some(avatar_id) = coach.avatar_id {
+  let avatar_id = match account {
+    Account::Coach(coach) => coach.avatar_id,
+    Account::Player(player) => player.avatar_id,
+  };
+
+  if let Some(avatar_id) = avatar_id {
     db_conn
       .run(move |conn| {
-        diesel::delete(Avatar::find_by_id(&avatar_id))
+        diesel::delete(Avatar::find_processed_by_id(&avatar_id))
           .execute(conn)
           .unwrap()
       })
@@ -93,7 +124,7 @@ pub async fn delete(db_conn: DbConn, auth: Auth<Jwt<Coach>>) -> MutationResponse
 }
 
 #[openapi(tag = "Ranklab")]
-#[get("/coach/avatars/<id>")]
+#[get("/avatars/<id>")]
 pub async fn get(id: Uuid, db_conn: DbConn) -> QueryResponse<AvatarView> {
   let avatar = db_conn
     .run(move |conn| Avatar::find_by_id(&id).first::<Avatar>(conn))

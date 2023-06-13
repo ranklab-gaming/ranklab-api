@@ -22,6 +22,7 @@ pub struct Player {
   pub stripe_customer_id: String,
   pub updated_at: chrono::NaiveDateTime,
   pub emails_enabled: bool,
+  pub avatar_id: Option<Uuid>,
 }
 
 impl Player {

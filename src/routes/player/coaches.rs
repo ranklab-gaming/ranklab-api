@@ -51,7 +51,7 @@ pub async fn get(db_conn: DbConn, slug: String) -> QueryResponse<CoachView> {
 
   let avatar = match coach.avatar_id {
     Some(avatar_id) => db_conn
-      .run(move |conn| Avatar::find_by_id(&avatar_id).get_result::<Avatar>(conn))
+      .run(move |conn| Avatar::find_processed_by_id(&avatar_id).get_result::<Avatar>(conn))
       .await
       .ok(),
     None => None,

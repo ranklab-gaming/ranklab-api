@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-use std::net::SocketAddr;
-
 use crate::auth::{decode_token_credentials, generate_token, Account, Credentials};
 use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::games;
 use crate::guards::{Auth, DbConn, Jwt, Stripe};
-use crate::models::{Player, PlayerChangeset};
+use crate::models::{Avatar, Player, PlayerChangeset};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::routes::session::CreateSessionResponse;
 use crate::schema::players;
@@ -24,6 +21,8 @@ use serde;
 use serde::Deserialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::net::SocketAddr;
 use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Deserialize, JsonSchema, Validate)]
@@ -48,8 +47,22 @@ pub struct CreatePlayerRequest {
 
 #[openapi(tag = "Ranklab")]
 #[get("/player/account")]
-pub async fn get(auth: Auth<Jwt<Player>>, config: &State<Config>) -> QueryResponse<PlayerView> {
-  Response::success(PlayerView::new(auth.into_deep_inner(), Some(config)))
+pub async fn get(
+  auth: Auth<Jwt<Player>>,
+  config: &State<Config>,
+  db_conn: DbConn,
+) -> QueryResponse<PlayerView> {
+  let player = auth.into_deep_inner();
+
+  let avatar: Option<Avatar> = match player.avatar_id {
+    Some(avatar_id) => db_conn
+      .run(move |conn| Avatar::find_processed_by_id(&avatar_id).get_result::<Avatar>(conn))
+      .await
+      .ok(),
+    None => None,
+  };
+
+  Response::success(PlayerView::new(player, Some(config), avatar))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -224,5 +237,5 @@ pub async fn update(
       _ => MutationError::InternalServerError(err.into()),
     })?;
 
-  Response::success(PlayerView::new(player, Some(config)))
+  Response::success(PlayerView::new(player, Some(config), None))
 }

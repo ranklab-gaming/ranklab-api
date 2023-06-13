@@ -3,8 +3,7 @@ use crate::data_types::{MediaState, ReviewState};
 use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
 use crate::models::{
-  Audio, AudioChangeset, Avatar, AvatarChangeset, Coach, CoachChangeset, Recording,
-  RecordingChangeset, Review,
+  Audio, AudioChangeset, Avatar, AvatarChangeset, Coach, Recording, RecordingChangeset, Review,
 };
 use crate::{aws, emails};
 use anyhow::anyhow;
@@ -298,7 +297,7 @@ impl S3BucketHandler {
 
     let processed_image_key = Some(record.s3.object.key.clone());
 
-    let avatar: Avatar = self
+    self
       .db_conn
       .run::<_, diesel::result::QueryResult<_>>(move |conn| {
         diesel::update(&avatar)
@@ -307,17 +306,7 @@ impl S3BucketHandler {
               .state(MediaState::Processed)
               .processed_image_key(processed_image_key),
           )
-          .get_result(conn)
-      })
-      .await
-      .map_err(QueueHandlerError::from)?;
-
-    self
-      .db_conn
-      .run(move |conn| {
-        diesel::update(Coach::find_by_id(&avatar.coach_id))
-          .set(CoachChangeset::default().avatar_id(Some(avatar.id)))
-          .execute(conn)
+          .get_result::<Avatar>(conn)
       })
       .await
       .map_err(QueueHandlerError::from)?;
