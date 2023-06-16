@@ -1,3 +1,4 @@
+use crate::games::GameId;
 use schemars::JsonSchema;
 use serde::Serialize;
 
@@ -21,7 +22,7 @@ impl SkillLevel {
 }
 
 pub struct Game {
+  pub id: GameId,
   pub skill_levels: Vec<SkillLevel>,
   pub name: String,
-  pub id: String,
 }

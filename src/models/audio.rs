@@ -1,9 +1,8 @@
 use crate::data_types::MediaState;
 use crate::schema::audios;
 use derive_builder::Builder;
-use diesel::dsl::FindBy;
-use diesel::dsl::{And, Eq, Filter};
-use diesel::helper_types::NotEq;
+use diesel::dsl::{And, Eq, Filter, FindBy};
+use diesel::helper_types::EqAny;
 use diesel::prelude::*;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -19,49 +18,33 @@ use uuid::Uuid;
 pub struct Audio {
   pub created_at: chrono::NaiveDateTime,
   pub id: Uuid,
-  pub review_id: Uuid,
   pub updated_at: chrono::NaiveDateTime,
   pub audio_key: String,
   pub processed_audio_key: Option<String>,
   pub state: MediaState,
   pub transcript: Option<String>,
+  pub user_id: Uuid,
 }
 
 impl Audio {
-  pub fn find_by_audio_key<T: ToString>(
-    audio_key: &T,
-  ) -> FindBy<audios::table, audios::audio_key, String> {
+  pub fn find_by_audio_key(audio_key: &str) -> FindBy<audios::table, audios::audio_key, String> {
     audios::table.filter(audios::audio_key.eq(audio_key.to_string()))
   }
 
-  pub fn find_by_id(id: &Uuid) -> FindBy<audios::table, audios::id, Uuid> {
-    audios::table.filter(audios::id.eq(*id))
+  pub fn find_for_user(
+    user_id: &Uuid,
+    id: &Uuid,
+  ) -> Filter<audios::table, And<Eq<audios::id, Uuid>, Eq<audios::user_id, Uuid>>> {
+    audios::table.filter(audios::id.eq(*id).and(audios::user_id.eq(*user_id)))
   }
 
-  #[allow(clippy::type_complexity)]
-  pub fn find_for_review_id(
-    id: &Uuid,
-    review_id: &Uuid,
-  ) -> Filter<
-    audios::table,
-    And<And<Eq<audios::id, Uuid>, Eq<audios::review_id, Uuid>>, NotEq<audios::state, MediaState>>,
-  > {
+  pub fn filter_processed_by_ids(
+    ids: Vec<Uuid>,
+  ) -> Filter<audios::table, And<EqAny<audios::id, Vec<Uuid>>, Eq<audios::state, MediaState>>> {
     audios::table.filter(
       audios::id
-        .eq(*id)
-        .and(audios::review_id.eq(*review_id))
-        .and(audios::state.ne(MediaState::Created)),
-    )
-  }
-
-  #[allow(clippy::type_complexity)]
-  pub fn filter_by_review_id(
-    review_id: &Uuid,
-  ) -> Filter<audios::table, And<Eq<audios::review_id, Uuid>, NotEq<audios::state, MediaState>>> {
-    audios::table.filter(
-      audios::review_id
-        .eq(*review_id)
-        .and(audios::state.ne(MediaState::Created)),
+        .eq_any(ids)
+        .and(audios::state.eq(MediaState::Processed)),
     )
   }
 }

@@ -1,16 +1,15 @@
+use super::AudioView;
 use crate::models::{Audio, Comment};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
 
-use super::AudioView;
-
 #[derive(Serialize, JsonSchema)]
 #[serde(rename = "Comment")]
 pub struct CommentView {
   pub id: Uuid,
-  pub review_id: Uuid,
-  pub coach_id: Uuid,
+  pub recording_id: Uuid,
+  pub user_id: Uuid,
   pub body: String,
   pub preview: String,
   pub metadata: serde_json::Value,
@@ -29,8 +28,8 @@ impl CommentView {
 
     CommentView {
       id: comment.id,
-      review_id: comment.review_id,
-      coach_id: comment.coach_id,
+      recording_id: comment.recording_id,
+      user_id: comment.user_id,
       body: comment.body,
       preview,
       metadata: comment.metadata,

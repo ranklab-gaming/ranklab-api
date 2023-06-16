@@ -5,7 +5,6 @@ use rusoto_sesv2::{
   BulkEmailContent, BulkEmailEntry, Destination, ReplacementEmailContent, ReplacementTemplate,
   SendBulkEmailError, SendBulkEmailRequest, SesV2, SesV2Client, Template,
 };
-pub mod notifications;
 
 pub struct Recipient {
   email: String,

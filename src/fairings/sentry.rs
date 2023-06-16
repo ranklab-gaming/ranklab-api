@@ -1,8 +1,7 @@
-use std::sync::Mutex;
-
 use rocket::fairing::{self, Fairing, Info, Kind};
 use rocket::{Build, Rocket};
 use sentry::ClientInitGuard;
+use std::sync::Mutex;
 
 pub struct SentryFairing {
   guard: Mutex<Option<ClientInitGuard>>,

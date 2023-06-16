@@ -1,7 +1,7 @@
 use crate::data_types::MediaState;
 use crate::schema::avatars;
 use derive_builder::Builder;
-use diesel::dsl::{And, Eq, EqAny, Filter, FindBy};
+use diesel::dsl::{And, Eq, Filter, FindBy};
 use diesel::prelude::*;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -21,17 +21,12 @@ pub struct Avatar {
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime,
   pub state: MediaState,
+  pub user_id: Uuid,
 }
 
 impl Avatar {
-  pub fn find_by_image_key<T: ToString>(
-    image_key: &T,
-  ) -> FindBy<avatars::table, avatars::image_key, String> {
+  pub fn find_by_image_key(image_key: &str) -> FindBy<avatars::table, avatars::image_key, String> {
     avatars::table.filter(avatars::image_key.eq(image_key.to_string()))
-  }
-
-  pub fn filter_by_ids(ids: Vec<Uuid>) -> Filter<avatars::table, EqAny<avatars::id, Vec<Uuid>>> {
-    avatars::table.filter(avatars::id.eq_any(ids))
   }
 
   pub fn find_processed_by_id(
@@ -44,7 +39,10 @@ impl Avatar {
     )
   }
 
-  pub fn find_by_id(id: &Uuid) -> Filter<avatars::table, Eq<avatars::id, Uuid>> {
-    avatars::table.filter(avatars::id.eq(*id))
+  pub fn find_for_user(
+    user_id: &Uuid,
+    id: &Uuid,
+  ) -> Filter<avatars::table, And<Eq<avatars::id, Uuid>, Eq<avatars::user_id, Uuid>>> {
+    avatars::table.filter(avatars::id.eq(*id).and(avatars::user_id.eq(*user_id)))
   }
 }

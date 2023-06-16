@@ -1,32 +1,27 @@
+mod handlers;
+use self::handlers::*;
+use crate::aws;
 use crate::config::Config;
-use crate::data_types::{MediaState, ReviewState};
 use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
 use crate::guards::DbConn;
-use crate::models::{
-  Audio, AudioChangeset, Avatar, AvatarChangeset, Coach, Recording, RecordingChangeset, Review,
-};
-use crate::{aws, emails};
 use anyhow::anyhow;
-use diesel::prelude::*;
-use reqwest::multipart;
-use rocket::tokio::io::AsyncReadExt;
 use rusoto_core::HttpClient;
-use rusoto_s3::{GetObjectRequest, HeadObjectRequest, S3Client, S3};
+use rusoto_s3::{HeadObjectRequest, S3Client, S3};
 use rusoto_signature::Region;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-struct RecordS3Object {
+pub struct RecordS3Object {
   key: String,
 }
 
 #[derive(Deserialize)]
-struct RecordS3 {
+pub struct RecordS3 {
   object: RecordS3Object,
 }
 
 #[derive(Deserialize)]
-struct Record {
+pub struct Record {
   s3: RecordS3,
 }
 
@@ -135,288 +130,17 @@ impl QueueHandler for S3BucketHandler {
         .ok_or_else(|| anyhow!("No file found in s3 key"))?;
 
       if file_type == "recordings" {
-        return self
-          .handle_recording_uploaded(&record, folder, file, profile)
-          .await;
+        return handle_recording_uploaded(&self, &record, folder, file, profile).await;
       }
 
       if file_type == "avatars" {
-        self.handle_avatar_uploaded(&record, folder, file).await?;
+        handle_avatar_uploaded(&self, &record, folder, file).await?;
       }
 
       if file_type == "audios" {
-        self.handle_audio_uploaded(&record, folder, file).await?;
+        handle_audio_uploaded(&self, &record, folder, file).await?;
       }
     }
-
-    Ok(())
-  }
-}
-
-impl S3BucketHandler {
-  async fn handle_recording_uploaded(
-    &self,
-    record: &Record,
-    folder: &str,
-    file: &str,
-    profile: &rocket::figment::Profile,
-  ) -> Result<(), QueueHandlerError> {
-    let video_key = format!(
-      "recordings/originals/{}",
-      file.split('_').collect::<Vec<_>>()[0]
-    );
-
-    let recording_query = Recording::find_by_video_key(&video_key);
-
-    if folder == "originals" {
-      self
-        .db_conn
-        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-          diesel::update(recording_query)
-            .set(RecordingChangeset::default().state(MediaState::Uploaded))
-            .execute(conn)
-        })
-        .await
-        .map_err(QueueHandlerError::from)?;
-
-      return Ok(());
-    }
-
-    if folder != "processed" {
-      return Ok(());
-    }
-
-    if file.ends_with(".mp4") {
-      let processed_video_key = Some(record.s3.object.key.clone());
-
-      self
-        .db_conn
-        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-          diesel::update(recording_query)
-            .set(
-              RecordingChangeset::default()
-                .state(MediaState::Processed)
-                .processed_video_key(processed_video_key),
-            )
-            .execute(conn)
-        })
-        .await
-        .map_err(QueueHandlerError::from)?;
-
-      let recording = self
-        .db_conn
-        .run(move |conn| Recording::find_by_video_key(&video_key).first::<Recording>(conn))
-        .await
-        .map_err(QueueHandlerError::from)?;
-
-      let reviews = self
-        .db_conn
-        .run(move |conn| Review::filter_by_recording_id(&recording.id).load::<Review>(conn))
-        .await
-        .map_err(QueueHandlerError::from)?;
-
-      let coach_ids = reviews
-        .iter()
-        .map(|review| review.coach_id)
-        .collect::<Vec<_>>();
-
-      let coaches = self
-        .db_conn
-        .run(move |conn| Coach::filter_by_ids(coach_ids).load::<Coach>(conn))
-        .await
-        .map_err(QueueHandlerError::from)?;
-
-      for review in reviews {
-        let coach = coaches
-          .iter()
-          .find(|coach| coach.id == review.coach_id)
-          .ok_or_else(|| anyhow!("No coach found for review"))?;
-
-        if coach.emails_enabled && review.state == ReviewState::AwaitingReview && profile != "test"
-        {
-          emails::notifications::coach_has_reviews(&self.config, coach)
-            .deliver()
-            .await
-            .map_err(anyhow::Error::from)?;
-        }
-      }
-
-      return Ok(());
-    }
-
-    if file.ends_with(".jpg") {
-      let thumbnail_key = Some(record.s3.object.key.clone());
-
-      self
-        .db_conn
-        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-          diesel::update(recording_query)
-            .set(RecordingChangeset::default().thumbnail_key(thumbnail_key))
-            .execute(conn)
-        })
-        .await
-        .map_err(QueueHandlerError::from)?;
-    }
-
-    Ok(())
-  }
-
-  async fn handle_avatar_uploaded(
-    &self,
-    record: &Record,
-    folder: &str,
-    file: &str,
-  ) -> Result<(), QueueHandlerError> {
-    let image_key = format!(
-      "avatars/originals/{}",
-      file.split('.').collect::<Vec<_>>()[0]
-    );
-
-    let avatar: Avatar = self
-      .db_conn
-      .run(move |conn| Avatar::find_by_image_key(&image_key).first::<Avatar>(conn))
-      .await?;
-
-    if folder == "originals" {
-      self
-        .db_conn
-        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-          diesel::update(&avatar)
-            .set(AvatarChangeset::default().state(MediaState::Uploaded))
-            .execute(conn)
-        })
-        .await
-        .map_err(QueueHandlerError::from)?;
-
-      return Ok(());
-    }
-
-    if folder != "processed" {
-      return Ok(());
-    }
-
-    let processed_image_key = Some(record.s3.object.key.clone());
-
-    self
-      .db_conn
-      .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-        diesel::update(&avatar)
-          .set(
-            AvatarChangeset::default()
-              .state(MediaState::Processed)
-              .processed_image_key(processed_image_key),
-          )
-          .get_result::<Avatar>(conn)
-      })
-      .await
-      .map_err(QueueHandlerError::from)?;
-
-    Ok(())
-  }
-
-  async fn handle_audio_uploaded(
-    &self,
-    record: &Record,
-    folder: &str,
-    file: &str,
-  ) -> Result<(), QueueHandlerError> {
-    let audio_key = format!(
-      "audios/originals/{}",
-      file.split('_').collect::<Vec<_>>()[0]
-    );
-
-    let audio_query = Audio::find_by_audio_key(&audio_key);
-
-    if folder == "originals" {
-      let audio: Audio = self
-        .db_conn
-        .run(move |conn| audio_query.first::<Audio>(conn))
-        .await?;
-
-      self
-        .db_conn
-        .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-          diesel::update(&audio)
-            .set(AudioChangeset::default().state(MediaState::Uploaded))
-            .execute(conn)
-        })
-        .await
-        .map_err(QueueHandlerError::from)?;
-
-      return Ok(());
-    }
-
-    if folder != "processed" {
-      return Ok(());
-    }
-
-    let processed_audio_key = Some(record.s3.object.key.clone());
-    let mut transcript: Option<String> = None;
-
-    if let Some(whisper_api_key) = &self.config.whisper_api_key {
-      let processed_audio_file = self
-        .client
-        .get_object(GetObjectRequest {
-          bucket: self.config.s3_bucket.clone(),
-          key: record.s3.object.key.clone(),
-          ..Default::default()
-        })
-        .await
-        .map_err(|e| QueueHandlerError::from(anyhow!(e)))?;
-
-      let stream = processed_audio_file
-        .body
-        .ok_or_else(|| QueueHandlerError::from(anyhow!("no body found in s3 response")))?;
-
-      let mut bytes = Vec::new();
-
-      stream
-        .into_async_read()
-        .read_to_end(&mut bytes)
-        .await
-        .map_err(|e| QueueHandlerError::from(anyhow!("error reading s3 response body: {}", e)))?;
-
-      let reqwest = reqwest::Client::new();
-
-      let part = multipart::Part::bytes(bytes)
-        .file_name("audio.mp4")
-        .mime_str("audio/mp4")
-        .map_err(|e| QueueHandlerError::from(anyhow!(e)))?;
-
-      let form = multipart::Form::new()
-        .part("file", part)
-        .text("model", "whisper-1");
-
-      let response = reqwest
-        .post("https://api.openai.com/v1/audio/transcriptions")
-        .bearer_auth(whisper_api_key.clone())
-        .multipart(form)
-        .send()
-        .await
-        .map_err(|e| QueueHandlerError::from(anyhow!(e)))?;
-
-      let json: WhisperApiResponse = response
-        .json()
-        .await
-        .map_err(|e| QueueHandlerError::from(anyhow!(e)))?;
-
-      transcript = Some(json.text);
-    }
-
-    self
-      .db_conn
-      .run::<_, diesel::result::QueryResult<_>>(move |conn| {
-        diesel::update(audio_query)
-          .set(
-            AudioChangeset::default()
-              .state(MediaState::Processed)
-              .processed_audio_key(processed_audio_key)
-              .transcript(transcript),
-          )
-          .execute(conn)
-      })
-      .await
-      .map_err(QueueHandlerError::from)?;
 
     Ok(())
   }

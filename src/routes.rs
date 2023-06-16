@@ -1,5 +1,9 @@
+pub mod audios;
 pub mod avatars;
-pub mod coach;
+pub mod comments;
+pub mod games;
 pub mod index;
-pub mod player;
-pub mod session;
+pub mod passwords;
+pub mod recordings;
+pub mod sessions;
+pub mod users;
