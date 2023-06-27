@@ -85,6 +85,7 @@ async fn rocket() -> Rocket<Build> {
         comments::update,
         games::create,
         games::list,
+        index::get,
         passwords::create,
         passwords::update,
         recordings::create,

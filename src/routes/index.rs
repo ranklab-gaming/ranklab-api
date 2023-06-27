@@ -4,6 +4,6 @@ use rocket_okapi::openapi;
 
 #[openapi(tag = "Ranklab")]
 #[get("/")]
-pub async fn get_health() -> QueryResponse<StatusResponse> {
+pub async fn get() -> QueryResponse<StatusResponse> {
   Response::status(Status::Ok)
 }
