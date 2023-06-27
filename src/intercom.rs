@@ -1,6 +1,5 @@
 use crate::config::Config;
 use hmac::{Hmac, Mac};
-
 pub mod contacts;
 
 pub fn generate_user_hash(email: &str, config: &Config) -> Option<String> {

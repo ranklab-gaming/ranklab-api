@@ -2,6 +2,7 @@ use crate::models::{Game, SkillLevel};
 
 pub fn overwatch() -> Game {
   Game {
+    id: super::GameId::Overwatch,
     skill_levels: SkillLevel::new_vec(vec![
       "Bronze",
       "Silver",
@@ -12,6 +13,5 @@ pub fn overwatch() -> Game {
       "Grandmaster",
     ]),
     name: "Overwatch".to_string(),
-    id: "overwatch".to_string(),
   }
 }

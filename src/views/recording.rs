@@ -1,13 +1,16 @@
-use crate::{data_types::MediaState, models::Recording};
+use crate::data_types::MediaState;
+use crate::models::{Recording, User};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
+
+use super::UserView;
 
 #[derive(Serialize, JsonSchema)]
 #[serde(rename = "Recording")]
 pub struct RecordingView {
   pub id: Uuid,
-  pub player_id: Uuid,
+  pub user_id: Uuid,
   pub video_key: Option<String>,
   pub thumbnail_key: Option<String>,
   pub upload_url: Option<String>,
@@ -19,11 +22,13 @@ pub struct RecordingView {
   pub state: MediaState,
   pub metadata: Option<serde_json::Value>,
   pub instance_id: Option<String>,
+  pub notes: String,
+  pub user: Option<UserView>,
 }
 
 impl From<Recording> for RecordingView {
   fn from(recording: Recording) -> Self {
-    RecordingView::new(recording, None, None)
+    RecordingView::new(recording, None, None, None)
   }
 }
 
@@ -32,10 +37,11 @@ impl RecordingView {
     recording: Recording,
     upload_url: Option<String>,
     instance_id: Option<String>,
+    user: Option<User>,
   ) -> Self {
     RecordingView {
       id: recording.id,
-      player_id: recording.player_id,
+      user_id: recording.user_id,
       video_key: recording.processed_video_key,
       upload_url,
       created_at: recording.created_at,
@@ -47,6 +53,8 @@ impl RecordingView {
       thumbnail_key: recording.thumbnail_key,
       metadata: recording.metadata,
       instance_id,
+      notes: recording.notes,
+      user: user.map(UserView::from),
     }
   }
 }

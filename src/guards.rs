@@ -1,9 +1,9 @@
 pub mod auth;
 mod db_conn;
-mod stripe;
-pub use self::stripe::Stripe;
+mod s3;
 pub use auth::{Auth, Jwt};
 pub use db_conn::DbConn;
+pub use s3::S3;
 
 #[macro_export]
 macro_rules! try_result {

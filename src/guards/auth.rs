@@ -1,11 +1,12 @@
-use crate::models::OneTimeToken;
 use okapi::openapi3::*;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket_okapi::gen::OpenApiGenerator;
 use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 mod jwt;
 mod ott;
-pub use jwt::{FromJwt, Jwt};
+use self::ott::ToScope;
+pub use self::ott::{Ott, ResetPassword};
+pub use jwt::Jwt;
 pub use ott::OneTimeTokenParams;
 use rocket::http::Status;
 use thiserror::Error;
@@ -16,18 +17,8 @@ pub enum AuthError {
   Missing,
   #[error("invalid token: {0}")]
   Invalid(String),
-  #[error("not found: {0}")]
-  NotFound(String),
-}
-
-impl From<AuthError> for (Status, AuthError) {
-  fn from(error: AuthError) -> Self {
-    match error {
-      AuthError::Missing => (Status::Unauthorized, error),
-      AuthError::Invalid(_) => (Status::BadRequest, error),
-      AuthError::NotFound(_) => (Status::NotFound, error),
-    }
-  }
+  #[error("user not found")]
+  NotFound,
 }
 
 #[async_trait]
@@ -52,13 +43,17 @@ impl<'r, T: AuthFromRequest> FromRequest<'r> for Auth<T> {
 
   async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
     match T::from_request(request).await {
-      Ok(t) => Outcome::Success(Self(t)),
-      Err(e) => Outcome::Failure(e.into()),
+      Ok(t) => Outcome::Success(Auth(t)),
+      Err(e) => match e {
+        AuthError::Missing => Outcome::Failure((Status::Unauthorized, e)),
+        AuthError::Invalid(_) => Outcome::Failure((Status::BadRequest, e)),
+        AuthError::NotFound => Outcome::Failure((Status::NotFound, e)),
+      },
     }
   }
 }
 
-impl<'a, T: FromJwt> OpenApiFromRequest<'a> for Auth<Jwt<T>> {
+impl<'a> OpenApiFromRequest<'a> for Auth<Jwt> {
   fn from_request_input(
     _gen: &mut OpenApiGenerator,
     _name: String,
@@ -79,7 +74,7 @@ impl<'a, T: FromJwt> OpenApiFromRequest<'a> for Auth<Jwt<T>> {
   }
 }
 
-impl<'a> OpenApiFromRequest<'a> for Auth<OneTimeToken> {
+impl<'a, T: ToScope> OpenApiFromRequest<'a> for Auth<Ott<T>> {
   fn from_request_input(
     gen: &mut OpenApiGenerator,
     _name: String,

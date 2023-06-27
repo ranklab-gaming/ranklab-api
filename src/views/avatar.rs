@@ -1,4 +1,5 @@
-use crate::{data_types::MediaState, models::Avatar};
+use crate::data_types::MediaState;
+use crate::models::Avatar;
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;

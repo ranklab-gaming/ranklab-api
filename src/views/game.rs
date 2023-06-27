@@ -1,3 +1,4 @@
+use crate::games::GameId;
 use crate::models::{Game, SkillLevel};
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -6,7 +7,7 @@ use serde::Serialize;
 #[serde(rename = "Game")]
 pub struct GameView {
   name: String,
-  id: String,
+  id: GameId,
   skill_levels: Vec<SkillLevel>,
 }
 
@@ -14,7 +15,7 @@ impl From<&Game> for GameView {
   fn from(game: &Game) -> Self {
     GameView {
       name: game.name.to_owned(),
-      id: game.id.to_owned(),
+      id: game.id,
       skill_levels: game.skill_levels.to_owned(),
     }
   }
