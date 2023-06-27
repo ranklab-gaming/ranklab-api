@@ -12,6 +12,7 @@ ALTER TABLE one_time_tokens ALTER COLUMN scope SET NOT NULL;
 DELETE FROM audios;
 ALTER TABLE audios DROP COLUMN review_id;
 ALTER TABLE audios ADD COLUMN user_id uuid NOT NULL REFERENCES users(id);
+UPDATE coaches SET avatar_id = NULL;
 DELETE FROM avatars;
 ALTER TABLE avatars ADD COLUMN user_id uuid NOT NULL REFERENCES users(id);
 ALTER TABLE users DROP COLUMN skill_level;
