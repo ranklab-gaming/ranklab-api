@@ -107,11 +107,21 @@ impl Recording {
   pub fn filter_by_game_id(
     game_id: &str,
   ) -> Order<
-    Filter<recordings::table, Eq<crate::schema::recordings::game_id, String>>,
+    Filter<
+      recordings::table,
+      And<
+        Eq<crate::schema::recordings::game_id, String>,
+        Eq<crate::schema::recordings::state, MediaState>,
+      >,
+    >,
     SqlLiteral<Bool>,
   > {
     recordings::table
-      .filter(crate::schema::recordings::game_id.eq(game_id.to_string()))
+      .filter(
+        crate::schema::recordings::game_id
+          .eq(game_id.to_string())
+          .and(crate::schema::recordings::state.eq(MediaState::Processed)),
+      )
       .order(diesel::dsl::sql::<Bool>("created_at desc"))
   }
 }
