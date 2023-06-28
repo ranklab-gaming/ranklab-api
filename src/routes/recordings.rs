@@ -219,10 +219,10 @@ pub async fn get(
   config: &State<Config>,
 ) -> QueryResponse<RecordingView> {
   let user = auth.into_user();
-  let user_id = user.id;
+  let game_id = user.game_id.clone();
 
   let recording: Recording = db_conn
-    .run(move |conn| Recording::find_for_user(&user_id, &id).first::<Recording>(conn))
+    .run(move |conn| Recording::find_for_game(&game_id, &id).first::<Recording>(conn))
     .await?;
 
   let url = recording

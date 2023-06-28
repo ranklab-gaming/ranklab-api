@@ -74,6 +74,18 @@ impl Recording {
   }
 
   #[allow(clippy::type_complexity)]
+  pub fn find_for_game(
+    game_id: &str,
+    id: &Uuid,
+  ) -> Filter<recordings::table, And<Eq<recordings::id, Uuid>, Eq<recordings::game_id, String>>> {
+    recordings::table.filter(
+      recordings::id
+        .eq(*id)
+        .and(recordings::game_id.eq(game_id.to_string())),
+    )
+  }
+
+  #[allow(clippy::type_complexity)]
   pub fn filter_for_user(
     user_id: &Uuid,
   ) -> Order<
