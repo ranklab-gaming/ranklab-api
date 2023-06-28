@@ -24,6 +24,7 @@ pub struct RecordingView {
   pub instance_id: Option<String>,
   pub notes: String,
   pub user: Option<UserView>,
+  pub notes_text: String,
 }
 
 impl From<Recording> for RecordingView {
@@ -39,6 +40,8 @@ impl RecordingView {
     instance_id: Option<String>,
     user: Option<User>,
   ) -> Self {
+    let notes_text = html2text::from_read(recording.notes.as_bytes(), 100);
+
     RecordingView {
       id: recording.id,
       user_id: recording.user_id,
@@ -54,6 +57,7 @@ impl RecordingView {
       metadata: recording.metadata,
       instance_id,
       notes: recording.notes,
+      notes_text,
       user: user.map(UserView::from),
     }
   }
