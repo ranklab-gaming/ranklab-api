@@ -20,6 +20,8 @@ ALTER TABLE users DROP COLUMN stripe_customer_id;
 ALTER TABLE recordings ADD COLUMN notes text NOT NULL DEFAULT '';
 ALTER TABLE recordings RENAME COLUMN player_id TO user_id;
 ALTER TABLE reviews DROP COLUMN coach_id;
+ALTER INDEX players_pkey RENAME TO users_pkey;
+ALTER INDEX players_email_key RENAME TO users_email_key;
 DROP TABLE coaches;
 DROP TABLE reviews;
 DROP TYPE review_state;

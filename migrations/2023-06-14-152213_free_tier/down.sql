@@ -50,3 +50,5 @@ ALTER TABLE players ADD COLUMN skill_level integer NOT NULL;
 ALTER TABLE players ADD COLUMN stripe_customer_id text NOT NULL;
 ALTER TABLE recordings DROP COLUMN notes;
 ALTER TABLE recordings RENAME COLUMN user_id TO player_id;
+ALTER INDEX users_pkey RENAME TO players_pkey;
+ALTER INDEX users_email_key RENAME TO players_email_key;
