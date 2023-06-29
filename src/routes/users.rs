@@ -173,6 +173,15 @@ pub async fn update(
   }
 
   let existing_user = auth.into_user();
+  let avatar_id = user.avatar_id.clone();
+
+  let avatar = match avatar_id {
+    Some(avatar_id) => db_conn
+      .run(move |conn| Avatar::find_processed_by_id(&avatar_id).get_result::<Avatar>(conn))
+      .await
+      .ok(),
+    None => None,
+  };
 
   let user: User = db_conn
     .run(move |conn| {
@@ -182,7 +191,7 @@ pub async fn update(
             .name(user.name.clone())
             .game_id(user.game_id.to_string())
             .emails_enabled(user.emails_enabled)
-            .avatar_id(user.avatar_id.clone()),
+            .avatar_id(avatar_id),
         )
         .get_result::<User>(conn)
     })
@@ -202,5 +211,5 @@ pub async fn update(
       _ => MutationError::InternalServerError(err.into()),
     })?;
 
-  Response::success(UserView::new(user, Some(config), None))
+  Response::success(UserView::new(user, Some(config), avatar))
 }
