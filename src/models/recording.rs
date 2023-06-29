@@ -9,14 +9,20 @@ use diesel::sql_types::Bool;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use validator::Validate;
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone, Validate)]
+pub struct RecordingOverwatchMetadata {
+  #[validate(length(min = 6, max = 6))]
+  pub replay_code: String,
+  #[validate(range(min = 0, max = 9))]
+  pub player_position: u8,
+}
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum RecordingMetadataValue {
-  Overwatch {
-    replay_code: String,
-    player_position: u8,
-  },
+  Overwatch(RecordingOverwatchMetadata),
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -29,8 +35,19 @@ pub enum RecordingMetadata {
 impl RecordingMetadata {
   pub fn is_overwatch(&self) -> bool {
     match self {
-      RecordingMetadata::Some(RecordingMetadataValue::Overwatch { .. }) => true,
+      RecordingMetadata::Some(RecordingMetadataValue::Overwatch(_)) => true,
       _ => false,
+    }
+  }
+}
+
+impl Validate for RecordingMetadata {
+  fn validate(&self) -> Result<(), validator::ValidationErrors> {
+    match self {
+      RecordingMetadata::Some(metadata) => match metadata {
+        RecordingMetadataValue::Overwatch(metadata) => metadata.validate(),
+      },
+      RecordingMetadata::None {} => Ok(()),
     }
   }
 }

@@ -31,6 +31,7 @@ pub struct CreateRecordingRequest {
   title: String,
   skill_level: i16,
   game_id: GameId,
+  #[validate]
   metadata: RecordingMetadata,
   notes: String,
 }
