@@ -76,10 +76,18 @@ pub struct Recording {
 }
 
 impl Recording {
+  pub fn all() -> Filter<recordings::table, SqlLiteral<Bool>> {
+    recordings::table.filter(diesel::dsl::sql::<Bool>("true"))
+  }
+
   pub fn find_by_video_key(
     video_key: &str,
   ) -> FindBy<recordings::table, recordings::video_key, String> {
     recordings::table.filter(recordings::video_key.eq(video_key.to_string()))
+  }
+
+  pub fn find_by_id(id: &Uuid) -> FindBy<recordings::table, recordings::id, Uuid> {
+    recordings::table.filter(recordings::id.eq(*id))
   }
 
   #[allow(clippy::type_complexity)]

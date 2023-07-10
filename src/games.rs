@@ -4,7 +4,9 @@ use lazy_static::lazy_static;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Deserialize, Serialize, Eq, Hash, Clone, JsonSchema, Copy)]
+#[derive(
+  Debug, PartialEq, Deserialize, Serialize, Eq, Hash, Clone, JsonSchema, Copy, FromFormField,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum GameId {
   Overwatch,
