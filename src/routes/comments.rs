@@ -46,7 +46,8 @@ pub async fn create(
   }
 
   let recording_id = comment.recording_id;
-  let user_id = auth.into_user().id;
+  let user = auth.into_user();
+  let user_id = user.id;
   let mut audio: Option<Audio> = None;
 
   if let Some(audio_id) = comment.audio_id {
@@ -75,7 +76,7 @@ pub async fn create(
     })
     .await;
 
-  Response::success(CommentView::new(comment, audio, None))
+  Response::success(CommentView::new(comment, audio, Some(user)))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -90,7 +91,8 @@ pub async fn update(
     return Response::validation_error(errors);
   }
 
-  let user_id = auth.into_user().id;
+  let user = auth.into_user();
+  let user_id = user.id;
 
   let existing_comment = db_conn
     .run(move |conn| Comment::find_for_user(&user_id, &id).first::<Comment>(conn))
@@ -122,7 +124,7 @@ pub async fn update(
     })
     .await;
 
-  Response::success(CommentView::new(updated_comment, audio, None))
+  Response::success(CommentView::new(updated_comment, audio, Some(user)))
 }
 
 #[openapi(tag = "Ranklab")]
