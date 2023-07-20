@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::guards::{Auth, DbConn, Jwt};
-use crate::models::{Audio, Comment, CommentChangeset, CommentMetadata};
+use crate::models::{Audio, Comment, CommentChangeset, CommentMetadata, User};
 use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::comments;
 use crate::views::CommentView;
@@ -75,7 +75,7 @@ pub async fn create(
     })
     .await;
 
-  Response::success(CommentView::new(comment, audio))
+  Response::success(CommentView::new(comment, audio, None))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -122,7 +122,7 @@ pub async fn update(
     })
     .await;
 
-  Response::success(CommentView::new(updated_comment, audio))
+  Response::success(CommentView::new(updated_comment, audio, None))
 }
 
 #[openapi(tag = "Ranklab")]
@@ -177,6 +177,17 @@ pub async fn list(
     })
     .await;
 
+  let user_ids = comments
+    .iter()
+    .map(|comment| comment.user_id)
+    .collect::<HashSet<_>>()
+    .into_iter()
+    .collect::<Vec<_>>();
+
+  let users = db_conn
+    .run(move |conn| User::filter_by_ids(user_ids).load::<User>(conn).unwrap())
+    .await;
+
   let comments = comments
     .into_iter()
     .map(|comment| {
@@ -185,7 +196,12 @@ pub async fn list(
         .find(|audio| Some(audio.id) == comment.audio_id)
         .cloned();
 
-      CommentView::new(comment, audio)
+      let user = users
+        .iter()
+        .find(|user| user.id == comment.user_id)
+        .cloned();
+
+      CommentView::new(comment, audio, user)
     })
     .collect();
 

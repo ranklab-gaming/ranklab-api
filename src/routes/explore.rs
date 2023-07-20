@@ -95,10 +95,28 @@ pub async fn get_comments(id: Uuid, db_conn: DbConn) -> QueryResponse<Vec<Commen
     .run(move |conn| Comment::filter_by_recording_id(&id).load::<Comment>(conn))
     .await?;
 
+  let user_ids = comments
+    .iter()
+    .map(|comment| comment.user_id)
+    .collect::<HashSet<_>>()
+    .into_iter()
+    .collect::<Vec<_>>();
+
+  let users = db_conn
+    .run(move |conn| User::filter_by_ids(user_ids).load::<User>(conn).unwrap())
+    .await;
+
   let comment_views = comments
     .clone()
     .into_iter()
-    .map(Into::into)
+    .map(|comment| {
+      let user = users
+        .clone()
+        .into_iter()
+        .find(|user| user.id == comment.user_id);
+
+      CommentView::new(comment, None, user)
+    })
     .collect::<Vec<CommentView>>();
 
   Response::success(comment_views)
