@@ -60,7 +60,7 @@ serde_plain = "1.0.1"
 serde_path_to_error = "0.1.14"
 sha2 = "0.10.7"
 smol_str = "0.2.0"
-thiserror = "1.0.43"
+thiserror = "1.0.44"
 uuid = { version = "1.4.0", features = ["v4", "serde"] }
 validator = { version = "0.16.1", features = ["derive"] }
 chrono = "0.4.26"
