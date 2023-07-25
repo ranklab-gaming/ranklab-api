@@ -18,3 +18,5 @@ pub mod response;
 pub mod routes;
 pub mod schema;
 pub mod views;
+
+pub const TEST_PROFILE: rocket::figment::Profile = rocket::figment::Profile::const_new("test");

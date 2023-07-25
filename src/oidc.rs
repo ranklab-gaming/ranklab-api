@@ -59,7 +59,7 @@ async fn fetch_jwks(client: &reqwest::Client, jwks_uri: &str) -> Result<Jwks, re
 
 pub async fn init_cache(web_host: &str, profile: &Profile) -> Result<OidcCache, reqwest::Error> {
   let accept_invalid_certs = (profile == rocket::Config::DEBUG_PROFILE
-    || profile == rocket::figment::Profile::const_new("test"))
+    || profile == crate::TEST_PROFILE)
     && web_host.starts_with("https");
 
   let client = reqwest::Client::builder()
