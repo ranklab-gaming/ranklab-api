@@ -16,6 +16,7 @@ use rocket_okapi::openapi_get_routes;
 use std::env;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+pub const TEST_PROFILE: rocket::figment::Profile = rocket::figment::Profile::const_new("test");
 
 pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
   let database_url: String = rocket
