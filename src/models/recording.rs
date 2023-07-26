@@ -76,8 +76,10 @@ pub struct Recording {
 }
 
 impl Recording {
-  pub fn all() -> Filter<recordings::table, SqlLiteral<Bool>> {
-    recordings::table.filter(diesel::dsl::sql::<Bool>("true"))
+  pub fn all() -> Order<Filter<recordings::table, SqlLiteral<Bool>>, SqlLiteral<Bool>> {
+    recordings::table
+      .filter(diesel::dsl::sql::<Bool>("true"))
+      .order(diesel::dsl::sql::<Bool>("created_at desc"))
   }
 
   pub fn find_by_video_key(
