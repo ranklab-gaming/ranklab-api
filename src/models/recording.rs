@@ -76,9 +76,10 @@ pub struct Recording {
 }
 
 impl Recording {
-  pub fn all() -> Order<Filter<recordings::table, SqlLiteral<Bool>>, SqlLiteral<Bool>> {
+  pub fn all(
+  ) -> Order<Filter<recordings::table, Eq<recordings::state, MediaState>>, SqlLiteral<Bool>> {
     recordings::table
-      .filter(diesel::dsl::sql::<Bool>("true"))
+      .filter(crate::schema::recordings::state.eq(MediaState::Processed))
       .order(diesel::dsl::sql::<Bool>("created_at desc"))
   }
 
