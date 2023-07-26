@@ -226,12 +226,23 @@ pub async fn get(
     .run(move |conn| Recording::find_for_game(&game_id, &id).first::<Recording>(conn))
     .await?;
 
+  let recording_id = recording.id;
+
+  let recording_user = db_conn
+    .run(move |conn| User::find_by_id(&recording_id).first::<User>(conn))
+    .await?;
+
   let url = recording
     .video_key
     .as_ref()
     .map(|video_key| create_upload_url(config, video_key));
 
-  Response::success(RecordingView::new(recording, url, None, Some(user)))
+  Response::success(RecordingView::new(
+    recording,
+    url,
+    None,
+    Some(recording_user),
+  ))
 }
 
 #[openapi(tag = "Ranklab")]
