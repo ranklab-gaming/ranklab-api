@@ -226,10 +226,10 @@ pub async fn get(
     .run(move |conn| Recording::find_for_game(&game_id, &id).first::<Recording>(conn))
     .await?;
 
-  let recording_id = recording.id;
+  let recording_user_id = recording.user_id;
 
   let recording_user = db_conn
-    .run(move |conn| User::find_by_id(&recording_id).first::<User>(conn))
+    .run(move |conn| User::find_by_id(&recording_user_id).first::<User>(conn))
     .await?;
 
   let url = recording
