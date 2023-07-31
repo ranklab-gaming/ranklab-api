@@ -16,6 +16,7 @@ pub struct UserView {
   pub intercom_hash: Option<String>,
   pub avatar_id: Option<Uuid>,
   pub avatar_image_key: Option<String>,
+  pub skill_level: i16,
 }
 
 impl From<User> for UserView {
@@ -37,6 +38,7 @@ impl UserView {
       intercom_hash,
       avatar_id: user.avatar_id,
       avatar_image_key: avatar.and_then(|avatar| avatar.processed_image_key),
+      skill_level: user.skill_level,
     }
   }
 }

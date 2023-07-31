@@ -31,6 +31,7 @@ pub struct UpdateUserRequest {
   game_id: GameId,
   emails_enabled: bool,
   avatar_id: Option<Uuid>,
+  skill_level: i16,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
@@ -191,7 +192,8 @@ pub async fn update(
             .name(user.name.clone())
             .game_id(user.game_id.to_string())
             .emails_enabled(user.emails_enabled)
-            .avatar_id(avatar_id),
+            .avatar_id(avatar_id)
+            .skill_level(user.skill_level),
         )
         .get_result::<User>(conn)
     })
