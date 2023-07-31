@@ -40,6 +40,7 @@ pub struct CreateUserRequest {
   name: String,
   credentials: Credentials,
   game_id: GameId,
+  skill_level: i16,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -114,7 +115,8 @@ pub async fn create(
             .password(password.map(|password| hash(password.clone(), DEFAULT_COST).unwrap()))
             .email(email.clone())
             .name(user.name.clone())
-            .game_id(user.game_id.to_string()),
+            .game_id(user.game_id.to_string())
+            .skill_level(user.skill_level),
         )
         .get_result::<User>(conn)
     })
