@@ -31,6 +31,7 @@ pub struct UpdateUserRequest {
   game_id: GameId,
   emails_enabled: bool,
   avatar_id: Option<Uuid>,
+  skill_level: i16,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
@@ -39,6 +40,7 @@ pub struct CreateUserRequest {
   name: String,
   credentials: Credentials,
   game_id: GameId,
+  skill_level: i16,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -113,7 +115,8 @@ pub async fn create(
             .password(password.map(|password| hash(password.clone(), DEFAULT_COST).unwrap()))
             .email(email.clone())
             .name(user.name.clone())
-            .game_id(user.game_id.to_string()),
+            .game_id(user.game_id.to_string())
+            .skill_level(user.skill_level),
         )
         .get_result::<User>(conn)
     })
@@ -191,7 +194,8 @@ pub async fn update(
             .name(user.name.clone())
             .game_id(user.game_id.to_string())
             .emails_enabled(user.emails_enabled)
-            .avatar_id(avatar_id),
+            .avatar_id(avatar_id)
+            .skill_level(user.skill_level),
         )
         .get_result::<User>(conn)
     })

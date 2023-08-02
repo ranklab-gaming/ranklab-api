@@ -22,6 +22,7 @@ pub struct User {
   pub updated_at: chrono::NaiveDateTime,
   pub emails_enabled: bool,
   pub avatar_id: Option<Uuid>,
+  pub skill_level: i16,
 }
 
 impl User {

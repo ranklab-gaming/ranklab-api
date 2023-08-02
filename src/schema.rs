@@ -94,6 +94,7 @@ diesel::table! {
         updated_at -> Timestamp,
         emails_enabled -> Bool,
         avatar_id -> Nullable<Uuid>,
+        skill_level -> Int2,
     }
 }
 
