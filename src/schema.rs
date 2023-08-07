@@ -47,6 +47,7 @@ diesel::table! {
         audio_id -> Nullable<Uuid>,
         user_id -> Uuid,
         recording_id -> Uuid,
+        notified_at -> Nullable<Timestamp>,
     }
 }
 

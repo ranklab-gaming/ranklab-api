@@ -1,6 +1,7 @@
 use crate::schema::comments;
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, Filter};
+use diesel::helper_types::IsNull;
 use diesel::prelude::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,7 @@ pub struct Comment {
   pub audio_id: Option<Uuid>,
   pub user_id: Uuid,
   pub recording_id: Uuid,
+  pub notified_at: Option<chrono::NaiveDateTime>,
 }
 
 #[allow(clippy::type_complexity)]
@@ -50,5 +52,9 @@ impl Comment {
     recording_id: &Uuid,
   ) -> Filter<comments::table, Eq<comments::recording_id, Uuid>> {
     comments::table.filter(comments::recording_id.eq(*recording_id))
+  }
+
+  pub fn filter_unnotified() -> Filter<comments::table, IsNull<comments::notified_at>> {
+    comments::table.filter(comments::notified_at.is_null())
   }
 }
