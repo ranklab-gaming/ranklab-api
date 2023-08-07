@@ -3,7 +3,7 @@ use crate::guards::DbConn;
 use crate::models::Comment;
 use chrono::Duration;
 use clokwerk::Interval::*;
-use clokwerk::{AsyncScheduler, Job, TimeUnits};
+use clokwerk::{Job, Scheduler, TimeUnits};
 use diesel::prelude::*;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
@@ -22,15 +22,23 @@ impl CronFairing {
     let db_conn = Arc::new(DbConn::get_one(rocket).await.unwrap());
 
     tokio::spawn(async move {
-      let db_conn = Arc::clone(&db_conn);
-      let mut scheduler = AsyncScheduler::new();
+      let mut scheduler = Scheduler::new();
 
-      scheduler.every(30.minutes()).run(|| async move {
-        let comments = db_conn
-          .run(move |conn| Comment::filter_unnotified().load::<Comment>(conn))
-          .await
-          .unwrap();
+      scheduler.every(30.minutes()).run(move || {
+        let db_conn: Arc<DbConn> = Arc::clone(&db_conn);
+
+        tokio::spawn(async move {
+          let comments = db_conn
+            .run(move |conn| Comment::filter_unnotified().load::<Comment>(conn))
+            .await
+            .unwrap();
+        });
       });
+
+      loop {
+        scheduler.run_pending();
+        tokio::time::sleep(Duration::seconds(1).to_std().unwrap()).await;
+      }
     });
   }
 }
