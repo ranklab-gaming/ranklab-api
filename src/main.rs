@@ -60,6 +60,7 @@ async fn rocket() -> Rocket<Build> {
     .attach(fairings::Sentry::fairing())
     .attach(fairings::Sqs::fairing())
     .attach(DbConn::fairing())
+    .attach(fairings::Cron::fairing())
     .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
     .attach(AdHoc::on_request("Accept JSON", |req, _| {
       Box::pin(async move { req.replace_header(Accept::JSON) })
