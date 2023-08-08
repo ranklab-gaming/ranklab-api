@@ -2,8 +2,10 @@ use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::guards::DbConn;
 use crate::models::{Comment, Recording, User};
+use crate::schema::comments::notified_at;
 use chrono::Duration;
 use clokwerk::{Scheduler, TimeUnits};
+use diesel::dsl::now;
 use diesel::prelude::*;
 use pluralizer::pluralize;
 use rocket::fairing::{Fairing, Info, Kind};
@@ -18,8 +20,10 @@ use uuid::Uuid;
 pub struct CronFairing;
 
 async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyhow::Error> {
+  let comments_query = Comment::filter_unnotified();
+
   let comments = db_conn
-    .run(move |conn| Comment::filter_unnotified().load::<Comment>(conn))
+    .run(move |conn| comments_query.load::<Comment>(conn))
     .await?;
 
   let mut comments_by_recording_id: HashMap<Uuid, Vec<Comment>> = HashMap::new();
@@ -49,7 +53,10 @@ async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyho
       json!({
         "subject": "You've received comments on your VOD!",
         "title": format!("You've received {} on the VOD \"{}\"", pluralize("comments", comments.len().try_into()?, true), title),
-        "body": "You can follow the link below to view them.",
+        "body": format!("You can follow the link below to view {}.", match comments.len() {
+          1 => "it",
+          _ => "them",
+        }),
         "cta" : "View comments",
         "cta_url" : format!("{}/recordings/{}", config.web_host, recording_id),
       }),
@@ -65,6 +72,14 @@ async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyho
       .deliver()
       .await
       .map_err(|e| anyhow::anyhow!("Failed to send email: {}", e))?;
+
+    db_conn
+      .run(move |conn| {
+        diesel::update(comments_query)
+          .set(notified_at.eq(now))
+          .get_result::<Comment>(conn)
+      })
+      .await?;
   }
 
   Ok(())
