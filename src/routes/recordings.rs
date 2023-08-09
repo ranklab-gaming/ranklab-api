@@ -2,11 +2,13 @@ use crate::config::Config;
 use crate::data_types::MediaState;
 use crate::games::GameId;
 use crate::guards::{Auth, DbConn, Jwt, S3};
-use crate::models::{Recording, RecordingChangeset, RecordingMetadata, User};
+use crate::models::{
+  Recording, RecordingChangeset, RecordingMetadata, RecordingWithCommentCount, User,
+};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::recordings;
-use crate::views::RecordingView;
+use crate::views::{RecordingView, RecordingWithCommentCountView};
 use crate::{aws, games};
 use diesel::prelude::*;
 use rocket::http::Status;
@@ -64,7 +66,7 @@ pub async fn list(
   auth: Auth<Jwt>,
   db_conn: DbConn,
   params: ListParams,
-) -> QueryResponse<PaginatedResult<RecordingView>> {
+) -> QueryResponse<PaginatedResult<RecordingWithCommentCountView>> {
   let user = auth.into_user();
   let user_id = user.id;
   let page = params.page.unwrap_or(1);
@@ -74,7 +76,7 @@ pub async fn list(
       .run(move |conn| {
         Recording::filter_for_user(&user_id)
           .paginate(page)
-          .load_and_count_pages::<Recording>(conn)
+          .load_and_count_pages::<RecordingWithCommentCount>(conn)
           .unwrap()
       })
       .await
@@ -83,7 +85,7 @@ pub async fn list(
       .run(move |conn| {
         Recording::filter_by_game_id(&user.game_id)
           .paginate(page)
-          .load_and_count_pages::<Recording>(conn)
+          .load_and_count_pages::<RecordingWithCommentCount>(conn)
           .unwrap()
       })
       .await
@@ -93,7 +95,7 @@ pub async fn list(
     .records
     .clone()
     .into_iter()
-    .map(|recording| recording.user_id)
+    .map(|recording| recording.recording.user_id)
     .collect::<HashSet<_>>()
     .into_iter()
     .collect::<Vec<_>>();
@@ -114,12 +116,12 @@ pub async fn list(
       let user = users
         .clone()
         .into_iter()
-        .find(|user| user.id == recording.user_id)
+        .find(|user| user.id == recording.recording.user_id)
         .unwrap();
 
-      RecordingView::new(recording, None, None, Some(user))
+      RecordingWithCommentCountView::new(recording, None, None, Some(user))
     })
-    .collect::<Vec<RecordingView>>();
+    .collect::<Vec<RecordingWithCommentCountView>>();
 
   Response::success(recordings.records(recording_views))
 }

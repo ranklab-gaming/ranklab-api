@@ -1,9 +1,9 @@
 use crate::games::GameId;
 use crate::guards::DbConn;
-use crate::models::{Comment, Recording, User};
+use crate::models::{Comment, Recording, RecordingWithCommentCount, User};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{QueryResponse, Response};
-use crate::views::{CommentView, RecordingView};
+use crate::views::{CommentView, RecordingView, RecordingWithCommentCountView};
 use diesel::prelude::*;
 use rocket_okapi::openapi;
 use schemars::JsonSchema;
@@ -21,18 +21,18 @@ pub struct ListParams {
 pub async fn list(
   db_conn: DbConn,
   params: ListParams,
-) -> QueryResponse<PaginatedResult<RecordingView>> {
+) -> QueryResponse<PaginatedResult<RecordingWithCommentCountView>> {
   let page = params.page.unwrap_or(1);
 
   let recordings = db_conn
     .run(move |conn| match params.game_id {
       Some(game_id) => Recording::filter_by_game_id(&game_id.to_string())
         .paginate(page)
-        .load_and_count_pages::<Recording>(conn)
+        .load_and_count_pages::<RecordingWithCommentCount>(conn)
         .unwrap(),
       None => Recording::all()
         .paginate(page)
-        .load_and_count_pages::<Recording>(conn)
+        .load_and_count_pages::<RecordingWithCommentCount>(conn)
         .unwrap(),
     })
     .await;
@@ -41,7 +41,7 @@ pub async fn list(
     .records
     .clone()
     .into_iter()
-    .map(|recording| recording.user_id)
+    .map(|recording| recording.recording.user_id)
     .collect::<HashSet<_>>()
     .into_iter()
     .collect::<Vec<_>>();
@@ -62,12 +62,12 @@ pub async fn list(
       let user = users
         .clone()
         .into_iter()
-        .find(|user| user.id == recording.user_id)
+        .find(|user| user.id == recording.recording.user_id)
         .unwrap();
 
-      RecordingView::new(recording, None, None, Some(user))
+      RecordingWithCommentCountView::new(recording, None, None, Some(user))
     })
-    .collect::<Vec<RecordingView>>();
+    .collect::<Vec<RecordingWithCommentCountView>>();
 
   Response::success(recordings.records(recording_views))
 }

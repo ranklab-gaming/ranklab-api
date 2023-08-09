@@ -12,6 +12,9 @@ pub use avatar::{Avatar, AvatarChangeset};
 pub use comment::{Comment, CommentChangeset, CommentMetadata, CommentMetadataValue};
 pub use game::{Game, SkillLevel};
 pub use one_time_token::{OneTimeToken, OneTimeTokenChangeset};
-pub use recording::{Recording, RecordingChangeset, RecordingMetadata, RecordingMetadataValue};
+pub use recording::{
+  Recording, RecordingChangeset, RecordingMetadata, RecordingMetadataValue,
+  RecordingWithCommentCount,
+};
 pub use session::Session;
 pub use user::{User, UserChangeset};
