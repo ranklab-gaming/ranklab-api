@@ -47,31 +47,33 @@ async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyho
       .run(move |conn| User::find_by_id(&user_id).get_result::<User>(conn))
       .await?;
 
-    let comments_added = Email::new(
-      config,
-      "notification".to_owned(),
-      json!({
-        "subject": "You've received comments on your VOD!",
-        "title": format!("You've received {} on the VOD \"{}\"", pluralize("comments", comments.len().try_into()?, true), title),
-        "body": format!("You can follow the link below to view {}.", match comments.len() {
-          1 => "it",
-          _ => "them",
-        }),
-        "cta" : "View comments",
-        "cta_url" : format!("{}/recordings/{}", config.web_host, recording_id),
-      }),
-      vec![Recipient::new(
-        user.email,
+    if user.emails_enabled {
+      let comments_added = Email::new(
+        config,
+        "notification".to_owned(),
         json!({
-          "name": user.name,
+          "subject": "You've received comments on your VOD!",
+          "title": format!("You've received {} on the VOD \"{}\"", pluralize("comments", comments.len().try_into()?, true), title),
+          "body": format!("You can follow the link below to view {}.", match comments.len() {
+            1 => "it",
+            _ => "them",
+          }),
+          "cta" : "View comments",
+          "cta_url" : format!("{}/recordings/{}", config.web_host, recording_id),
         }),
-      )],
-    );
+        vec![Recipient::new(
+          user.email,
+          json!({
+            "name": user.name,
+          }),
+        )],
+      );
 
-    comments_added
-      .deliver()
-      .await
-      .map_err(|e| anyhow::anyhow!("Failed to send email: {}", e))?;
+      comments_added
+        .deliver()
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to send email: {}", e))?;
+    }
 
     db_conn
       .run(move |conn| {

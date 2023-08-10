@@ -76,7 +76,7 @@ pub async fn handle_recording_uploaded(
         .run(move |conn| User::find_by_id(&user_id).first::<User>(conn))
         .await?;
 
-      if parsed_metadata.is_overwatch() {
+      if parsed_metadata.is_overwatch() && user.emails_enabled {
         let video_uploaded = Email::new(
           &handler.config,
           "notification".to_owned(),
