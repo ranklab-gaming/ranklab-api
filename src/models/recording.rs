@@ -3,7 +3,7 @@ use crate::schema::recordings;
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, Filter, FindBy};
 use diesel::expression::SqlLiteral;
-use diesel::helper_types::{GroupBy, InnerJoin, NotEq, On, Order, Select};
+use diesel::helper_types::{GroupBy, LeftJoin, NotEq, On, Order, Select};
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use schemars::JsonSchema;
@@ -84,7 +84,7 @@ pub struct RecordingWithCommentCount {
 impl Recording {
   pub fn all() -> Select<
     GroupBy<
-      InnerJoin<
+      LeftJoin<
         Order<
           Filter<recordings::table, Eq<crate::schema::recordings::state, MediaState>>,
           SqlLiteral<Bool>,
@@ -98,19 +98,19 @@ impl Recording {
     >,
     (
       <recordings::table as diesel::Table>::AllColumns,
-      diesel::dsl::count<crate::schema::comments::id>,
+      diesel::dsl::count<diesel::dsl::Nullable<crate::schema::comments::id>>,
     ),
   > {
     recordings::table
       .filter(crate::schema::recordings::state.eq(MediaState::Processed))
       .order(diesel::dsl::sql::<Bool>("created_at desc"))
-      .inner_join(
+      .left_join(
         crate::schema::comments::table.on(crate::schema::comments::recording_id.eq(recordings::id)),
       )
       .group_by(recordings::id)
       .select((
         recordings::all_columns,
-        diesel::dsl::count(crate::schema::comments::id),
+        diesel::dsl::count(crate::schema::comments::id.nullable()),
       ))
   }
 
@@ -118,7 +118,7 @@ impl Recording {
     game_id: &str,
   ) -> Select<
     GroupBy<
-      InnerJoin<
+      LeftJoin<
         Order<
           Filter<
             recordings::table,
@@ -138,7 +138,7 @@ impl Recording {
     >,
     (
       <recordings::table as diesel::Table>::AllColumns,
-      diesel::dsl::count<crate::schema::comments::id>,
+      diesel::dsl::count<diesel::dsl::Nullable<crate::schema::comments::id>>,
     ),
   > {
     recordings::table
@@ -148,13 +148,13 @@ impl Recording {
           .and(crate::schema::recordings::game_id.eq(game_id.to_string())),
       )
       .order(diesel::dsl::sql::<Bool>("created_at desc"))
-      .inner_join(
+      .left_join(
         crate::schema::comments::table.on(crate::schema::comments::recording_id.eq(recordings::id)),
       )
       .group_by(recordings::id)
       .select((
         recordings::all_columns,
-        diesel::dsl::count(crate::schema::comments::id),
+        diesel::dsl::count(crate::schema::comments::id.nullable()),
       ))
   }
 
@@ -193,7 +193,7 @@ impl Recording {
     user_id: &Uuid,
   ) -> Select<
     GroupBy<
-      InnerJoin<
+      LeftJoin<
         Order<
           Filter<
             recordings::table,
@@ -213,7 +213,7 @@ impl Recording {
     >,
     (
       <recordings::table as diesel::Table>::AllColumns,
-      diesel::dsl::count<crate::schema::comments::id>,
+      diesel::dsl::count<diesel::dsl::Nullable<crate::schema::comments::id>>,
     ),
   > {
     recordings::table
@@ -223,13 +223,13 @@ impl Recording {
           .and(crate::schema::recordings::user_id.eq(*user_id)),
       )
       .order(diesel::dsl::sql::<Bool>("created_at desc"))
-      .inner_join(
+      .left_join(
         crate::schema::comments::table.on(crate::schema::comments::recording_id.eq(recordings::id)),
       )
       .group_by(recordings::id)
       .select((
         recordings::all_columns,
-        diesel::dsl::count(crate::schema::comments::id),
+        diesel::dsl::count(crate::schema::comments::id.nullable()),
       ))
   }
 }
