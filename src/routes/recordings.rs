@@ -8,7 +8,7 @@ use crate::models::{
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::recordings;
-use crate::views::{RecordingView, RecordingWithCommentCountView};
+use crate::views::RecordingView;
 use crate::{aws, games};
 use diesel::prelude::*;
 use rocket::http::Status;
@@ -66,7 +66,7 @@ pub async fn list(
   auth: Auth<Option<Jwt>>,
   db_conn: DbConn,
   params: ListParams,
-) -> QueryResponse<PaginatedResult<RecordingWithCommentCountView>> {
+) -> QueryResponse<PaginatedResult<RecordingView>> {
   let user = auth.into_user();
   let page = params.page.unwrap_or(1);
 
@@ -134,9 +134,15 @@ pub async fn list(
         .find(|user| user.id == recording.recording.user_id)
         .unwrap();
 
-      RecordingWithCommentCountView::new(recording, None, None, Some(user))
+      RecordingView::new(
+        recording.recording,
+        None,
+        None,
+        Some(user),
+        Some(recording.comment_count),
+      )
     })
-    .collect::<Vec<RecordingWithCommentCountView>>();
+    .collect::<Vec<RecordingView>>();
 
   Response::success(recordings.records(recording_views))
 }
@@ -225,6 +231,7 @@ pub async fn create(
     url,
     config.instance_id.clone(),
     Some(user),
+    None,
   ))
 }
 
@@ -268,6 +275,7 @@ pub async fn get(
     url,
     None,
     Some(recording_user),
+    None,
   ))
 }
 

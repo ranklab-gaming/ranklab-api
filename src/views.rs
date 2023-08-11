@@ -8,5 +8,5 @@ pub use audio::AudioView;
 pub use avatar::AvatarView;
 pub use comment::CommentView;
 pub use game::GameView;
-pub use recording::{RecordingView, RecordingWithCommentCountView};
+pub use recording::RecordingView;
 pub use user::UserView;
