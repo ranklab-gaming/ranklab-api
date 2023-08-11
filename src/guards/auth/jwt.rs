@@ -34,6 +34,12 @@ impl Auth<Jwt> {
   }
 }
 
+impl Auth<Option<Jwt>> {
+  pub fn into_user(self) -> Option<User> {
+    self.0.map(|jwt| jwt.into_user())
+  }
+}
+
 #[async_trait]
 impl AuthFromRequest for Jwt {
   async fn from_request(req: &Request<'_>) -> Result<Self, AuthError> {

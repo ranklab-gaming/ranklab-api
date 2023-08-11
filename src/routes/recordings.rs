@@ -63,32 +63,47 @@ pub struct ListParams {
 #[openapi(tag = "Ranklab")]
 #[get("/recordings?<params..>")]
 pub async fn list(
-  auth: Auth<Jwt>,
+  auth: Auth<Option<Jwt>>,
   db_conn: DbConn,
   params: ListParams,
 ) -> QueryResponse<PaginatedResult<RecordingWithCommentCountView>> {
   let user = auth.into_user();
-  let user_id = user.id;
   let page = params.page.unwrap_or(1);
 
-  let recordings = if params.only_own.unwrap_or(false) {
-    db_conn
-      .run(move |conn| {
-        Recording::filter_for_user(&user_id)
-          .paginate(page)
-          .load_and_count_pages::<RecordingWithCommentCount>(conn)
-          .unwrap()
-      })
-      .await
-  } else {
-    db_conn
-      .run(move |conn| {
-        Recording::filter_by_game_id(&user.game_id)
-          .paginate(page)
-          .load_and_count_pages::<RecordingWithCommentCount>(conn)
-          .unwrap()
-      })
-      .await
+  let recordings = match user {
+    Some(user) => {
+      if params.only_own.unwrap_or(false) {
+        let user_id = user.id;
+
+        db_conn
+          .run(move |conn| {
+            Recording::filter_for_user(&user_id)
+              .paginate(page)
+              .load_and_count_pages::<RecordingWithCommentCount>(conn)
+              .unwrap()
+          })
+          .await
+      } else {
+        db_conn
+          .run(move |conn| {
+            Recording::filter_by_game_id(&user.game_id)
+              .paginate(page)
+              .load_and_count_pages::<RecordingWithCommentCount>(conn)
+              .unwrap()
+          })
+          .await
+      }
+    }
+    None => {
+      db_conn
+        .run(move |conn| {
+          Recording::all()
+            .paginate(page)
+            .load_and_count_pages::<RecordingWithCommentCount>(conn)
+            .unwrap()
+        })
+        .await
+    }
   };
 
   let user_ids = recordings
@@ -217,16 +232,25 @@ pub async fn create(
 #[get("/recordings/<id>")]
 pub async fn get(
   id: Uuid,
-  auth: Auth<Jwt>,
+  auth: Auth<Option<Jwt>>,
   db_conn: DbConn,
   config: &State<Config>,
 ) -> QueryResponse<RecordingView> {
   let user = auth.into_user();
-  let game_id = user.game_id.clone();
+  let game_id = user.map(|user| user.game_id.clone());
 
-  let recording: Recording = db_conn
-    .run(move |conn| Recording::find_for_game(&game_id, &id).first::<Recording>(conn))
-    .await?;
+  let recording: Recording = match game_id {
+    Some(game_id) => {
+      db_conn
+        .run(move |conn| Recording::find_for_game(&game_id, &id).first::<Recording>(conn))
+        .await?
+    }
+    None => {
+      db_conn
+        .run(move |conn| Recording::find_by_id(&id).first::<Recording>(conn))
+        .await?
+    }
+  };
 
   let recording_user_id = recording.user_id;
 

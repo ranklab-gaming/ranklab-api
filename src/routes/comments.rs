@@ -149,11 +149,7 @@ pub async fn delete(
 
 #[openapi(tag = "Ranklab")]
 #[get("/comments?<params..>")]
-pub async fn list(
-  params: ListParams,
-  _auth: Auth<Jwt>,
-  db_conn: DbConn,
-) -> QueryResponse<Vec<CommentView>> {
+pub async fn list(params: ListParams, db_conn: DbConn) -> QueryResponse<Vec<CommentView>> {
   let recording_id = params.recording_id;
 
   let comments: Vec<Comment> = db_conn

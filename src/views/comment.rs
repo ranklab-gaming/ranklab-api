@@ -15,6 +15,7 @@ pub struct CommentView {
   pub metadata: serde_json::Value,
   pub audio: Option<AudioView>,
   pub user: Option<UserView>,
+  pub created_at: chrono::NaiveDateTime,
 }
 
 impl From<Comment> for CommentView {
@@ -36,6 +37,7 @@ impl CommentView {
       metadata: comment.metadata,
       audio: audio.map(AudioView::from),
       user: user.map(UserView::from),
+      created_at: comment.created_at,
     }
   }
 }
