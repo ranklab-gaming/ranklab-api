@@ -96,6 +96,7 @@ diesel::table! {
         emails_enabled -> Bool,
         avatar_id -> Nullable<Uuid>,
         skill_level -> Int2,
+        digest_notified_at -> Timestamp,
     }
 }
 

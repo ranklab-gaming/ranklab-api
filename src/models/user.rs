@@ -23,6 +23,7 @@ pub struct User {
   pub emails_enabled: bool,
   pub avatar_id: Option<Uuid>,
   pub skill_level: i16,
+  pub digest_notified_at: chrono::NaiveDateTime,
 }
 
 impl User {
@@ -36,5 +37,9 @@ impl User {
 
   pub fn filter_by_ids(ids: Vec<Uuid>) -> Filter<users::table, EqAny<users::id, Vec<Uuid>>> {
     users::table.filter(users::id.eq_any(ids))
+  }
+
+  pub fn all() -> users::table {
+    users::table
   }
 }

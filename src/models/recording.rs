@@ -1,9 +1,9 @@
 use crate::data_types::MediaState;
-use crate::schema::recordings;
+use crate::schema::{comments, recordings};
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, Filter, FindBy};
 use diesel::expression::SqlLiteral;
-use diesel::helper_types::{GroupBy, LeftJoin, NotEq, On, Order, Select};
+use diesel::helper_types::{GroupBy, Gt, LeftJoin, NotEq, On, Order, Select};
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use schemars::JsonSchema;
@@ -85,32 +85,24 @@ impl Recording {
   pub fn all() -> Select<
     GroupBy<
       LeftJoin<
-        Order<
-          Filter<recordings::table, Eq<crate::schema::recordings::state, MediaState>>,
-          SqlLiteral<Bool>,
-        >,
-        On<
-          crate::schema::comments::table,
-          Eq<crate::schema::comments::recording_id, crate::schema::recordings::id>,
-        >,
+        Order<Filter<recordings::table, Eq<recordings::state, MediaState>>, SqlLiteral<Bool>>,
+        On<comments::table, Eq<comments::recording_id, recordings::id>>,
       >,
       recordings::id,
     >,
     (
       <recordings::table as diesel::Table>::AllColumns,
-      diesel::dsl::count<diesel::dsl::Nullable<crate::schema::comments::id>>,
+      diesel::dsl::count<diesel::dsl::Nullable<comments::id>>,
     ),
   > {
     recordings::table
-      .filter(crate::schema::recordings::state.eq(MediaState::Processed))
+      .filter(recordings::state.eq(MediaState::Processed))
       .order(diesel::dsl::sql::<Bool>("created_at desc"))
-      .left_join(
-        crate::schema::comments::table.on(crate::schema::comments::recording_id.eq(recordings::id)),
-      )
+      .left_join(comments::table.on(comments::recording_id.eq(recordings::id)))
       .group_by(recordings::id)
       .select((
         recordings::all_columns,
-        diesel::dsl::count(crate::schema::comments::id.nullable()),
+        diesel::dsl::count(comments::id.nullable()),
       ))
   }
 
@@ -122,39 +114,31 @@ impl Recording {
         Order<
           Filter<
             recordings::table,
-            And<
-              Eq<crate::schema::recordings::state, MediaState>,
-              Eq<crate::schema::recordings::game_id, String>,
-            >,
+            And<Eq<recordings::state, MediaState>, Eq<recordings::game_id, String>>,
           >,
           SqlLiteral<Bool>,
         >,
-        On<
-          crate::schema::comments::table,
-          Eq<crate::schema::comments::recording_id, crate::schema::recordings::id>,
-        >,
+        On<comments::table, Eq<comments::recording_id, recordings::id>>,
       >,
       recordings::id,
     >,
     (
       <recordings::table as diesel::Table>::AllColumns,
-      diesel::dsl::count<diesel::dsl::Nullable<crate::schema::comments::id>>,
+      diesel::dsl::count<diesel::dsl::Nullable<comments::id>>,
     ),
   > {
     recordings::table
       .filter(
-        crate::schema::recordings::state
+        recordings::state
           .eq(MediaState::Processed)
-          .and(crate::schema::recordings::game_id.eq(game_id.to_string())),
+          .and(recordings::game_id.eq(game_id.to_string())),
       )
       .order(diesel::dsl::sql::<Bool>("created_at desc"))
-      .left_join(
-        crate::schema::comments::table.on(crate::schema::comments::recording_id.eq(recordings::id)),
-      )
+      .left_join(comments::table.on(comments::recording_id.eq(recordings::id)))
       .group_by(recordings::id)
       .select((
         recordings::all_columns,
-        diesel::dsl::count(crate::schema::comments::id.nullable()),
+        diesel::dsl::count(comments::id.nullable()),
       ))
   }
 
@@ -197,39 +181,45 @@ impl Recording {
         Order<
           Filter<
             recordings::table,
-            And<
-              NotEq<crate::schema::recordings::state, MediaState>,
-              Eq<crate::schema::recordings::user_id, Uuid>,
-            >,
+            And<NotEq<recordings::state, MediaState>, Eq<recordings::user_id, Uuid>>,
           >,
           SqlLiteral<Bool>,
         >,
-        On<
-          crate::schema::comments::table,
-          Eq<crate::schema::comments::recording_id, crate::schema::recordings::id>,
-        >,
+        On<comments::table, Eq<comments::recording_id, recordings::id>>,
       >,
       recordings::id,
     >,
     (
       <recordings::table as diesel::Table>::AllColumns,
-      diesel::dsl::count<diesel::dsl::Nullable<crate::schema::comments::id>>,
+      diesel::dsl::count<diesel::dsl::Nullable<comments::id>>,
     ),
   > {
     recordings::table
       .filter(
-        crate::schema::recordings::state
+        recordings::state
           .ne(MediaState::Created)
-          .and(crate::schema::recordings::user_id.eq(*user_id)),
+          .and(recordings::user_id.eq(*user_id)),
       )
       .order(diesel::dsl::sql::<Bool>("created_at desc"))
-      .left_join(
-        crate::schema::comments::table.on(crate::schema::comments::recording_id.eq(recordings::id)),
-      )
+      .left_join(comments::table.on(comments::recording_id.eq(recordings::id)))
       .group_by(recordings::id)
       .select((
         recordings::all_columns,
-        diesel::dsl::count(crate::schema::comments::id.nullable()),
+        diesel::dsl::count(comments::id.nullable()),
       ))
+  }
+
+  pub fn filter_for_digest(
+    user_id: &Uuid,
+    digest_notified_at: &chrono::NaiveDateTime,
+  ) -> Filter<
+    recordings::table,
+    And<NotEq<recordings::user_id, Uuid>, Gt<recordings::created_at, chrono::NaiveDateTime>>,
+  > {
+    recordings::table.filter(
+      recordings::user_id
+        .ne(*user_id)
+        .and(recordings::created_at.gt(*digest_notified_at)),
+    )
   }
 }

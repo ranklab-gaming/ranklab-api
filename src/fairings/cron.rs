@@ -2,8 +2,7 @@ use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::guards::DbConn;
 use crate::models::{Comment, Recording, User};
-use crate::schema::comments::notified_at;
-use chrono::Duration;
+use crate::schema::{comments, users};
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::dsl::now;
 use diesel::prelude::*;
@@ -78,11 +77,73 @@ async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyho
     db_conn
       .run(move |conn| {
         diesel::update(comments_query)
-          .set(notified_at.eq(now))
+          .set(comments::notified_at.eq(now))
           .get_result::<Comment>(conn)
       })
       .await?;
   }
+
+  Ok(())
+}
+
+async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow::Error> {
+  let users_query = User::all();
+
+  let users = db_conn
+    .run(move |conn| users_query.load::<User>(conn))
+    .await?;
+
+  for user in users {
+    if user.emails_enabled {
+      let user_id = user.id;
+      let digest_notified_at = user.digest_notified_at;
+
+      let recordings = db_conn
+        .run(move |conn| {
+          Recording::filter_for_digest(&user_id, &digest_notified_at).load::<Recording>(conn)
+        })
+        .await?;
+
+      if !recordings.is_empty() {
+        let recordings_added = Email::new(
+          config,
+          "notification".to_owned(),
+          json!({
+            "subject": "There are new VODs to review!",
+            "title": format!("There {} new {} waiting for feedback", match recordings.len() {
+              1 => "is 1".to_owned(),
+              _ => format!("are {}", recordings.len()),
+            }, pluralize("VOD", recordings.len().try_into()?, false)),
+            "body": format!("You can follow the link below to view {}.", match recordings.len() {
+              1 => "it",
+              _ => "them",
+            }),
+            "cta" : "View VODs",
+            "cta_url" : format!("{}/dashboard", config.web_host),
+          }),
+          vec![Recipient::new(
+            user.email,
+            json!({
+              "name": user.name,
+            }),
+          )],
+        );
+
+        recordings_added
+          .deliver()
+          .await
+          .map_err(|e| anyhow::anyhow!("Failed to send email: {}", e))?;
+      }
+    }
+  }
+
+  db_conn
+    .run(move |conn| {
+      diesel::update(users_query)
+        .set(users::digest_notified_at.eq(now))
+        .get_result::<User>(conn)
+    })
+    .await?;
 
   Ok(())
 }
@@ -93,15 +154,17 @@ impl CronFairing {
   }
 
   async fn init(&self, rocket: &Rocket<Orbit>) {
-    let config = rocket.state::<Config>().unwrap().clone();
-    let db_conn = Arc::new(DbConn::get_one(rocket).await.unwrap());
+    let config_1 = rocket.state::<Config>().unwrap().clone();
+    let config_2 = rocket.state::<Config>().unwrap().clone();
+    let db_conn_1 = Arc::new(DbConn::get_one(rocket).await.unwrap());
+    let db_conn_2 = Arc::new(DbConn::get_one(rocket).await.unwrap());
 
     tokio::spawn(async move {
       let mut scheduler = Scheduler::new();
 
       scheduler.every(30.minutes()).run(move || {
-        let db_conn: Arc<DbConn> = Arc::clone(&db_conn);
-        let config = config.clone();
+        let db_conn: Arc<DbConn> = Arc::clone(&db_conn_1);
+        let config = config_1.clone();
 
         tokio::spawn(async move {
           if let Err(e) = process_comments(&db_conn, &config).await {
@@ -111,9 +174,21 @@ impl CronFairing {
         });
       });
 
+      scheduler.every(1.day()).run(move || {
+        let db_conn: Arc<DbConn> = Arc::clone(&db_conn_2);
+        let config = config_2.clone();
+
+        tokio::spawn(async move {
+          if let Err(e) = process_digests(&db_conn, &config).await {
+            error!("[cron] {:?}", e);
+            sentry::capture_error(e.root_cause());
+          }
+        });
+      });
+
       loop {
         scheduler.run_pending();
-        tokio::time::sleep(Duration::seconds(1).to_std().unwrap()).await;
+        tokio::time::sleep(chrono::Duration::seconds(1).to_std().unwrap()).await;
       }
     });
   }
