@@ -118,7 +118,7 @@ async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow
               1 => "it",
               _ => "them",
             }),
-            "cta" : "View VODs",
+            "cta" : format!("View {}", pluralize("VOD", recordings.len().try_into()?, false)),
             "cta_url" : format!("{}/dashboard", config.web_host),
           }),
           vec![Recipient::new(
