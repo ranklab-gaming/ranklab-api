@@ -214,12 +214,16 @@ impl Recording {
     digest_notified_at: &chrono::NaiveDateTime,
   ) -> Filter<
     recordings::table,
-    And<NotEq<recordings::user_id, Uuid>, Gt<recordings::created_at, chrono::NaiveDateTime>>,
+    And<
+      And<NotEq<recordings::user_id, Uuid>, Gt<recordings::created_at, chrono::NaiveDateTime>>,
+      Eq<recordings::state, MediaState>,
+    >,
   > {
     recordings::table.filter(
       recordings::user_id
         .ne(*user_id)
-        .and(recordings::created_at.gt(*digest_notified_at)),
+        .and(recordings::created_at.gt(*digest_notified_at))
+        .and(recordings::state.eq(MediaState::Processed)),
     )
   }
 }
