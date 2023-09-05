@@ -60,7 +60,7 @@ impl Email {
     }
 
     let email_request = SendBulkEmailRequest {
-      from_email_address: Some("noreply@ranklab.gg".to_owned()),
+      from_email_address: Some("Ranklab <noreply@ranklab.gg>".to_string()),
       default_content: BulkEmailContent {
         template: Some(Template {
           template_name: Some(self.template_name),
