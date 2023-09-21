@@ -11,12 +11,39 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum OverwatchMap {
+  BlizzardWorld,
+  Busan,
+  Dorado,
+  Eichenwalde,
+  Hanamura,
+  Havana,
+  Hollywood,
+  HorizonLunarColony,
+  Ilios,
+  Junkertown,
+  KingsRow,
+  LijiangTower,
+  Nepal,
+  Numbani,
+  Oasis,
+  Paris,
+  Rialto,
+  Route66,
+  TempleOfAnubis,
+  VolskayaIndustries,
+  WatchpointGibraltar,
+}
+
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Validate)]
 pub struct RecordingOverwatchMetadata {
   #[validate(length(min = 6, max = 6))]
   pub replay_code: String,
   #[validate(range(min = 0, max = 9))]
   pub player_position: u8,
+  pub map: OverwatchMap,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
