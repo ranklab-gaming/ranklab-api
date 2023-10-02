@@ -41,7 +41,7 @@ jobs:
           aws-region: eu-west-2
       - name: Login to ECR
         id: ecr-login
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
       - name: Login to GCR
         uses: docker/login-action@v2
         with:
