@@ -64,7 +64,7 @@ thiserror = "1.0.49"
 uuid = { version = "1.4.1", features = ["v4", "serde"] }
 validator = { version = "0.16.1", features = ["derive"] }
 chrono = "0.4.31"
-rust_iso3166 = "0.1.10"
+rust_iso3166 = "0.1.11"
 slugify = "0.1.0"
 once_cell = "1.18.0"
 clokwerk = "0.4.0"
