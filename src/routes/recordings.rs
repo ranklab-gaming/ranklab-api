@@ -58,6 +58,7 @@ fn validate_recording(
 pub struct ListParams {
   page: Option<i64>,
   only_own: Option<bool>,
+  game_id: Option<GameId>,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -70,40 +71,32 @@ pub async fn list(
   let user = auth.into_user();
   let page = params.page.unwrap_or(1);
 
-  let recordings = match user {
-    Some(user) => {
-      if params.only_own.unwrap_or(false) {
-        let user_id = user.id;
+  let recordings = if params.only_own.unwrap_or(false) {
+    if let Some(user) = user {
+      let user_id = user.id;
 
-        db_conn
-          .run(move |conn| {
-            Recording::filter_for_user(&user_id)
-              .paginate(page)
-              .load_and_count_pages::<RecordingWithCommentCount>(conn)
-              .unwrap()
-          })
-          .await
-      } else {
-        db_conn
-          .run(move |conn| {
-            Recording::filter_by_game_id(&user.game_id)
-              .paginate(page)
-              .load_and_count_pages::<RecordingWithCommentCount>(conn)
-              .unwrap()
-          })
-          .await
-      }
-    }
-    None => {
       db_conn
         .run(move |conn| {
-          Recording::all()
+          Recording::filter_for_user(&user_id)
             .paginate(page)
             .load_and_count_pages::<RecordingWithCommentCount>(conn)
             .unwrap()
         })
         .await
+    } else {
+      return Response::query_error(Status::BadRequest);
     }
+  } else if let Some(game_id) = params.game_id {
+    db_conn
+      .run(move |conn| {
+        Recording::filter_by_game_id(&game_id.to_string())
+          .paginate(page)
+          .load_and_count_pages::<RecordingWithCommentCount>(conn)
+          .unwrap()
+      })
+      .await
+  } else {
+    return Response::query_error(Status::BadRequest);
   };
 
   let user_ids = recordings
