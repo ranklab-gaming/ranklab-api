@@ -1,5 +1,5 @@
-use super::{AudioView, UserView};
-use crate::models::{Audio, Comment, User};
+use super::UserView;
+use crate::models::{Comment, User};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -13,19 +13,18 @@ pub struct CommentView {
   pub body: String,
   pub preview: String,
   pub metadata: serde_json::Value,
-  pub audio: Option<AudioView>,
   pub user: Option<UserView>,
   pub created_at: chrono::NaiveDateTime,
 }
 
 impl From<Comment> for CommentView {
   fn from(comment: Comment) -> Self {
-    CommentView::new(comment, None, None)
+    CommentView::new(comment, None)
   }
 }
 
 impl CommentView {
-  pub fn new(comment: Comment, audio: Option<Audio>, user: Option<User>) -> Self {
+  pub fn new(comment: Comment, user: Option<User>) -> Self {
     let preview = html2text::from_read(comment.body.as_bytes(), 100);
 
     CommentView {
@@ -35,7 +34,6 @@ impl CommentView {
       body: comment.body,
       preview,
       metadata: comment.metadata,
-      audio: audio.map(AudioView::from),
       user: user.map(UserView::from),
       created_at: comment.created_at,
     }

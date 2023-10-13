@@ -33,7 +33,6 @@ pub struct Comment {
   pub id: Uuid,
   pub updated_at: chrono::NaiveDateTime,
   pub metadata: serde_json::Value,
-  pub audio_id: Option<Uuid>,
   pub user_id: Uuid,
   pub recording_id: Uuid,
   pub notified_at: Option<chrono::NaiveDateTime>,

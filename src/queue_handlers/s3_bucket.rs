@@ -136,10 +136,6 @@ impl QueueHandler for S3BucketHandler {
       if file_type == "avatars" {
         handle_avatar_uploaded(&self, &record, folder, file).await?;
       }
-
-      if file_type == "audios" {
-        handle_audio_uploaded(&self, &record, folder, file).await?;
-      }
     }
 
     Ok(())

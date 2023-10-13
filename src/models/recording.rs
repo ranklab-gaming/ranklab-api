@@ -7,50 +7,8 @@ use diesel::helper_types::{GroupBy, Gt, LeftJoin, NotEq, On, Order, Select};
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use uuid::Uuid;
-use validator::Validate;
-
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Validate)]
-pub struct RecordingOverwatchMetadata {
-  #[validate(length(min = 6, max = 6))]
-  pub replay_code: String,
-  #[validate(range(min = 0, max = 9))]
-  pub player_position: u8,
-}
-
-#[derive(Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(rename_all = "snake_case")]
-pub enum RecordingMetadataValue {
-  Overwatch(RecordingOverwatchMetadata),
-}
-
-#[derive(Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(untagged)]
-pub enum RecordingMetadata {
-  Some(RecordingMetadataValue),
-  None {},
-}
-
-impl RecordingMetadata {
-  pub fn is_overwatch(&self) -> bool {
-    match self {
-      RecordingMetadata::Some(RecordingMetadataValue::Overwatch(_)) => true,
-      _ => false,
-    }
-  }
-}
-
-impl Validate for RecordingMetadata {
-  fn validate(&self) -> Result<(), validator::ValidationErrors> {
-    match self {
-      RecordingMetadata::Some(metadata) => match metadata {
-        RecordingMetadataValue::Overwatch(metadata) => metadata.validate(),
-      },
-      RecordingMetadata::None {} => Ok(()),
-    }
-  }
-}
 
 #[derive(Builder, Queryable, Identifiable, Clone, Serialize, JsonSchema)]
 #[builder(
@@ -70,7 +28,6 @@ pub struct Recording {
   pub video_key: Option<String>,
   pub thumbnail_key: Option<String>,
   pub processed_video_key: Option<String>,
-  pub metadata: Option<serde_json::Value>,
   pub state: MediaState,
   pub notes: String,
 }

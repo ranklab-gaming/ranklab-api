@@ -15,14 +15,12 @@ use uuid::Uuid;
 pub struct User {
   pub created_at: chrono::NaiveDateTime,
   pub email: String,
-  pub game_id: String,
   pub id: Uuid,
   pub name: String,
   pub password: Option<String>,
   pub updated_at: chrono::NaiveDateTime,
   pub emails_enabled: bool,
   pub avatar_id: Option<Uuid>,
-  pub skill_level: i16,
   pub digest_notified_at: chrono::NaiveDateTime,
 }
 

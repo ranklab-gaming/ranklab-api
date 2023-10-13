@@ -1,25 +1,22 @@
 use crate::config::Config;
 use crate::data_types::MediaState;
+use crate::games;
 use crate::games::GameId;
 use crate::guards::{Auth, DbConn, Jwt, S3};
-use crate::models::{
-  Recording, RecordingChangeset, RecordingMetadata, RecordingWithCommentCount, User,
-};
+use crate::models::{Recording, RecordingChangeset, RecordingWithCommentCount, User};
 use crate::pagination::{Paginate, PaginatedResult};
 use crate::response::{MutationResponse, QueryResponse, Response, StatusResponse};
 use crate::schema::recordings;
 use crate::views::RecordingView;
-use crate::{aws, games};
 use diesel::prelude::*;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
-use rusoto_core::{HttpClient, Region};
+use rusoto_core::Region;
 use rusoto_credential::AwsCredentials;
 use rusoto_s3::util::PreSignedRequest;
 use rusoto_s3::{DeleteObjectRequest, PutObjectRequest, S3 as RusotoS3};
-use rusoto_sqs::{Sqs, SqsClient};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
@@ -33,8 +30,6 @@ pub struct CreateRecordingRequest {
   title: String,
   skill_level: i16,
   game_id: GameId,
-  #[validate]
-  metadata: RecordingMetadata,
   notes: String,
 }
 
@@ -152,17 +147,10 @@ pub async fn create(
     return Response::validation_error(errors);
   }
 
-  let metadata = recording.metadata.clone();
-  let is_overwatch = metadata.is_overwatch();
   let key = Some(format!("recordings/originals/{}", Uuid::new_v4()));
   let user = auth.into_user();
   let user_id = user.id;
-
-  let state = if is_overwatch {
-    MediaState::Uploaded
-  } else {
-    MediaState::Created
-  };
+  let state = MediaState::Created;
 
   let recording: Recording = db_conn
     .run(move |conn| {
@@ -174,7 +162,6 @@ pub async fn create(
             .title(recording.title.clone())
             .skill_level(recording.skill_level)
             .video_key(key)
-            .metadata(Some(serde_json::to_value(&recording.metadata).unwrap()))
             .state(state)
             .notes(ammonia::clean(&recording.notes)),
         )
@@ -182,37 +169,6 @@ pub async fn create(
         .unwrap()
     })
     .await;
-
-  if let Some(recorder_queue) = &config.recorder_queue {
-    if is_overwatch {
-      let mut builder = hyper::Client::builder();
-
-      builder.pool_max_idle_per_host(0);
-
-      let client = SqsClient::new_with(
-        HttpClient::from_builder(builder, hyper_tls::HttpsConnector::new()),
-        aws::CredentialsProvider::new(
-          config.aws_access_key_id.clone(),
-          config.aws_secret_key.clone(),
-        ),
-        Region::EuWest2,
-      );
-
-      let mut message = serde_json::to_value(&recording).unwrap();
-
-      if let Some(instance_id) = &config.instance_id {
-        message["instance_id"] = serde_json::Value::String(instance_id.clone());
-      }
-
-      let request = rusoto_sqs::SendMessageRequest {
-        message_body: message.to_string(),
-        queue_url: recorder_queue.clone(),
-        ..Default::default()
-      };
-
-      client.send_message(request).await.unwrap();
-    }
-  }
 
   let url = recording
     .video_key
@@ -232,25 +188,13 @@ pub async fn create(
 #[get("/recordings/<id>")]
 pub async fn get(
   id: Uuid,
-  auth: Auth<Option<Jwt>>,
+  _auth: Auth<Option<Jwt>>,
   db_conn: DbConn,
   config: &State<Config>,
 ) -> QueryResponse<RecordingView> {
-  let user = auth.into_user();
-  let game_id = user.map(|user| user.game_id.clone());
-
-  let recording: Recording = match game_id {
-    Some(game_id) => {
-      db_conn
-        .run(move |conn| Recording::find_for_game(&game_id, &id).first::<Recording>(conn))
-        .await?
-    }
-    None => {
-      db_conn
-        .run(move |conn| Recording::find_by_id(&id).first::<Recording>(conn))
-        .await?
-    }
-  };
+  let recording: Recording = db_conn
+    .run(move |conn| Recording::find_by_id(&id).first::<Recording>(conn))
+    .await?;
 
   let recording_user_id = recording.user_id;
 

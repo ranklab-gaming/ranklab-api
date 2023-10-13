@@ -1,10 +1,8 @@
-mod audio;
 mod avatar;
 mod comment;
 mod game;
 mod recording;
 mod user;
-pub use audio::AudioView;
 pub use avatar::AvatarView;
 pub use comment::CommentView;
 pub use game::GameView;

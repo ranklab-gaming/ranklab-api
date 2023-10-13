@@ -21,5 +21,4 @@ pub struct Config {
   pub intercom_verification_secret: Option<String>,
   pub instance_id: Option<String>,
   pub whisper_api_key: Option<String>,
-  pub recorder_queue: Option<String>,
 }
