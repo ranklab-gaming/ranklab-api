@@ -8,12 +8,6 @@ version = "0.1.0"
 ammonia = "3.3.0"
 anyhow = "1.0.75"
 async-mutex = "1.4.0"
-async-stripe = { git = "https://github.com/ranklab-gaming/async-stripe", features = [
-  "runtime-tokio-hyper",
-  "checkout",
-  "connect",
-  "webhook-events"
-], default_features = false }
 bcrypt = "0.15.0"
 derive_builder = "0.12.0"
 diesel-derive-enum = { version = "2.1.0", features = [
@@ -51,7 +45,6 @@ rusoto_s3 = "0.48.0"
 rusoto_sesv2 = "0.48.0"
 rusoto_signature = "0.48.0"
 rusoto_sqs = "0.48.0"
-rusoto_stepfunctions = "0.48.0"
 schemars = { version = "0.8.15", features = ["chrono"] }
 sentry = "0.31.7"
 serde = "1.0.189"

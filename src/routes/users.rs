@@ -1,7 +1,6 @@
 use crate::auth::{decode_token_credentials, generate_token, Credentials};
 use crate::config::Config;
 use crate::emails::{Email, Recipient};
-use crate::games::GameId;
 use crate::guards::{Auth, DbConn, Jwt};
 use crate::models::{Avatar, Session, User, UserChangeset};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
@@ -20,7 +19,6 @@ use serde;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use uuid::Uuid;
 use validator::{Validate, ValidationError, ValidationErrors};
 
@@ -28,10 +26,8 @@ use validator::{Validate, ValidationError, ValidationErrors};
 pub struct UpdateUserRequest {
   #[validate(length(min = 2))]
   name: String,
-  game_id: GameId,
   emails_enabled: bool,
   avatar_id: Option<Uuid>,
-  skill_level: i16,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
@@ -39,8 +35,6 @@ pub struct CreateUserRequest {
   #[validate(length(min = 2))]
   name: String,
   credentials: Credentials,
-  game_id: GameId,
-  skill_level: i16,
 }
 
 #[openapi(tag = "Ranklab")]
@@ -69,7 +63,6 @@ pub async fn create(
   user: Json<CreateUserRequest>,
   db_conn: DbConn,
   config: &State<Config>,
-  ip_address: SocketAddr,
   rocket_config: &rocket::Config,
 ) -> MutationResponse<Session> {
   let profile = rocket_config.profile().unwrap();
@@ -77,8 +70,6 @@ pub async fn create(
   if let Err(errors) = user.validate() {
     return Response::validation_error(errors);
   }
-
-  let mut params = stripe::CreateCustomer::new();
 
   let email = match &user.credentials {
     Credentials::Password(credentials) => credentials.email.clone(),
@@ -93,19 +84,11 @@ pub async fn create(
     Credentials::Token(_) => None,
   };
 
-  params.email = Some(&email);
-
-  params.tax = Some(stripe::CreateCustomerTax {
-    ip_address: Some(ip_address.ip().to_string()),
-  });
-
   let mut metadata = HashMap::new();
 
   if let Some(instance_id) = config.instance_id.as_ref() {
     metadata.insert("instance_id".to_owned(), instance_id.to_owned());
   }
-
-  params.metadata = Some(metadata);
 
   let user = db_conn
     .run(move |conn| {
@@ -114,9 +97,7 @@ pub async fn create(
           UserChangeset::default()
             .password(password.map(|password| hash(password.clone(), DEFAULT_COST).unwrap()))
             .email(email.clone())
-            .name(user.name.clone())
-            .game_id(user.game_id.to_string())
-            .skill_level(user.skill_level),
+            .name(user.name.clone()),
         )
         .get_result::<User>(conn)
     })
@@ -192,10 +173,8 @@ pub async fn update(
         .set(
           UserChangeset::default()
             .name(user.name.clone())
-            .game_id(user.game_id.to_string())
             .emails_enabled(user.emails_enabled)
-            .avatar_id(avatar_id)
-            .skill_level(user.skill_level),
+            .avatar_id(avatar_id),
         )
         .get_result::<User>(conn)
     })

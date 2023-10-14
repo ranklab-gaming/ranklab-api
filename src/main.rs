@@ -74,9 +74,6 @@ async fn rocket() -> Rocket<Build> {
     .mount(
       "/",
       openapi_get_routes![
-        audios::create,
-        audios::delete,
-        audios::get,
         avatars::create,
         avatars::delete,
         avatars::get,
