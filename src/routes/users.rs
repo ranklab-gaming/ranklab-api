@@ -19,7 +19,6 @@ use serde;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use uuid::Uuid;
 use validator::{Validate, ValidationError, ValidationErrors};
 
@@ -64,7 +63,6 @@ pub async fn create(
   user: Json<CreateUserRequest>,
   db_conn: DbConn,
   config: &State<Config>,
-  ip_address: SocketAddr,
   rocket_config: &rocket::Config,
 ) -> MutationResponse<Session> {
   let profile = rocket_config.profile().unwrap();
@@ -72,8 +70,6 @@ pub async fn create(
   if let Err(errors) = user.validate() {
     return Response::validation_error(errors);
   }
-
-  let mut params = stripe::CreateCustomer::new();
 
   let email = match &user.credentials {
     Credentials::Password(credentials) => credentials.email.clone(),
@@ -88,19 +84,11 @@ pub async fn create(
     Credentials::Token(_) => None,
   };
 
-  params.email = Some(&email);
-
-  params.tax = Some(stripe::CreateCustomerTax {
-    ip_address: Some(ip_address.ip().to_string()),
-  });
-
   let mut metadata = HashMap::new();
 
   if let Some(instance_id) = config.instance_id.as_ref() {
     metadata.insert("instance_id".to_owned(), instance_id.to_owned());
   }
-
-  params.metadata = Some(metadata);
 
   let user = db_conn
     .run(move |conn| {

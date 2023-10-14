@@ -37,11 +37,6 @@ pub struct S3BucketHandler {
   client: S3Client,
 }
 
-#[derive(Deserialize)]
-pub struct WhisperApiResponse {
-  pub text: String,
-}
-
 #[async_trait]
 impl QueueHandler for S3BucketHandler {
   fn new(db_conn: DbConn, config: Config) -> Self {
