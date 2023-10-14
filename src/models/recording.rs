@@ -39,30 +39,6 @@ pub struct RecordingWithCommentCount {
 }
 
 impl Recording {
-  pub fn all() -> Select<
-    GroupBy<
-      LeftJoin<
-        Order<Filter<recordings::table, Eq<recordings::state, MediaState>>, SqlLiteral<Bool>>,
-        On<comments::table, Eq<comments::recording_id, recordings::id>>,
-      >,
-      recordings::id,
-    >,
-    (
-      <recordings::table as diesel::Table>::AllColumns,
-      diesel::dsl::count<diesel::dsl::Nullable<comments::id>>,
-    ),
-  > {
-    recordings::table
-      .filter(recordings::state.eq(MediaState::Processed))
-      .order(diesel::dsl::sql::<Bool>("created_at desc"))
-      .left_join(comments::table.on(comments::recording_id.eq(recordings::id)))
-      .group_by(recordings::id)
-      .select((
-        recordings::all_columns,
-        diesel::dsl::count(comments::id.nullable()),
-      ))
-  }
-
   pub fn filter_by_game_id(
     game_id: &str,
   ) -> Select<
@@ -115,18 +91,6 @@ impl Recording {
     id: &Uuid,
   ) -> Filter<recordings::table, And<Eq<recordings::id, Uuid>, Eq<recordings::user_id, Uuid>>> {
     recordings::table.filter(recordings::id.eq(*id).and(recordings::user_id.eq(*user_id)))
-  }
-
-  #[allow(clippy::type_complexity)]
-  pub fn find_for_game(
-    game_id: &str,
-    id: &Uuid,
-  ) -> Filter<recordings::table, And<Eq<recordings::id, Uuid>, Eq<recordings::game_id, String>>> {
-    recordings::table.filter(
-      recordings::id
-        .eq(*id)
-        .and(recordings::game_id.eq(game_id.to_string())),
-    )
   }
 
   #[allow(clippy::type_complexity)]
