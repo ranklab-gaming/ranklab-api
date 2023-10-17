@@ -61,6 +61,7 @@ pub fn decode_token_credentials(
   let mut validation = Validation::new(Algorithm::HS256);
 
   validation.set_issuer(&[config.web_host.clone()]);
+  validation.set_audience(&[config.host.clone()]);
   validation.validate_exp = true;
 
   let jwt = decode::<CredentialsClaims>(

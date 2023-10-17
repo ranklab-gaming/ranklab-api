@@ -1,8 +1,8 @@
 use super::{Auth, AuthError};
-use crate::guards::auth::AuthFromRequest;
 use crate::guards::DbConn;
 use crate::models::User;
 use crate::oidc::OidcCache;
+use crate::{config::Config, guards::auth::AuthFromRequest};
 use diesel::prelude::*;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use lazy_static::lazy_static;
@@ -44,6 +44,7 @@ impl Auth<Option<Jwt>> {
 impl AuthFromRequest for Jwt {
   async fn from_request(req: &Request<'_>) -> Result<Self, AuthError> {
     let db_conn = req.guard::<DbConn>().await.unwrap();
+    let config = req.guard::<&State<Config>>().await.unwrap();
     let oidc_cache = req.guard::<&State<OidcCache>>().await;
     let oidc_configuration = oidc_cache.as_ref().unwrap().oidc_configuration.clone();
     let jwks = oidc_cache.as_ref().unwrap().jwks.clone();
@@ -68,6 +69,7 @@ impl AuthFromRequest for Jwt {
     let mut validation = Validation::new(Algorithm::RS256);
 
     validation.set_issuer(&[oidc_configuration.issuer]);
+    validation.set_audience(&[config.web_host.clone()]);
 
     let claims = decode::<Claims>(
       jwt,
