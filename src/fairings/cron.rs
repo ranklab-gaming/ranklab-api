@@ -86,7 +86,10 @@ async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyho
   Ok(())
 }
 
+#[allow(dead_code, unused_variables, unreachable_code)]
 async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow::Error> {
+  return Ok(());
+
   let users_query = User::all();
 
   let users = db_conn
