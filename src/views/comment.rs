@@ -1,5 +1,5 @@
 use super::UserView;
-use crate::models::{Comment, User};
+use crate::models::{Comment, CommentMetadata, User};
 use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
@@ -12,7 +12,7 @@ pub struct CommentView {
   pub user_id: Uuid,
   pub body: String,
   pub preview: String,
-  pub metadata: serde_json::Value,
+  pub metadata: CommentMetadata,
   pub user: Option<UserView>,
   pub created_at: chrono::NaiveDateTime,
 }
@@ -33,7 +33,7 @@ impl CommentView {
       user_id: comment.user_id,
       body: comment.body,
       preview,
-      metadata: comment.metadata,
+      metadata: serde_json::from_value(comment.metadata).unwrap(),
       user: user.map(UserView::from),
       created_at: comment.created_at,
     }
