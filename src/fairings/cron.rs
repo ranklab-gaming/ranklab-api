@@ -218,7 +218,7 @@ impl CronFairing {
         });
       });
 
-      scheduler.every(5.second()).run(move || {
+      scheduler.every(1.day()).run(move || {
         let db_conn: Arc<DbConn> = Arc::clone(&db_conn_2);
         let config = config_2.clone();
 
