@@ -26,4 +26,16 @@ impl Following {
   ) -> Filter<followings::table, Eq<followings::user_id, Uuid>> {
     followings::table.filter(followings::user_id.eq(*user_id))
   }
+
+  pub fn find_for_user_and_game(
+    user_id: &Uuid,
+    game_id: &str,
+  ) -> Filter<
+    Filter<followings::table, Eq<followings::user_id, Uuid>>,
+    Eq<followings::game_id, String>,
+  > {
+    followings::table
+      .filter(followings::user_id.eq(*user_id))
+      .filter(followings::game_id.eq(game_id.to_owned()))
+  }
 }
