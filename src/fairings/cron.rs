@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::emails::{Email, Recipient};
+use crate::games;
 use crate::guards::DbConn;
 use crate::models::{Comment, Recording, User};
 use crate::schema::{comments, users};
@@ -9,6 +10,7 @@ use diesel::prelude::*;
 use pluralizer::pluralize;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
+use serde::Serialize;
 use serde_json::json;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -86,63 +88,102 @@ async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyho
   Ok(())
 }
 
-#[allow(dead_code, unused_variables, unreachable_code)]
+#[derive(Serialize)]
+struct GameWithRecordingCount {
+  name: String,
+  count: i64,
+  url: String,
+}
+
 async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow::Error> {
-  return Ok(());
-
-  let users_query = User::all();
-
-  let users = db_conn
-    .run(move |conn| users_query.load::<User>(conn))
+  let users: Vec<(User, String)> = db_conn
+    .run(move |conn| User::filter_for_digest().load::<(User, String)>(conn))
     .await?;
 
+  let mut users_with_game_ids: Vec<(User, Vec<String>)> = vec![];
+
   for user in users {
-    if user.emails_enabled {
-      let user_id = user.id;
-      let digest_notified_at = user.digest_notified_at;
+    let user_id = user.0.id;
+    let game_id = user.1;
 
-      let recordings = db_conn
-        .run(move |conn| {
-          Recording::filter_for_digest(&user_id, &digest_notified_at).load::<Recording>(conn)
-        })
-        .await?;
+    let user_with_game_ids = users_with_game_ids
+      .iter_mut()
+      .find(|(user, _)| user.id == user_id);
 
-      if !recordings.is_empty() {
-        let recordings_added = Email::new(
-          config,
-          "notification".to_owned(),
-          json!({
-            "subject": "There are new VODs to review!",
-            "title": format!("There {} new {} waiting for feedback", match recordings.len() {
-              1 => "is 1".to_owned(),
-              _ => format!("are {}", recordings.len()),
-            }, pluralize("VOD", recordings.len().try_into()?, false)),
-            "body": format!("You can follow the link below to view {}.", match recordings.len() {
-              1 => "it",
-              _ => "them",
-            }),
-            "cta" : format!("View {}", pluralize("VOD", recordings.len().try_into()?, false)),
-            "cta_url" : format!("{}/dashboard", config.web_host),
-          }),
-          vec![Recipient::new(
-            user.email,
-            json!({
-              "name": user.name,
-            }),
-          )],
-        );
-
-        recordings_added
-          .deliver()
-          .await
-          .map_err(|e| anyhow::anyhow!("Failed to send email: {}", e))?;
-      }
+    match user_with_game_ids {
+      Some((_, game_ids)) => game_ids.push(game_id),
+      None => users_with_game_ids.push((user.0, vec![game_id])),
     }
+  }
+
+  for (user, game_ids) in users_with_game_ids {
+    let user_id = user.id;
+    let digest_notified_at = user.digest_notified_at;
+    let email = user.email.clone();
+    let recordings_game_ids = game_ids.clone();
+
+    let recordings = db_conn
+      .run(move |conn| {
+        Recording::filter_for_digest(&user_id, &digest_notified_at, recordings_game_ids)
+          .load::<Recording>(conn)
+      })
+      .await?;
+
+    if recordings.len() == 0 {
+      continue;
+    }
+
+    let games_with_recording_count: Vec<GameWithRecordingCount> =
+      game_ids.iter().fold(vec![], |mut acc, game_id| {
+        let count: i64 = recordings
+          .clone()
+          .into_iter()
+          .filter(|recording| recording.game_id == *game_id)
+          .count()
+          .try_into()
+          .unwrap_or(0);
+
+        if count == 0 {
+          return acc;
+        }
+
+        if let Some(game) = games::find(game_id) {
+          acc.push(GameWithRecordingCount {
+            name: game.name.clone(),
+            count,
+            url: format!("{}/directory/{}", config.web_host, game_id),
+          });
+        }
+
+        acc
+      });
+
+    let recordings_added = Email::new(
+      config,
+      "digest".to_owned(),
+      json!({
+        "title": "New VODs are available to review.",
+        "subject": "There are new VODs to review!",
+        "games": games_with_recording_count,
+        "cta_url" : format!("{}/directory", config.web_host),
+      }),
+      vec![Recipient::new(
+        email,
+        json!({
+          "name": user.name,
+        }),
+      )],
+    );
+
+    recordings_added
+      .deliver()
+      .await
+      .map_err(|e| anyhow::anyhow!("Failed to send email: {}", e))?;
   }
 
   db_conn
     .run(move |conn| {
-      diesel::update(users_query)
+      diesel::update(User::all())
         .set(users::digest_notified_at.eq(now))
         .get_result::<User>(conn)
     })
@@ -177,7 +218,7 @@ impl CronFairing {
         });
       });
 
-      scheduler.every(1.day()).run(move || {
+      scheduler.every(5.second()).run(move || {
         let db_conn: Arc<DbConn> = Arc::clone(&db_conn_2);
         let config = config_2.clone();
 

@@ -1,7 +1,10 @@
+use crate::schema::followings;
 use crate::schema::users;
 use derive_builder::Builder;
 use diesel::dsl::{Find, FindBy};
-use diesel::helper_types::{EqAny, Filter};
+use diesel::helper_types::On;
+use diesel::helper_types::Select;
+use diesel::helper_types::{Eq, EqAny, Filter, InnerJoin};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -35,6 +38,22 @@ impl User {
 
   pub fn filter_by_ids(ids: Vec<Uuid>) -> Filter<users::table, EqAny<users::id, Vec<Uuid>>> {
     users::table.filter(users::id.eq_any(ids))
+  }
+
+  pub fn filter_for_digest() -> Select<
+    Filter<
+      InnerJoin<users::table, On<followings::table, Eq<users::id, followings::user_id>>>,
+      Eq<users::emails_enabled, bool>,
+    >,
+    (
+      <users::table as diesel::Table>::AllColumns,
+      followings::game_id,
+    ),
+  > {
+    users::table
+      .inner_join(followings::table.on(users::id.eq(followings::user_id)))
+      .filter(users::emails_enabled.eq(true))
+      .select((users::all_columns, followings::game_id))
   }
 
   pub fn all() -> users::table {

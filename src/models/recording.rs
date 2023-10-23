@@ -3,7 +3,7 @@ use crate::schema::{comments, recordings};
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, Filter, FindBy};
 use diesel::expression::SqlLiteral;
-use diesel::helper_types::{GroupBy, Gt, LeftJoin, NotEq, On, Order, Select};
+use diesel::helper_types::{EqAny, GroupBy, Gt, LeftJoin, NotEq, On, Order, Select};
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 use schemars::JsonSchema;
@@ -133,18 +133,23 @@ impl Recording {
   pub fn filter_for_digest(
     user_id: &Uuid,
     digest_notified_at: &chrono::NaiveDateTime,
+    game_ids: Vec<String>,
   ) -> Filter<
     recordings::table,
     And<
-      And<NotEq<recordings::user_id, Uuid>, Gt<recordings::created_at, chrono::NaiveDateTime>>,
-      Eq<recordings::state, MediaState>,
+      And<
+        And<NotEq<recordings::user_id, Uuid>, Gt<recordings::created_at, chrono::NaiveDateTime>>,
+        Eq<recordings::state, MediaState>,
+      >,
+      EqAny<recordings::game_id, Vec<String>>,
     >,
   > {
     recordings::table.filter(
       recordings::user_id
         .ne(*user_id)
         .and(recordings::created_at.gt(*digest_notified_at))
-        .and(recordings::state.eq(MediaState::Processed)),
+        .and(recordings::state.eq(MediaState::Processed))
+        .and(recordings::game_id.eq_any(game_ids)),
     )
   }
 }

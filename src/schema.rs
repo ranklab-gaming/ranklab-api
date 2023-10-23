@@ -35,6 +35,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    followings (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        game_id -> Text,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     one_time_tokens (id) {
         created_at -> Timestamp,
         id -> Uuid,
@@ -82,12 +92,14 @@ diesel::table! {
 
 diesel::joinable!(comments -> recordings (recording_id));
 diesel::joinable!(comments -> users (user_id));
+diesel::joinable!(followings -> users (user_id));
 diesel::joinable!(one_time_tokens -> users (user_id));
 diesel::joinable!(recordings -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     avatars,
     comments,
+    followings,
     one_time_tokens,
     recordings,
     users,
