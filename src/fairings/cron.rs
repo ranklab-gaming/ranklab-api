@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::games;
 use crate::guards::DbConn;
-use crate::models::{Comment, Recording, User};
+use crate::models::{Comment, Following, Recording, User};
 use crate::schema::{comments, users};
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::dsl::now;
@@ -28,6 +28,7 @@ async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyho
     .await?;
 
   let mut comments_by_recording_id: HashMap<Uuid, Vec<Comment>> = HashMap::new();
+
   for comment in comments {
     let recording_id = comment.recording_id;
     let comments = comments_by_recording_id
@@ -89,97 +90,102 @@ async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyho
 }
 
 #[derive(Serialize)]
-struct GameWithRecordingCount {
+struct DigestEmailGame {
   name: String,
   count: i64,
   url: String,
 }
 
 async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow::Error> {
-  let users: Vec<(User, String)> = db_conn
-    .run(move |conn| User::filter_for_digest().load::<(User, String)>(conn))
+  let users = db_conn
+    .run(move |conn| User::filter_for_digest().load::<User>(conn))
     .await?;
 
-  let mut users_with_game_ids: Vec<(User, Vec<String>)> = vec![];
+  let user_ids = users
+    .clone()
+    .into_iter()
+    .map(|user| user.id)
+    .collect::<Vec<_>>();
+
+  let followings = db_conn
+    .run(move |conn| Following::filter_for_user_ids(user_ids).load::<Following>(conn))
+    .await?;
+
+  let mut recipients: Vec<Recipient> = vec![];
 
   for user in users {
-    let user_id = user.0.id;
-    let game_id = user.1;
+    let followings = followings
+      .clone()
+      .into_iter()
+      .filter(|following| following.user_id == user.id)
+      .collect::<Vec<_>>();
 
-    let user_with_game_ids = users_with_game_ids
-      .iter_mut()
-      .find(|(user, _)| user.id == user_id);
+    let game_ids = followings
+      .clone()
+      .into_iter()
+      .map(|following| following.game_id)
+      .collect::<Vec<_>>();
 
-    match user_with_game_ids {
-      Some((_, game_ids)) => game_ids.push(game_id),
-      None => users_with_game_ids.push((user.0, vec![game_id])),
-    }
-  }
+    let games = game_ids
+      .clone()
+      .into_iter()
+      .map(|game_id| games::find(&game_id).unwrap())
+      .collect::<Vec<_>>();
 
-  for (user, game_ids) in users_with_game_ids {
     let user_id = user.id;
     let digest_notified_at = user.digest_notified_at;
-    let email = user.email.clone();
-    let recordings_game_ids = game_ids.clone();
 
     let recordings = db_conn
       .run(move |conn| {
-        Recording::filter_for_digest(&user_id, &digest_notified_at, recordings_game_ids)
+        Recording::filter_for_digest(&user_id, &digest_notified_at, game_ids)
           .load::<Recording>(conn)
       })
       .await?;
 
-    if recordings.len() == 0 {
+    if recordings.is_empty() {
       continue;
     }
 
-    let games_with_recording_count: Vec<GameWithRecordingCount> =
-      game_ids.iter().fold(vec![], |mut acc, game_id| {
-        let count: i64 = recordings
-          .clone()
-          .into_iter()
-          .filter(|recording| recording.game_id == *game_id)
-          .count()
-          .try_into()
-          .unwrap_or(0);
+    let email = user.email.clone();
+    let name = user.name.clone();
 
-        if count == 0 {
-          return acc;
-        }
-
-        if let Some(game) = games::find(game_id) {
-          acc.push(GameWithRecordingCount {
-            name: game.name.clone(),
-            count,
-            url: format!("{}/directory/{}", config.web_host, game_id),
-          });
-        }
-
-        acc
-      });
-
-    let recordings_added = Email::new(
-      config,
-      "digest".to_owned(),
+    let recipient = Recipient::new(
+      email,
       json!({
-        "title": "New VODs are available to review.",
-        "subject": "There are new VODs to review!",
-        "games": games_with_recording_count,
-        "cta_url" : format!("{}/directory", config.web_host),
+        "name": name,
+        "games": games
+          .into_iter()
+          .map(|game| DigestEmailGame {
+            name: game.name.clone(),
+            count: recordings
+              .clone()
+              .into_iter()
+              .filter(|recording| recording.game_id == game.id.to_string())
+              .count() as i64,
+            url: format!("{}/directory/{}", config.web_host, game.id.to_string()),
+          })
+          .collect::<Vec<_>>(),
       }),
-      vec![Recipient::new(
-        email,
-        json!({
-          "name": user.name,
-        }),
-      )],
     );
 
-    recordings_added
-      .deliver()
-      .await
-      .map_err(|e| anyhow::anyhow!("Failed to send email: {}", e))?;
+    recipients.push(recipient);
   }
+
+  let digest = Email::new(
+    &config,
+    "digest".to_owned(),
+    json!({
+      "title": "New VODs are available to review.",
+      "subject": "There are new VODs to review!",
+      "cta_url" : format!("{}/directory", config.web_host),
+    }),
+    recipients,
+  );
+
+  digest
+    .deliver()
+    .await
+    .map_err(|e| anyhow::anyhow!("Failed to send digest email: {}", e))?;
 
   db_conn
     .run(move |conn| {

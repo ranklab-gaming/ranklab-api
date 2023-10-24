@@ -1,6 +1,7 @@
 use crate::schema::followings;
 use derive_builder::Builder;
 use diesel::dsl::{Eq, Filter};
+use diesel::helper_types::EqAny;
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -37,5 +38,11 @@ impl Following {
     followings::table
       .filter(followings::user_id.eq(*user_id))
       .filter(followings::game_id.eq(game_id.to_owned()))
+  }
+
+  pub fn filter_for_user_ids(
+    user_ids: Vec<Uuid>,
+  ) -> Filter<followings::table, EqAny<followings::user_id, Vec<Uuid>>> {
+    followings::table.filter(followings::user_id.eq_any(user_ids))
   }
 }

@@ -45,15 +45,12 @@ impl User {
       InnerJoin<users::table, On<followings::table, Eq<users::id, followings::user_id>>>,
       Eq<users::emails_enabled, bool>,
     >,
-    (
-      <users::table as diesel::Table>::AllColumns,
-      followings::game_id,
-    ),
+    <users::table as diesel::Table>::AllColumns,
   > {
     users::table
       .inner_join(followings::table.on(users::id.eq(followings::user_id)))
       .filter(users::emails_enabled.eq(true))
-      .select((users::all_columns, followings::game_id))
+      .select(users::all_columns)
   }
 
   pub fn all() -> users::table {
