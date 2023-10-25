@@ -1,7 +1,7 @@
-use crate::schema::comments;
+use crate::schema::{comments, recordings, users};
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, Filter};
-use diesel::helper_types::IsNull;
+use diesel::helper_types::{InnerJoin, IsNull, On, Select};
 use diesel::prelude::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -53,7 +53,35 @@ impl Comment {
     comments::table.filter(comments::recording_id.eq(*recording_id))
   }
 
-  pub fn filter_unnotified() -> Filter<comments::table, IsNull<comments::notified_at>> {
-    comments::table.filter(comments::notified_at.is_null())
+  pub fn filter_unnotified() -> Select<
+    Filter<
+      InnerJoin<
+        InnerJoin<
+          comments::table,
+          On<recordings::table, Eq<comments::recording_id, recordings::id>>,
+        >,
+        On<users::table, Eq<recordings::user_id, users::id>>,
+      >,
+      And<Eq<users::emails_enabled, bool>, IsNull<comments::notified_at>>,
+    >,
+    (
+      <comments::table as diesel::Table>::AllColumns,
+      <users::table as diesel::Table>::AllColumns,
+      <recordings::table as diesel::Table>::AllColumns,
+    ),
+  > {
+    comments::table
+      .inner_join(recordings::table.on(comments::recording_id.eq(recordings::id)))
+      .inner_join(users::table.on(recordings::user_id.eq(users::id)))
+      .filter(
+        users::emails_enabled
+          .eq(true)
+          .and(comments::notified_at.is_null()),
+      )
+      .select((
+        comments::all_columns,
+        users::all_columns,
+        recordings::all_columns,
+      ))
   }
 }

@@ -2,6 +2,7 @@ use crate::schema::followings;
 use crate::schema::users;
 use derive_builder::Builder;
 use diesel::dsl::{Find, FindBy};
+use diesel::helper_types::DistinctOn;
 use diesel::helper_types::On;
 use diesel::helper_types::Select;
 use diesel::helper_types::{Eq, EqAny, Filter, InnerJoin};
@@ -24,7 +25,6 @@ pub struct User {
   pub updated_at: chrono::NaiveDateTime,
   pub emails_enabled: bool,
   pub avatar_id: Option<Uuid>,
-  pub digest_notified_at: chrono::NaiveDateTime,
 }
 
 impl User {
@@ -40,17 +40,21 @@ impl User {
     users::table.filter(users::id.eq_any(ids))
   }
 
-  pub fn filter_for_digest() -> Select<
-    Filter<
-      InnerJoin<users::table, On<followings::table, Eq<users::id, followings::user_id>>>,
-      Eq<users::emails_enabled, bool>,
+  pub fn filter_for_digest() -> DistinctOn<
+    Select<
+      Filter<
+        InnerJoin<users::table, On<followings::table, Eq<users::id, followings::user_id>>>,
+        Eq<users::emails_enabled, bool>,
+      >,
+      <users::table as diesel::Table>::AllColumns,
     >,
-    <users::table as diesel::Table>::AllColumns,
+    users::id,
   > {
     users::table
       .inner_join(followings::table.on(users::id.eq(followings::user_id)))
       .filter(users::emails_enabled.eq(true))
       .select(users::all_columns)
+      .distinct_on(users::id)
   }
 
   pub fn all() -> users::table {

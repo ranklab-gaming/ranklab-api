@@ -35,6 +35,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    digests (id) {
+        id -> Uuid,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+        metadata -> Jsonb,
+    }
+}
+
+diesel::table! {
     followings (id) {
         id -> Uuid,
         user_id -> Uuid,
@@ -86,7 +95,6 @@ diesel::table! {
         updated_at -> Timestamp,
         emails_enabled -> Bool,
         avatar_id -> Nullable<Uuid>,
-        digest_notified_at -> Timestamp,
     }
 }
 
@@ -99,6 +107,7 @@ diesel::joinable!(recordings -> users (user_id));
 diesel::allow_tables_to_appear_in_same_query!(
     avatars,
     comments,
+    digests,
     followings,
     one_time_tokens,
     recordings,

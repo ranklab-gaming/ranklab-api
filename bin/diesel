@@ -1,3 +1,11 @@
 #!/bin/bash
-DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/app} diesel "$@"
 
+ROCKET_PROFILE=${ROCKET_PROFILE:-debug}
+
+if [ "$ROCKET_PROFILE" = "test" ]; then
+    export $(cat .env.test | xargs)
+else
+    export $(cat .env.development | xargs)
+fi
+
+diesel "$@"

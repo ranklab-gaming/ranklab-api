@@ -2,20 +2,19 @@ use crate::config::Config;
 use crate::emails::{Email, Recipient};
 use crate::games;
 use crate::guards::DbConn;
-use crate::models::{Comment, Following, Recording, User};
-use crate::schema::{comments, users};
+use crate::models::{Comment, Digest, DigestChangeset, Following, Recording, User};
+use crate::schema::{comments, digests};
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::dsl::now;
 use diesel::prelude::*;
+use itertools::Itertools;
 use pluralizer::pluralize;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
 use serde::Serialize;
 use serde_json::json;
-use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::Arc;
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct CronFairing;
@@ -23,68 +22,97 @@ pub struct CronFairing;
 async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyhow::Error> {
   let comments_query = Comment::filter_unnotified();
 
-  let comments = db_conn
-    .run(move |conn| comments_query.load::<Comment>(conn))
+  let joined_comments = db_conn
+    .run(move |conn| comments_query.load::<(Comment, User, Recording)>(conn))
     .await?;
 
-  let mut comments_by_recording_id: HashMap<Uuid, Vec<Comment>> = HashMap::new();
+  let comments = joined_comments
+    .clone()
+    .into_iter()
+    .map(|(comment, _, _)| comment)
+    .collect::<Vec<_>>();
 
-  for comment in comments {
-    let recording_id = comment.recording_id;
-    let comments = comments_by_recording_id
-      .entry(recording_id)
-      .or_insert(vec![]);
-    comments.push(comment);
+  if joined_comments.is_empty() {
+    return Ok(());
   }
 
-  for (recording_id, comments) in comments_by_recording_id {
-    let recording = db_conn
-      .run(move |conn| Recording::find_by_id(&recording_id).get_result::<Recording>(conn))
-      .await?;
+  let users = joined_comments
+    .clone()
+    .into_iter()
+    .map(|(_, user, _)| user)
+    .unique_by(|user| user.id)
+    .collect::<Vec<_>>();
 
-    let title = recording.title;
-    let user_id = recording.user_id;
+  let mut recipients: Vec<Recipient> = vec![];
 
-    let user = db_conn
-      .run(move |conn| User::find_by_id(&user_id).get_result::<User>(conn))
-      .await?;
+  for user in &users {
+    let recordings = joined_comments
+      .clone()
+      .into_iter()
+      .filter(|(_, _, recording)| recording.user_id == user.id)
+      .map(|(_, _, recording)| recording)
+      .unique_by(|recording| recording.id)
+      .collect::<Vec<_>>();
 
-    if user.emails_enabled {
-      let comments_added = Email::new(
-        config,
-        "notification".to_owned(),
+    for recording in &recordings {
+      let comments = comments
+        .clone()
+        .into_iter()
+        .filter(|comment| comment.recording_id == recording.id)
+        .collect::<Vec<_>>();
+
+      if comments.is_empty() {
+        continue;
+      }
+
+      let title = recording.title.clone();
+      let recording_id = recording.id.to_string();
+
+      let recipient = Recipient::new(
+        user.email.clone(),
         json!({
-          "subject": "You've received comments on your VOD!",
+          "name": user.name,
           "title": format!("You've received {} on the VOD \"{}\"", pluralize("comments", comments.len().try_into()?, true), title),
           "body": format!("You can follow the link below to view {}.", match comments.len() {
             1 => "it",
             _ => "them",
           }),
-          "cta" : "View comments",
           "cta_url" : format!("{}/recordings/{}", config.web_host, recording_id),
         }),
-        vec![Recipient::new(
-          user.email,
-          json!({
-            "name": user.name,
-          }),
-        )],
       );
 
-      comments_added
-        .deliver()
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to send email: {}", e))?;
+      recipients.push(recipient);
     }
-
-    db_conn
-      .run(move |conn| {
-        diesel::update(comments_query)
-          .set(comments::notified_at.eq(now))
-          .get_result::<Comment>(conn)
-      })
-      .await?;
   }
+
+  let email = Email::new(
+    config,
+    "notification".to_owned(),
+    json!({
+      "subject": "You've received comments on your VOD!",
+      "cta" : "View comments",
+    }),
+    recipients,
+  );
+
+  email
+    .deliver()
+    .await
+    .map_err(|e| anyhow::anyhow!("Failed to send comments notification email: {}", e))?;
+
+  let comment_ids = comments
+    .clone()
+    .into_iter()
+    .map(|comment| comment.id)
+    .collect::<Vec<_>>();
+
+  db_conn
+    .run(move |conn| {
+      diesel::update(comments::table.filter(comments::id.eq_any(comment_ids)))
+        .set(comments::notified_at.eq(now))
+        .get_result::<Comment>(conn)
+    })
+    .await?;
 
   Ok(())
 }
@@ -92,106 +120,130 @@ async fn process_comments(db_conn: &DbConn, config: &Config) -> Result<(), anyho
 #[derive(Serialize)]
 struct DigestEmailGame {
   name: String,
-  count: i64,
+  count: isize,
+  vods_label: String,
   url: String,
 }
 
 async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow::Error> {
+  let last_digest = db_conn
+    .run(move |conn| Digest::last().first::<Digest>(conn).optional())
+    .await?;
+
+  let recordings = db_conn
+    .run(move |conn| Recording::filter_for_digest(last_digest).load::<Recording>(conn))
+    .await?;
+
+  if recordings.is_empty() {
+    return Ok(());
+  }
+
   let users = db_conn
     .run(move |conn| User::filter_for_digest().load::<User>(conn))
     .await?;
 
-  let user_ids = users
-    .clone()
-    .into_iter()
-    .map(|user| user.id)
-    .collect::<Vec<_>>();
+  let followings_users = users.clone();
 
   let followings = db_conn
-    .run(move |conn| Following::filter_for_user_ids(user_ids).load::<Following>(conn))
+    .run(move |conn| Following::filter_for_digest(followings_users).load::<Following>(conn))
     .await?;
 
   let mut recipients: Vec<Recipient> = vec![];
 
-  for user in users {
+  for user in &users {
+    let email = user.email.clone();
+    let name = user.name.clone();
+
     let followings = followings
       .clone()
       .into_iter()
       .filter(|following| following.user_id == user.id)
       .collect::<Vec<_>>();
 
-    let game_ids = followings
+    let games: Vec<DigestEmailGame> = followings
       .clone()
       .into_iter()
-      .map(|following| following.game_id)
-      .collect::<Vec<_>>();
+      .map(|following| {
+        let game = games::find(&following.game_id).unwrap();
 
-    let games = game_ids
-      .clone()
-      .into_iter()
-      .map(|game_id| games::find(&game_id).unwrap())
-      .collect::<Vec<_>>();
+        let count = recordings
+          .clone()
+          .into_iter()
+          .filter(|recording| {
+            recording.game_id == game.id.to_string() && recording.user_id != user.id
+          })
+          .count() as isize;
 
-    let user_id = user.id;
-    let digest_notified_at = user.digest_notified_at;
-
-    let recordings = db_conn
-      .run(move |conn| {
-        Recording::filter_for_digest(&user_id, &digest_notified_at, game_ids)
-          .load::<Recording>(conn)
+        DigestEmailGame {
+          name: game.name.clone(),
+          vods_label: format!(
+            "new {}",
+            match count {
+              1 => "VOD",
+              _ => "VODs",
+            }
+          ),
+          count,
+          url: format!("{}/directory/{}", config.web_host, game.id.to_string()),
+        }
       })
-      .await?;
+      .filter(|game| game.count > 0)
+      .collect();
 
-    if recordings.is_empty() {
+    if games.is_empty() {
       continue;
     }
-
-    let email = user.email.clone();
-    let name = user.name.clone();
 
     let recipient = Recipient::new(
       email,
       json!({
         "name": name,
         "games": games
-          .into_iter()
-          .map(|game| DigestEmailGame {
-            name: game.name.clone(),
-            count: recordings
-              .clone()
-              .into_iter()
-              .filter(|recording| recording.game_id == game.id.to_string())
-              .count() as i64,
-            url: format!("{}/directory/{}", config.web_host, game.id.to_string()),
-          })
-          .collect::<Vec<_>>(),
       }),
     );
 
     recipients.push(recipient);
   }
 
-  let digest = Email::new(
+  let vods_label = format!(
+    "{} new {}",
+    recordings.len(),
+    match recordings.len() {
+      1 => "VOD",
+      _ => "VODs",
+    }
+  );
+
+  let email = Email::new(
     &config,
     "digest".to_owned(),
     json!({
-      "title": "New VODs are available to review.",
-      "subject": "There are new VODs to review!",
+      "title": format!("{} available to review.", match recordings.len() {
+        1 => "A new VOD",
+        _ => "New VODs"
+      }),
+      "subject": format!("There {} {} available to review.", match recordings.len() {
+        1 => "is",
+        _ => "are"
+      }, vods_label),
       "cta_url" : format!("{}/directory", config.web_host),
+      "vods_label": vods_label,
     }),
     recipients,
   );
 
-  digest
+  let metadata = serde_json::to_value(&email)?;
+
+  email
     .deliver()
     .await
     .map_err(|e| anyhow::anyhow!("Failed to send digest email: {}", e))?;
 
   db_conn
     .run(move |conn| {
-      diesel::update(User::all())
-        .set(users::digest_notified_at.eq(now))
-        .get_result::<User>(conn)
+      diesel::insert_into(digests::table)
+        .values(DigestChangeset::default().metadata(metadata))
+        .get_result::<Digest>(conn)
     })
     .await?;
 
@@ -204,36 +256,44 @@ impl CronFairing {
   }
 
   async fn init(&self, rocket: &Rocket<Orbit>) {
-    let config_1 = rocket.state::<Config>().unwrap().clone();
-    let config_2 = rocket.state::<Config>().unwrap().clone();
-    let db_conn_1 = Arc::new(DbConn::get_one(rocket).await.unwrap());
-    let db_conn_2 = Arc::new(DbConn::get_one(rocket).await.unwrap());
+    let config = Arc::new(rocket.state::<Config>().unwrap().clone());
+    let db_conn = Arc::new(DbConn::get_one(rocket).await.unwrap());
 
     tokio::spawn(async move {
       let mut scheduler = Scheduler::new();
 
-      scheduler.every(30.minutes()).run(move || {
-        let db_conn: Arc<DbConn> = Arc::clone(&db_conn_1);
-        let config = config_1.clone();
+      scheduler.every(30.minutes()).run({
+        let db_conn = Arc::clone(&db_conn);
+        let config = Arc::clone(&config);
 
-        tokio::spawn(async move {
-          if let Err(e) = process_comments(&db_conn, &config).await {
-            error!("[cron] {:?}", e);
-            sentry::capture_error(e.root_cause());
-          }
-        });
+        move || {
+          let db_conn = Arc::clone(&db_conn);
+          let config = Arc::clone(&config);
+
+          tokio::spawn(async move {
+            if let Err(e) = process_comments(&db_conn, &config).await {
+              error!("[cron] {:?}", e);
+              sentry::capture_error(e.root_cause());
+            }
+          });
+        }
       });
 
-      scheduler.every(1.day()).run(move || {
-        let db_conn: Arc<DbConn> = Arc::clone(&db_conn_2);
-        let config = config_2.clone();
+      scheduler.every(1.day()).run({
+        let db_conn = Arc::clone(&db_conn);
+        let config = Arc::clone(&config);
 
-        tokio::spawn(async move {
-          if let Err(e) = process_digests(&db_conn, &config).await {
-            error!("[cron] {:?}", e);
-            sentry::capture_error(e.root_cause());
-          }
-        });
+        move || {
+          let db_conn = Arc::clone(&db_conn);
+          let config = Arc::clone(&config);
+
+          tokio::spawn(async move {
+            if let Err(e) = process_digests(&db_conn, &config).await {
+              error!("[cron] {:?}", e);
+              sentry::capture_error(e.root_cause());
+            }
+          });
+        }
       });
 
       loop {

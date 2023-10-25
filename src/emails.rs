@@ -5,13 +5,17 @@ use rusoto_sesv2::{
   BulkEmailContent, BulkEmailEntry, Destination, ReplacementEmailContent, ReplacementTemplate,
   SendBulkEmailError, SendBulkEmailRequest, SesV2, SesV2Client, Template,
 };
+use serde::Serialize;
 
+#[derive(Serialize)]
 pub struct Recipient {
   email: String,
   template_data: serde_json::Value,
 }
 
+#[derive(Serialize)]
 pub struct Email {
+  #[serde(skip)]
   client: SesV2Client,
   template_data: serde_json::Value,
   template_name: String,

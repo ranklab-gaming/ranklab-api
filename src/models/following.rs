@@ -5,6 +5,8 @@ use diesel::helper_types::EqAny;
 use diesel::prelude::*;
 use uuid::Uuid;
 
+use super::User;
+
 #[derive(Builder, Queryable, Identifiable, Clone)]
 #[builder(
   derive(AsChangeset, Insertable),
@@ -40,9 +42,10 @@ impl Following {
       .filter(followings::game_id.eq(game_id.to_owned()))
   }
 
-  pub fn filter_for_user_ids(
-    user_ids: Vec<Uuid>,
+  pub fn filter_for_digest(
+    users: Vec<User>,
   ) -> Filter<followings::table, EqAny<followings::user_id, Vec<Uuid>>> {
-    followings::table.filter(followings::user_id.eq_any(user_ids))
+    followings::table
+      .filter(followings::user_id.eq_any(users.iter().map(|u| u.id).collect::<Vec<Uuid>>()))
   }
 }

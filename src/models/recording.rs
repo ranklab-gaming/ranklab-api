@@ -1,5 +1,6 @@
 use crate::data_types::MediaState;
 use crate::schema::{comments, recordings};
+use chrono::{Duration, NaiveDateTime, Utc};
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, Filter, FindBy};
 use diesel::expression::SqlLiteral;
@@ -10,6 +11,8 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use uuid::Uuid;
 
+use super::Digest;
+
 #[derive(Builder, Queryable, Identifiable, Clone, Serialize, JsonSchema)]
 #[builder(
   derive(AsChangeset, Insertable),
@@ -18,13 +21,13 @@ use uuid::Uuid;
 )]
 #[builder_struct_attr(diesel(table_name = recordings))]
 pub struct Recording {
-  pub created_at: chrono::NaiveDateTime,
+  pub created_at: NaiveDateTime,
   pub game_id: String,
   pub id: Uuid,
   pub user_id: Uuid,
   pub skill_level: i16,
   pub title: String,
-  pub updated_at: chrono::NaiveDateTime,
+  pub updated_at: NaiveDateTime,
   pub video_key: Option<String>,
   pub thumbnail_key: Option<String>,
   pub processed_video_key: Option<String>,
@@ -131,25 +134,30 @@ impl Recording {
   }
 
   pub fn filter_for_digest(
-    user_id: &Uuid,
-    digest_notified_at: &chrono::NaiveDateTime,
-    game_ids: Vec<String>,
+    last_digest: Option<Digest>,
   ) -> Filter<
     recordings::table,
-    And<
-      And<
-        And<NotEq<recordings::user_id, Uuid>, Gt<recordings::created_at, chrono::NaiveDateTime>>,
-        Eq<recordings::state, MediaState>,
-      >,
-      EqAny<recordings::game_id, Vec<String>>,
-    >,
+    And<Gt<recordings::updated_at, NaiveDateTime>, Eq<recordings::state, MediaState>>,
   > {
+    let last_digest_at = last_digest
+      .map(|digest| digest.created_at)
+      .unwrap_or_else(|| {
+        Utc::now()
+          .naive_utc()
+          .checked_sub_signed(Duration::days(1))
+          .unwrap()
+      });
+
     recordings::table.filter(
-      recordings::user_id
-        .ne(*user_id)
-        .and(recordings::created_at.gt(*digest_notified_at))
-        .and(recordings::state.eq(MediaState::Processed))
-        .and(recordings::game_id.eq_any(game_ids)),
+      recordings::updated_at
+        .gt(last_digest_at)
+        .and(recordings::state.eq(MediaState::Processed)),
     )
+  }
+
+  pub fn filter_by_ids(
+    ids: Vec<Uuid>,
+  ) -> Filter<recordings::table, EqAny<recordings::id, Vec<Uuid>>> {
+    recordings::table.filter(recordings::id.eq_any(ids))
   }
 }
