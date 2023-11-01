@@ -1,6 +1,9 @@
 pub mod apex;
 pub mod cs2;
+pub mod dota2;
+pub mod lol;
 pub mod overwatch;
+pub mod valorant;
 use crate::models::Game;
 use lazy_static::lazy_static;
 use schemars::JsonSchema;
@@ -14,6 +17,9 @@ pub enum GameId {
   Overwatch,
   Apex,
   Cs2,
+  Dota2,
+  Lol,
+  Valorant,
 }
 
 impl ToString for GameId {
@@ -23,7 +29,14 @@ impl ToString for GameId {
 }
 
 lazy_static! {
-  static ref GAMES: Vec<Game> = vec![overwatch::overwatch(), apex::apex(), cs2::cs2()];
+  static ref GAMES: Vec<Game> = vec![
+    overwatch::overwatch(),
+    apex::apex(),
+    cs2::cs2(),
+    dota2::dota2(),
+    lol::lol(),
+    valorant::valorant(),
+  ];
 }
 
 pub fn all() -> &'static Vec<Game> {
