@@ -1,4 +1,5 @@
 pub mod apex;
+pub mod cs2;
 pub mod overwatch;
 use crate::models::Game;
 use lazy_static::lazy_static;
@@ -12,6 +13,7 @@ use serde::{Deserialize, Serialize};
 pub enum GameId {
   Overwatch,
   Apex,
+  Cs2,
 }
 
 impl ToString for GameId {
@@ -21,7 +23,7 @@ impl ToString for GameId {
 }
 
 lazy_static! {
-  static ref GAMES: Vec<Game> = vec![overwatch::overwatch(), apex::apex()];
+  static ref GAMES: Vec<Game> = vec![overwatch::overwatch(), apex::apex(), cs2::cs2()];
 }
 
 pub fn all() -> &'static Vec<Game> {
