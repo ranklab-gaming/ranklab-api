@@ -1,7 +1,7 @@
-use crate::aws;
 use crate::config::Config;
 use crate::guards::DbConn;
-use crate::queue_handlers::S3BucketHandler;
+use crate::queue_handlers::{RekognitionHandler, UploadsHandler};
+use crate::{aws, PROFILE, RELEASE_PROFILE};
 use anyhow::anyhow;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
@@ -23,16 +23,9 @@ pub enum QueueHandlerError {
 pub trait QueueHandler: Send + Sync {
   fn new(db_conn: DbConn, config: Config) -> Self;
   fn url(&self) -> String;
-  async fn instance_id(
-    &self,
-    message: &rusoto_sqs::Message,
-    profile: &rocket::figment::Profile,
-  ) -> Result<Option<String>, QueueHandlerError>;
-  async fn handle(
-    &self,
-    message: &rusoto_sqs::Message,
-    profile: &rocket::figment::Profile,
-  ) -> Result<(), QueueHandlerError>;
+  fn name(&self) -> &'static str;
+  async fn instance_id(&self, message: String) -> Result<Option<String>, QueueHandlerError>;
+  async fn handle(&self, message: String) -> Result<(), QueueHandlerError>;
 }
 
 #[derive(Clone)]
@@ -44,13 +37,13 @@ impl SqsFairing {
   }
 
   async fn init(&self, rocket: &Rocket<Orbit>) {
-    self.start::<S3BucketHandler>(rocket).await;
+    self.start::<UploadsHandler>(rocket).await;
+    self.start::<RekognitionHandler>(rocket).await;
   }
 
   async fn start<T: QueueHandler>(&self, rocket: &Rocket<Orbit>) {
     let db_conn = DbConn::get_one(rocket).await.unwrap();
     let config = rocket.state::<Config>().unwrap().clone();
-    let profile = rocket.config().profile.clone();
     let aws_access_key_id = config.aws_access_key_id.clone();
     let aws_secret_key = config.aws_secret_key.clone();
     let instance_id = config.instance_id.clone();
@@ -69,17 +62,14 @@ impl SqsFairing {
       );
 
       loop {
-        match fairing
-          .poll(&handler, &client, &profile, &instance_id)
-          .await
-        {
+        match fairing.poll(&handler, &client, &instance_id).await {
           Ok(should_delay_poll) => {
             if should_delay_poll {
               tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
             }
           }
           Err(e) => {
-            error!("[sqs] {:?}", e);
+            error!("[sqs] [{}] {:?}", handler.name(), e);
             sentry::capture_error(e.root_cause());
           }
         }
@@ -91,7 +81,6 @@ impl SqsFairing {
     &self,
     handler: &T,
     client: &SqsClient,
-    profile: &rocket::figment::Profile,
     instance_id: &Option<String>,
   ) -> anyhow::Result<bool> {
     let receive_request = ReceiveMessageRequest {
@@ -107,7 +96,14 @@ impl SqsFairing {
       for message in messages {
         info!("[sqs] Received message: {:?}", message.message_id);
 
-        let message_instance_id = handler.instance_id(&message, profile).await?;
+        let body = message
+          .body
+          .clone()
+          .ok_or_else(|| anyhow!("No body found in sqs message"))?;
+
+        info!("[sqs] Message body: {:?}", body);
+
+        let message_instance_id = handler.instance_id(body.clone()).await?;
 
         if message_instance_id != *instance_id {
           info!(
@@ -132,9 +128,9 @@ impl SqsFairing {
           continue;
         }
 
-        match handler.handle(&message, profile).await {
+        match handler.handle(body).await {
           Err(QueueHandlerError::Ignorable(e)) => {
-            if profile == rocket::config::Config::RELEASE_PROFILE {
+            if &*PROFILE == RELEASE_PROFILE {
               return Err(e);
             } else {
               return Ok(should_delay_poll);

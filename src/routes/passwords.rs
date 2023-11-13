@@ -5,11 +5,11 @@ use crate::guards::{Auth, DbConn};
 use crate::models::{OneTimeToken, OneTimeTokenChangeset, User, UserChangeset};
 use crate::response::{MutationResponse, Response, StatusResponse};
 use crate::schema::one_time_tokens;
+use crate::{PROFILE, TEST_PROFILE};
 use bcrypt::{hash, DEFAULT_COST};
 use chrono::Utc;
 use diesel::prelude::*;
 use rand::distributions::{Alphanumeric, DistString};
-use rocket::figment::Provider;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -34,9 +34,7 @@ pub async fn create(
   password: Json<CreatePasswordRequest>,
   config: &State<Config>,
   db_conn: DbConn,
-  rocket_config: &rocket::Config,
 ) -> MutationResponse<StatusResponse> {
-  let profile = rocket_config.profile().unwrap();
   let email = password.email.clone();
   let response = Response::status(Status::Ok);
 
@@ -84,7 +82,7 @@ pub async fn create(
     )],
   );
 
-  if profile != "test" {
+  if &*PROFILE != TEST_PROFILE {
     reset_password_email.deliver().await.unwrap();
   }
 

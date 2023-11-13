@@ -1,2 +1,4 @@
-mod s3_bucket;
-pub use s3_bucket::S3BucketHandler;
+mod rekognition;
+mod uploads;
+pub use rekognition::RekognitionHandler;
+pub use uploads::UploadsHandler;

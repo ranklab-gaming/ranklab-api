@@ -234,7 +234,7 @@ pub async fn delete(
 
   if let Some(video_key) = &recording.video_key {
     let req = DeleteObjectRequest {
-      bucket: config.s3_bucket.to_owned(),
+      bucket: config.uploads_bucket.to_owned(),
       key: video_key.clone(),
       ..Default::default()
     };
@@ -244,7 +244,7 @@ pub async fn delete(
 
   if let Some(thumbnail_key) = &recording.thumbnail_key {
     let req = DeleteObjectRequest {
-      bucket: config.s3_bucket.to_owned(),
+      bucket: config.uploads_bucket.to_owned(),
       key: thumbnail_key.clone(),
       ..Default::default()
     };
@@ -254,7 +254,7 @@ pub async fn delete(
 
   if let Some(processed_video_key) = &recording.processed_video_key {
     let req = DeleteObjectRequest {
-      bucket: config.s3_bucket.to_owned(),
+      bucket: config.uploads_bucket.to_owned(),
       key: processed_video_key.clone(),
       ..Default::default()
     };
@@ -277,7 +277,7 @@ fn create_upload_url(config: &Config, recording_video_key: &String) -> String {
   }
 
   let req = PutObjectRequest {
-    bucket: config.s3_bucket.to_owned(),
+    bucket: config.uploads_bucket.to_owned(),
     key: recording_video_key.to_owned(),
     acl: Some("public-read".to_string()),
     metadata: Some(metadata),

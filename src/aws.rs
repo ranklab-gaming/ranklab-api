@@ -1,3 +1,4 @@
+pub mod media_convert;
 use rusoto_core::credential::{AwsCredentials, CredentialsError, ProvideAwsCredentials};
 
 pub struct CredentialsProvider {

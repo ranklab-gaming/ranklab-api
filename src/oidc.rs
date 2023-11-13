@@ -1,4 +1,4 @@
-use rocket::figment::Profile;
+use crate::{DEBUG_PROFILE, PROFILE, TEST_PROFILE};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -57,10 +57,9 @@ async fn fetch_jwks(client: &reqwest::Client, jwks_uri: &str) -> Result<Jwks, re
   client.get(jwks_uri).send().await?.json::<Jwks>().await
 }
 
-pub async fn init_cache(web_host: &str, profile: &Profile) -> Result<OidcCache, reqwest::Error> {
-  let accept_invalid_certs = (profile == rocket::Config::DEBUG_PROFILE
-    || profile == crate::TEST_PROFILE)
-    && web_host.starts_with("https");
+pub async fn init_cache(web_host: &str) -> Result<OidcCache, reqwest::Error> {
+  let accept_invalid_certs =
+    (&*PROFILE == DEBUG_PROFILE || &*PROFILE == TEST_PROFILE) && web_host.starts_with("https");
 
   let client = reqwest::Client::builder()
     .danger_accept_invalid_certs(accept_invalid_certs)
