@@ -33,11 +33,7 @@ pub async fn handle_recording_processed(
       .db_conn
       .run::<_, diesel::result::QueryResult<_>>(move |conn| {
         diesel::update(&recording)
-          .set(
-            RecordingChangeset::default()
-              .state(MediaState::Processed)
-              .thumbnail_key(Some(key)),
-          )
+          .set(RecordingChangeset::default().thumbnail_key(Some(key)))
           .execute(conn)
       })
       .await
