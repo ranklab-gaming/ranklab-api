@@ -7,7 +7,7 @@ use diesel_migrations::*;
 use ranklab_api::config::Config;
 use ranklab_api::guards::DbConn;
 use ranklab_api::routes::*;
-use ranklab_api::{fairings, oidc};
+use ranklab_api::{fairings, oidc, PROFILE};
 use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
 use rocket::http::Accept;
@@ -32,15 +32,12 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 async fn rocket() -> Rocket<Build> {
-  let rocket_profile = match env::var("ROCKET_PROFILE") {
-    Ok(profile) => profile,
-    Err(_) => rocket::config::Config::DEFAULT_PROFILE.to_string(),
-  };
+  let profile = (&*PROFILE).to_string();
 
-  let env_suffix = match rocket_profile.as_str() {
+  let env_suffix = match profile.as_str() {
     "debug" => "development",
     "release" => "production",
-    _ => rocket_profile.as_str(),
+    _ => profile.as_str(),
   };
 
   dotenv::from_filename(format!(".env.{}", env_suffix)).ok();
@@ -66,11 +63,7 @@ async fn rocket() -> Rocket<Build> {
       Box::pin(async move { req.replace_header(Accept::JSON) })
     }))
     .attach(AdHoc::config::<Config>())
-    .manage(
-      oidc::init_cache(&web_host, &rocket_profile.into())
-        .await
-        .unwrap(),
-    )
+    .manage(oidc::init_cache(&web_host).await.unwrap())
     .mount(
       "/",
       openapi_get_routes![

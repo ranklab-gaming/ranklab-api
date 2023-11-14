@@ -6,10 +6,10 @@ use crate::models::{Avatar, Session, User, UserChangeset};
 use crate::response::{MutationError, MutationResponse, QueryResponse, Response};
 use crate::schema::users;
 use crate::views::UserView;
+use crate::{PROFILE, RELEASE_PROFILE};
 use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind;
-use rocket::figment::Provider;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -63,10 +63,7 @@ pub async fn create(
   user: Json<CreateUserRequest>,
   db_conn: DbConn,
   config: &State<Config>,
-  rocket_config: &rocket::Config,
 ) -> MutationResponse<Session> {
-  let profile = rocket_config.profile().unwrap();
-
   if let Err(errors) = user.validate() {
     return Response::validation_error(errors);
   }
@@ -137,7 +134,7 @@ pub async fn create(
     )],
   );
 
-  if profile == rocket::config::Config::RELEASE_PROFILE {
+  if &*PROFILE == RELEASE_PROFILE {
     user_signup_email.deliver().await.unwrap();
   }
 

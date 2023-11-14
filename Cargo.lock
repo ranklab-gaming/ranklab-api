@@ -1924,6 +1924,9 @@ dependencies = [
  "rocket_sync_db_pools_codegen",
  "rusoto_core",
  "rusoto_credential",
+ "rusoto_lambda",
+ "rusoto_mediaconvert",
+ "rusoto_rekognition",
  "rusoto_s3",
  "rusoto_sesv2",
  "rusoto_signature",
@@ -2270,6 +2273,50 @@ dependencies = [
  "shlex",
  "tokio",
  "zeroize",
+]
+
+[[package]]
+name = "rusoto_lambda"
+version = "0.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f452ebc6a04749d413531b8332f540c78c39d3f3ed9309bb22e8d8dde9c78d8c"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "rusoto_core",
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
+
+[[package]]
+name = "rusoto_mediaconvert"
+version = "0.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "974da7ad6327e2a3f51e331dbc97b7b474c2514ed8f4c9166b07d868141ed652"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "rusoto_core",
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
+
+[[package]]
+name = "rusoto_rekognition"
+version = "0.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8b1630c613f5eac8a4273ec313a9fa0750dc5591ed7c26b92f89b9c382c11dd"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "rusoto_core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
