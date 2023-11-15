@@ -97,6 +97,25 @@ impl Recording {
   }
 
   #[allow(clippy::type_complexity)]
+  pub fn find_processed_for_user(
+    user_id: &Uuid,
+    id: &Uuid,
+  ) -> Filter<
+    recordings::table,
+    And<
+      And<Eq<recordings::id, Uuid>, Eq<recordings::user_id, Uuid>>,
+      Eq<recordings::state, MediaState>,
+    >,
+  > {
+    recordings::table.filter(
+      recordings::id
+        .eq(*id)
+        .and(recordings::user_id.eq(*user_id))
+        .and(recordings::state.eq(MediaState::Processed)),
+    )
+  }
+
+  #[allow(clippy::type_complexity)]
   pub fn filter_for_user(
     user_id: &Uuid,
   ) -> Select<

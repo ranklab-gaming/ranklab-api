@@ -229,7 +229,7 @@ pub async fn delete(
   let s3 = s3.into_inner();
 
   let recording: Recording = db_conn
-    .run(move |conn| Recording::find_for_user(&user_id, &id).first::<Recording>(conn))
+    .run(move |conn| Recording::find_processed_for_user(&user_id, &id).first::<Recording>(conn))
     .await?;
 
   if let Some(video_key) = &recording.video_key {

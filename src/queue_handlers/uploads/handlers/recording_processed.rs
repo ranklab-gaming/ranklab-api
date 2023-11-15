@@ -14,7 +14,7 @@ pub async fn handle_recording_processed(
     .run(move |conn| Recording::find_by_video_key(&original_key).first::<Recording>(conn))
     .await?;
 
-  if key.ends_with(".mp4") {
+  if key.contains("_720p") {
     handler
       .db_conn
       .run::<_, diesel::result::QueryResult<_>>(move |conn| {
@@ -28,7 +28,7 @@ pub async fn handle_recording_processed(
       })
       .await
       .map_err(QueueHandlerError::from)?;
-  } else if key.ends_with(".jpg") {
+  } else if key.contains("_thumbnail") {
     handler
       .db_conn
       .run::<_, diesel::result::QueryResult<_>>(move |conn| {
