@@ -94,21 +94,27 @@ impl SqsFairing {
 
     if let Some(messages) = response.messages {
       for message in messages {
-        info!("[sqs] Received message: {:?}", message.message_id);
+        info!(
+          "[sqs] [{}] Received message: {:?}",
+          handler.name(),
+          message.message_id
+        );
 
         let body = message
           .body
           .clone()
           .ok_or_else(|| anyhow!("No body found in sqs message"))?;
 
-        info!("[sqs] Message body: {:?}", body);
+        info!("[sqs] [{}] Message body: {:?}", handler.name(), body);
 
         let message_instance_id = handler.instance_id(body.clone()).await?;
 
         if message_instance_id != *instance_id {
           info!(
-            "[sqs] Message {:?} is for instance {:?}, skipping",
-            message.message_id, message_instance_id
+            "[sqs] [{}] Message {:?} is for instance {:?}, skipping",
+            handler.name(),
+            message.message_id,
+            message_instance_id
           );
 
           self
@@ -140,7 +146,11 @@ impl SqsFairing {
           Ok(()) => (),
         };
 
-        info!("[sqs] Deleting message: {:?}", message.message_id);
+        info!(
+          "[sqs] [{}] Deleting message: {:?}",
+          handler.name(),
+          message.message_id
+        );
 
         let delete_request = DeleteMessageRequest {
           queue_url: handler.url(),
