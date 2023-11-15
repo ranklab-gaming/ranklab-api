@@ -1,8 +1,10 @@
 use crate::data_types::MediaState;
+use crate::emails::{Email, Recipient};
 use crate::fairings::sqs::QueueHandlerError;
-use crate::models::{Recording, RecordingChangeset};
+use crate::models::{Recording, RecordingChangeset, User};
 use crate::queue_handlers::UploadsHandler;
 use diesel::prelude::*;
+use serde_json::json;
 
 pub async fn handle_recording_processed(
   handler: &UploadsHandler,
@@ -15,6 +17,9 @@ pub async fn handle_recording_processed(
     .await?;
 
   if key.contains("_720p") {
+    let user_id = recording.user_id;
+    let recording_id = recording.id;
+
     handler
       .db_conn
       .run::<_, diesel::result::QueryResult<_>>(move |conn| {
@@ -28,6 +33,34 @@ pub async fn handle_recording_processed(
       })
       .await
       .map_err(QueueHandlerError::from)?;
+
+    let user = handler
+      .db_conn
+      .run(move |conn| User::find_by_id(&user_id).first::<User>(conn))
+      .await?;
+
+    let email = Email::new(
+      &handler.config,
+      "notification".to_owned(),
+      json!({
+        "subject": "Your VOD is ready!",
+        "title": "Your VOD has been processed and is now ready to be reviewed.",
+        "body": "You can follow the link below to view it.",
+        "cta" : "View VOD",
+        "cta_url" : format!("{}/recordings/{}", handler.config.web_host, recording_id),
+      }),
+      vec![Recipient::new(
+        user.email.clone(),
+        json!({
+          "name": user.name.clone()
+        }),
+      )],
+    );
+
+    email
+      .deliver()
+      .await
+      .map_err(|e| anyhow::anyhow!("Failed to send VOD processed email: {}", e))?;
   } else if key.contains("_thumbnail") {
     if recording.thumbnail_key.is_some() {
       return Ok(());
