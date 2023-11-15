@@ -65,6 +65,11 @@ impl QueueHandler for RekognitionHandler {
     let message = serde_json::from_str::<RekognitionNotificationMessage>(&notification.message)
       .map_err(anyhow::Error::from)?;
 
+    info!(
+      "Heading object: {}, bucket: {}",
+      message.video.s3_object_name, self.config.uploads_bucket
+    );
+
     let object = self
       .client
       .head_object(HeadObjectRequest {
