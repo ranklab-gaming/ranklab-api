@@ -36,7 +36,7 @@ pub async fn handle_recording_uploaded(
     .await
     .map_err(QueueHandlerError::from)?;
 
-  let job = rekognition
+  rekognition
     .start_content_moderation(rusoto_rekognition::StartContentModerationRequest {
       video: rusoto_rekognition::Video {
         s3_object: Some(rusoto_rekognition::S3Object {
@@ -54,8 +54,6 @@ pub async fn handle_recording_uploaded(
     })
     .await
     .map_err(anyhow::Error::from)?;
-
-  info!("Started content moderation job: {:?}", job);
 
   Ok(())
 }
