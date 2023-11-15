@@ -73,8 +73,7 @@ impl QueueHandler for RekognitionHandler {
         ..Default::default()
       })
       .await
-      .ok()
-      .ok_or_else(|| anyhow::anyhow!("Failed to head object"))?;
+      .map_err(anyhow::Error::from)?;
 
     let instance_id: Option<String> = object
       .metadata
@@ -101,16 +100,14 @@ impl QueueHandler for RekognitionHandler {
           ..Default::default()
         })
         .await
-        .ok()
-        .ok_or_else(|| anyhow::anyhow!("Failed to delete object"))?;
+        .map_err(anyhow::Error::from)?;
 
       return Ok(());
     }
 
     let endpoints_response = describe_endpoints(self.config.clone())
       .await
-      .ok()
-      .ok_or_else(|| anyhow::anyhow!("Failed to describe endpoints"))?;
+      .map_err(anyhow::Error::from)?;
 
     let endpoints = endpoints_response.endpoints;
 
@@ -317,8 +314,7 @@ impl QueueHandler for RekognitionHandler {
         ..Default::default()
       })
       .await
-      .ok()
-      .ok_or_else(|| anyhow::anyhow!("Failed to create job"))?;
+      .map_err(anyhow::Error::from)?;
 
     Ok(())
   }
