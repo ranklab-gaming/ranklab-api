@@ -62,10 +62,6 @@ pub async fn handle_recording_processed(
       .await
       .map_err(|e| anyhow::anyhow!("Failed to send VOD processed email: {}", e))?;
   } else if key.contains("_thumbnail") {
-    if recording.thumbnail_key.is_some() {
-      return Ok(());
-    }
-
     handler
       .db_conn
       .run::<_, diesel::result::QueryResult<_>>(move |conn| {
