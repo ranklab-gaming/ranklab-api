@@ -202,40 +202,42 @@ async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow
       continue;
     }
 
+    let count = games.iter().map(|game| game.count).sum::<isize>();
+
+    let vods_label = format!(
+      "{} new {}",
+      count,
+      match count {
+        1 => "VOD",
+        _ => "VODs",
+      }
+    );
+
     let recipient = Recipient::new(
       email,
       json!({
         "name": name,
-        "games": games
+        "games": games,
+        "title": format!("{} available to review.", match count {
+          1 => "A new VOD",
+          _ => "New VODs"
+        }),
+        "subject": format!("There {} {} available to review.", match count {
+          1 => "is",
+          _ => "are"
+        }, vods_label),
+        "vods_label": vods_label,
       }),
     );
 
     recipients.push(recipient);
   }
 
-  let vods_label = format!(
-    "{} new {}",
-    recordings.len(),
-    match recordings.len() {
-      1 => "VOD",
-      _ => "VODs",
-    }
-  );
-
   let email = Email::new(
     &config,
     "digest".to_owned(),
     json!({
-      "title": format!("{} available to review.", match recordings.len() {
-        1 => "A new VOD",
-        _ => "New VODs"
-      }),
-      "subject": format!("There {} {} available to review.", match recordings.len() {
-        1 => "is",
-        _ => "are"
-      }, vods_label),
       "cta_url" : format!("{}/directory", config.web_host),
-      "vods_label": vods_label,
     }),
     recipients,
   );
