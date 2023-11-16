@@ -135,6 +135,14 @@ async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow
     .await?;
 
   if recordings.is_empty() {
+    db_conn
+      .run(move |conn| {
+        diesel::insert_into(digests::table)
+          .values(DigestChangeset::default().metadata(json!({})))
+          .get_result::<Digest>(conn)
+      })
+      .await?;
+
     return Ok(());
   }
 
