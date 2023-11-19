@@ -107,21 +107,19 @@ pub async fn update(
 
   db_conn
     .run(move |conn| {
-      diesel::update(&user)
-        .set(UserChangeset::default().password(Some(password_hash)))
-        .get_result::<User>(conn)
-        .unwrap()
-    })
-    .await;
+      conn.transaction::<User, diesel::result::Error, _>(|conn| {
+        diesel::update(&user)
+          .set(UserChangeset::default().password(Some(password_hash)))
+          .execute(conn)?;
 
-  db_conn
-    .run(move |conn| {
-      diesel::update(&token)
-        .set(OneTimeTokenChangeset::default().used_at(Some(Utc::now().naive_utc())))
-        .get_result::<OneTimeToken>(conn)
-        .unwrap()
+        diesel::update(&token)
+          .set(OneTimeTokenChangeset::default().used_at(Some(Utc::now().naive_utc())))
+          .execute(conn)?;
+
+        Ok(user)
+      })
     })
-    .await;
+    .await?;
 
   Response::status(Status::Ok)
 }

@@ -27,6 +27,18 @@ pub async fn handle_avatar_processed(
 
   let previous_avatar_id = previous_avatar.as_ref().map(|avatar| avatar.id);
 
+  if let Some(previous_avatar) = previous_avatar {
+    handler.delete_upload(previous_avatar.image_key).await?;
+
+    handler
+      .delete_upload(
+        previous_avatar
+          .processed_image_key
+          .ok_or_else(|| anyhow::anyhow!("Previous avatar has no processed image key"))?,
+      )
+      .await?;
+  }
+
   handler
     .db_conn
     .run::<_, diesel::result::QueryResult<_>>(move |conn| {
@@ -48,18 +60,6 @@ pub async fn handle_avatar_processed(
     })
     .await
     .map_err(QueueHandlerError::from)?;
-
-  if let Some(previous_avatar) = previous_avatar {
-    handler.delete_upload(previous_avatar.image_key).await?;
-
-    handler
-      .delete_upload(
-        previous_avatar
-          .processed_image_key
-          .ok_or_else(|| anyhow::anyhow!("Previous avatar has no processed image key"))?,
-      )
-      .await?;
-  }
 
   Ok(())
 }

@@ -134,7 +134,7 @@ pub async fn create(
   );
 
   if &*PROFILE == RELEASE_PROFILE {
-    user_signup_email.deliver().await.unwrap();
+    user_signup_email.deliver().await.unwrap_or_default();
   }
 
   Response::success(Session { token })

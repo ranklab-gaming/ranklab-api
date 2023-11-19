@@ -11,7 +11,7 @@ use rocket_okapi::openapi;
 use rusoto_core::Region;
 use rusoto_credential::AwsCredentials;
 use rusoto_s3::util::PreSignedRequest;
-use rusoto_s3::{DeleteObjectRequest, PutObjectRequest, S3 as RusotoS3};
+use rusoto_s3::{DeleteObjectsRequest, PutObjectRequest, S3 as RusotoS3};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -81,21 +81,25 @@ pub async fn delete(
     .run(move |conn| Avatar::find_for_user(&user.id).first::<Avatar>(conn))
     .await?;
 
-  let req = DeleteObjectRequest {
+  let req = DeleteObjectsRequest {
     bucket: config.uploads_bucket.to_owned(),
-    key: avatar.image_key.clone(),
+    delete: rusoto_s3::Delete {
+      objects: vec![
+        rusoto_s3::ObjectIdentifier {
+          key: avatar.image_key.clone(),
+          ..Default::default()
+        },
+        rusoto_s3::ObjectIdentifier {
+          key: avatar.processed_image_key.clone().unwrap(),
+          ..Default::default()
+        },
+      ],
+      quiet: Some(true),
+    },
     ..Default::default()
   };
 
-  s3.delete_object(req).await.unwrap();
-
-  let req = DeleteObjectRequest {
-    bucket: config.uploads_bucket.to_owned(),
-    key: avatar.processed_image_key.clone().unwrap(),
-    ..Default::default()
-  };
-
-  s3.delete_object(req).await.unwrap();
+  s3.delete_objects(req).await.unwrap();
 
   db_conn
     .run(move |conn| diesel::delete(&avatar).execute(conn).unwrap())

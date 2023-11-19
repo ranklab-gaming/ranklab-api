@@ -16,7 +16,7 @@ use rocket_okapi::openapi;
 use rusoto_core::Region;
 use rusoto_credential::AwsCredentials;
 use rusoto_s3::util::PreSignedRequest;
-use rusoto_s3::{DeleteObjectRequest, PutObjectRequest, S3 as RusotoS3};
+use rusoto_s3::{DeleteObjectsRequest, PutObjectRequest, S3 as RusotoS3};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
@@ -188,7 +188,7 @@ pub async fn create(
 #[get("/recordings/<id>")]
 pub async fn get(
   id: Uuid,
-  _auth: Auth<Option<Jwt>>,
+  #[allow(unused_variables)] auth: Auth<Option<Jwt>>,
   db_conn: DbConn,
   config: &State<Config>,
 ) -> QueryResponse<RecordingView> {
@@ -232,35 +232,36 @@ pub async fn delete(
     .run(move |conn| Recording::find_processed_for_user(&user_id, &id).first::<Recording>(conn))
     .await?;
 
-  if let Some(video_key) = &recording.video_key {
-    let req = DeleteObjectRequest {
-      bucket: config.uploads_bucket.to_owned(),
-      key: video_key.clone(),
-      ..Default::default()
-    };
+  let mut objects_to_delete = vec![];
 
-    s3.delete_object(req).await.unwrap();
+  if let Some(video_key) = &recording.video_key {
+    objects_to_delete.push(video_key.clone());
   }
 
   if let Some(thumbnail_key) = &recording.thumbnail_key {
-    let req = DeleteObjectRequest {
-      bucket: config.uploads_bucket.to_owned(),
-      key: thumbnail_key.clone(),
-      ..Default::default()
-    };
-
-    s3.delete_object(req).await.unwrap();
+    objects_to_delete.push(thumbnail_key.clone());
   }
 
   if let Some(processed_video_key) = &recording.processed_video_key {
-    let req = DeleteObjectRequest {
-      bucket: config.uploads_bucket.to_owned(),
-      key: processed_video_key.clone(),
-      ..Default::default()
-    };
-
-    s3.delete_object(req).await.unwrap();
+    objects_to_delete.push(processed_video_key.clone());
   }
+
+  let req = DeleteObjectsRequest {
+    bucket: config.uploads_bucket.to_owned(),
+    delete: rusoto_s3::Delete {
+      objects: objects_to_delete
+        .into_iter()
+        .map(|key| rusoto_s3::ObjectIdentifier {
+          key: key.clone(),
+          ..Default::default()
+        })
+        .collect(),
+      ..Default::default()
+    },
+    ..Default::default()
+  };
+
+  s3.delete_objects(req).await.unwrap();
 
   db_conn
     .run(move |conn| diesel::delete(&recording).execute(conn))
