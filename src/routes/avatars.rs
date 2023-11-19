@@ -67,11 +67,10 @@ pub async fn create(
 }
 
 #[openapi(tag = "Ranklab")]
-#[delete("/avatars/<id>")]
+#[delete("/avatars")]
 pub async fn delete(
   db_conn: DbConn,
   auth: Auth<Jwt>,
-  id: Uuid,
   config: &State<Config>,
   s3: S3,
 ) -> MutationResponse<StatusResponse> {
@@ -79,7 +78,7 @@ pub async fn delete(
   let s3 = s3.into_inner();
 
   let avatar: Avatar = db_conn
-    .run(move |conn| Avatar::find_for_user(&user.id, &id).first::<Avatar>(conn))
+    .run(move |conn| Avatar::find_for_user(&user.id).first::<Avatar>(conn))
     .await?;
 
   let req = DeleteObjectRequest {
@@ -90,15 +89,13 @@ pub async fn delete(
 
   s3.delete_object(req).await.unwrap();
 
-  if let Some(processed_image_key) = &avatar.processed_image_key {
-    let req = DeleteObjectRequest {
-      bucket: config.uploads_bucket.to_owned(),
-      key: processed_image_key.clone(),
-      ..Default::default()
-    };
+  let req = DeleteObjectRequest {
+    bucket: config.uploads_bucket.to_owned(),
+    key: avatar.processed_image_key.clone().unwrap(),
+    ..Default::default()
+  };
 
-    s3.delete_object(req).await.unwrap();
-  }
+  s3.delete_object(req).await.unwrap();
 
   db_conn
     .run(move |conn| diesel::delete(&avatar).execute(conn).unwrap())
@@ -113,7 +110,7 @@ pub async fn get(auth: Auth<Jwt>, id: Uuid, db_conn: DbConn) -> QueryResponse<Av
   let user_id = auth.into_user().id;
 
   let avatar = db_conn
-    .run(move |conn| Avatar::find_for_user(&user_id, &id).first::<Avatar>(conn))
+    .run(move |conn| Avatar::find_by_id_for_user(&id, &user_id).first::<Avatar>(conn))
     .await?;
 
   Response::success(AvatarView::new(avatar, None, None))

@@ -13,7 +13,6 @@ pub struct UserView {
   pub email: String,
   pub emails_enabled: bool,
   pub intercom_hash: Option<String>,
-  pub avatar_id: Option<Uuid>,
   pub avatar_image_key: Option<String>,
 }
 
@@ -33,7 +32,6 @@ impl UserView {
       email: user.email,
       emails_enabled: user.emails_enabled,
       intercom_hash,
-      avatar_id: user.avatar_id,
       avatar_image_key: avatar.and_then(|avatar| avatar.processed_image_key),
     }
   }

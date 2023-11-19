@@ -29,20 +29,24 @@ impl Avatar {
     avatars::table.filter(avatars::image_key.eq(image_key.to_string()))
   }
 
-  pub fn find_processed_by_id(
+  pub fn find_by_id(id: &Uuid) -> FindBy<avatars::table, avatars::id, Uuid> {
+    avatars::table.filter(avatars::id.eq(*id))
+  }
+
+  pub fn find_by_id_for_user(
     id: &Uuid,
-  ) -> Filter<avatars::table, And<Eq<avatars::id, Uuid>, Eq<avatars::state, MediaState>>> {
-    avatars::table.filter(
-      avatars::id
-        .eq(*id)
-        .and(avatars::state.eq(MediaState::Processed)),
-    )
+    user_id: &Uuid,
+  ) -> Filter<avatars::table, And<Eq<avatars::id, Uuid>, Eq<avatars::user_id, Uuid>>> {
+    avatars::table.filter(avatars::id.eq(*id).and(avatars::user_id.eq(*user_id)))
   }
 
   pub fn find_for_user(
     user_id: &Uuid,
-    id: &Uuid,
-  ) -> Filter<avatars::table, And<Eq<avatars::id, Uuid>, Eq<avatars::user_id, Uuid>>> {
-    avatars::table.filter(avatars::id.eq(*id).and(avatars::user_id.eq(*user_id)))
+  ) -> Filter<avatars::table, And<Eq<avatars::user_id, Uuid>, Eq<avatars::state, MediaState>>> {
+    avatars::table.filter(
+      avatars::user_id
+        .eq(*user_id)
+        .and(avatars::state.eq(MediaState::Processed)),
+    )
   }
 }

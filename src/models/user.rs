@@ -24,7 +24,6 @@ pub struct User {
   pub password: Option<String>,
   pub updated_at: chrono::NaiveDateTime,
   pub emails_enabled: bool,
-  pub avatar_id: Option<Uuid>,
 }
 
 impl User {

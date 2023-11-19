@@ -19,7 +19,6 @@ use serde;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;
-use uuid::Uuid;
 use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Deserialize, JsonSchema, Validate)]
@@ -27,7 +26,6 @@ pub struct UpdateUserRequest {
   #[validate(length(min = 2))]
   name: String,
   emails_enabled: bool,
-  avatar_id: Option<Uuid>,
 }
 
 #[derive(Deserialize, Validate, JsonSchema)]
@@ -45,14 +43,15 @@ pub async fn get(
   db_conn: DbConn,
 ) -> QueryResponse<UserView> {
   let user = auth.into_user();
+  let user_id = user.id;
 
-  let avatar: Option<Avatar> = match user.avatar_id {
-    Some(avatar_id) => db_conn
-      .run(move |conn| Avatar::find_processed_by_id(&avatar_id).get_result::<Avatar>(conn))
-      .await
-      .ok(),
-    None => None,
-  };
+  let avatar = db_conn
+    .run(move |conn| {
+      Avatar::find_for_user(&user_id)
+        .get_result::<Avatar>(conn)
+        .ok()
+    })
+    .await;
 
   Response::success(UserView::new(user, Some(config), avatar))
 }
@@ -154,15 +153,15 @@ pub async fn update(
   }
 
   let existing_user = auth.into_user();
-  let avatar_id = user.avatar_id.clone();
+  let existing_user_id = existing_user.id;
 
-  let avatar = match avatar_id {
-    Some(avatar_id) => db_conn
-      .run(move |conn| Avatar::find_processed_by_id(&avatar_id).get_result::<Avatar>(conn))
-      .await
-      .ok(),
-    None => None,
-  };
+  let avatar = db_conn
+    .run(move |conn| {
+      Avatar::find_for_user(&existing_user_id)
+        .get_result::<Avatar>(conn)
+        .ok()
+    })
+    .await;
 
   let user: User = db_conn
     .run(move |conn| {
@@ -170,8 +169,7 @@ pub async fn update(
         .set(
           UserChangeset::default()
             .name(user.name.clone())
-            .emails_enabled(user.emails_enabled)
-            .avatar_id(avatar_id),
+            .emails_enabled(user.emails_enabled),
         )
         .get_result::<User>(conn)
     })

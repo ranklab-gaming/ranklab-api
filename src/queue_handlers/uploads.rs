@@ -136,4 +136,18 @@ impl UploadsHandler {
     let body: S3Event = serde_json::from_str(&message).map_err(anyhow::Error::from)?;
     Ok(body)
   }
+
+  pub async fn delete_upload(&self, key: String) -> Result<(), QueueHandlerError> {
+    self
+      .client
+      .delete_object(rusoto_s3::DeleteObjectRequest {
+        bucket: self.config.uploads_bucket.clone(),
+        key: key.clone(),
+        ..Default::default()
+      })
+      .await
+      .map_err(anyhow::Error::from)?;
+
+    Ok(())
+  }
 }

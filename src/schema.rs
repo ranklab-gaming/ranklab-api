@@ -94,10 +94,10 @@ diesel::table! {
         password -> Nullable<Text>,
         updated_at -> Timestamp,
         emails_enabled -> Bool,
-        avatar_id -> Nullable<Uuid>,
     }
 }
 
+diesel::joinable!(avatars -> users (user_id));
 diesel::joinable!(comments -> recordings (recording_id));
 diesel::joinable!(comments -> users (user_id));
 diesel::joinable!(followings -> users (user_id));

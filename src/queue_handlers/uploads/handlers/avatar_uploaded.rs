@@ -71,7 +71,7 @@ pub async fn handle_avatar_uploaded(
     .ok_or_else(|| anyhow::anyhow!("No content type found for object"))?;
 
   if !["image/jpeg", "image/png"].contains(&content_type.as_str()) {
-    return delete_image(handler, key, config).await;
+    return handler.delete_upload(key).await;
   }
 
   let moderation_labels = rekognition
@@ -91,7 +91,7 @@ pub async fn handle_avatar_uploaded(
 
   if let Some(moderation_labels) = moderation_labels.moderation_labels {
     if !moderation_labels.is_empty() {
-      return delete_image(handler, key, config).await;
+      return handler.delete_upload(key).await;
     }
   }
 
@@ -102,24 +102,6 @@ pub async fn handle_avatar_uploaded(
       function_name: avatar_processor_lambda_arn,
       invocation_type: Some("Event".to_owned()),
       payload: Some(message.into_bytes().into()),
-      ..Default::default()
-    })
-    .await
-    .map_err(anyhow::Error::from)?;
-
-  Ok(())
-}
-
-async fn delete_image(
-  handler: &UploadsHandler,
-  key: String,
-  config: &crate::config::Config,
-) -> Result<(), QueueHandlerError> {
-  handler
-    .client
-    .delete_object(rusoto_s3::DeleteObjectRequest {
-      bucket: config.uploads_bucket.clone(),
-      key: key.clone(),
       ..Default::default()
     })
     .await

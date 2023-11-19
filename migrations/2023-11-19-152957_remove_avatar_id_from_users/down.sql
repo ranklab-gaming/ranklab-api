@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN avatar_id uuid REFERENCES avatars(id) ON DELETE SET NULL;
