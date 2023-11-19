@@ -1,5 +1,6 @@
-use crate::aws::CredentialsProvider;
+use crate::aws::ConfigCredentialsProvider;
 use crate::config::Config;
+use hyper_tls::HttpsConnector;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{Request, State};
 use rocket_okapi::gen::OpenApiGenerator;
@@ -18,11 +19,8 @@ impl<'r> FromRequest<'r> for S3 {
     let config = request.guard::<&State<Config>>().await.unwrap();
 
     let client = S3Client::new_with(
-      HttpClient::from_builder(hyper::Client::builder(), hyper_tls::HttpsConnector::new()),
-      CredentialsProvider::new(
-        config.aws_access_key_id.clone(),
-        config.aws_secret_key.clone(),
-      ),
+      HttpClient::from_connector(HttpsConnector::new()),
+      ConfigCredentialsProvider::new(config.inner().clone()),
       Region::EuWest2,
     );
 

@@ -1,22 +1,22 @@
 use crate::data_types::MediaState;
-use crate::fairings::sqs::QueueHandlerError;
 use crate::models::{Avatar, AvatarChangeset};
 use crate::queue_handlers::UploadsHandler;
+use anyhow::Result;
 use diesel::prelude::*;
 
 pub async fn handle_avatar_processed(
   handler: &UploadsHandler,
   key: String,
   original_key: String,
-) -> Result<(), QueueHandlerError> {
-  let avatar: Avatar = handler
+) -> Result<()> {
+  let avatar = handler
     .db_conn
     .run(move |conn| Avatar::find_by_image_key(&original_key).first::<Avatar>(conn))
     .await?;
 
   let user_id = avatar.user_id;
 
-  let previous_avatar: Option<Avatar> = handler
+  let previous_avatar = handler
     .db_conn
     .run(move |conn| {
       Avatar::find_for_user(&user_id)
@@ -41,7 +41,7 @@ pub async fn handle_avatar_processed(
 
   handler
     .db_conn
-    .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+    .run::<_, QueryResult<_>>(move |conn| {
       conn.transaction(|conn| {
         if let Some(previous_avatar_id) = previous_avatar_id {
           diesel::delete(Avatar::find_by_id(&previous_avatar_id)).execute(conn)?;
@@ -58,8 +58,7 @@ pub async fn handle_avatar_processed(
         Ok(())
       })
     })
-    .await
-    .map_err(QueueHandlerError::from)?;
+    .await?;
 
   Ok(())
 }

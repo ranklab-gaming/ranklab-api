@@ -35,7 +35,7 @@ impl Fairing for SentryFairing {
   }
 
   async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
-    let sentry_dsn: Option<String> = rocket.figment().extract_inner("sentry_dsn").ok();
+    let sentry_dsn = rocket.figment().extract_inner::<String>("sentry_dsn").ok();
     self.init(sentry_dsn);
     Ok(rocket)
   }

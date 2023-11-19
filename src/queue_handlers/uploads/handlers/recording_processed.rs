@@ -1,8 +1,8 @@
 use crate::data_types::MediaState;
 use crate::emails::{Email, Recipient};
-use crate::fairings::sqs::QueueHandlerError;
 use crate::models::{Recording, RecordingChangeset, User};
 use crate::queue_handlers::UploadsHandler;
+use anyhow::Result;
 use diesel::prelude::*;
 use serde_json::json;
 
@@ -10,8 +10,8 @@ pub async fn handle_recording_processed(
   handler: &UploadsHandler,
   key: String,
   original_key: String,
-) -> Result<(), QueueHandlerError> {
-  let recording: Recording = handler
+) -> Result<()> {
+  let recording = handler
     .db_conn
     .run(move |conn| Recording::find_by_video_key(&original_key).first::<Recording>(conn))
     .await?;
@@ -22,7 +22,7 @@ pub async fn handle_recording_processed(
 
     handler
       .db_conn
-      .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+      .run::<_, QueryResult<_>>(move |conn| {
         diesel::update(&recording)
           .set(
             RecordingChangeset::default()
@@ -31,8 +31,7 @@ pub async fn handle_recording_processed(
           )
           .execute(conn)
       })
-      .await
-      .map_err(QueueHandlerError::from)?;
+      .await?;
 
     let user = handler
       .db_conn
@@ -64,13 +63,12 @@ pub async fn handle_recording_processed(
   } else if key.contains("_thumbnail") {
     handler
       .db_conn
-      .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+      .run::<_, QueryResult<_>>(move |conn| {
         diesel::update(&recording)
           .set(RecordingChangeset::default().thumbnail_key(Some(key)))
           .execute(conn)
       })
-      .await
-      .map_err(QueueHandlerError::from)?;
+      .await?;
   }
 
   Ok(())

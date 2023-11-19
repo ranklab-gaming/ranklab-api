@@ -47,7 +47,7 @@ pub async fn create(
   let user = auth.into_user();
   let user_id = user.id;
 
-  let comment: Comment = db_conn
+  let comment = db_conn
     .run(move |conn| {
       diesel::insert_into(comments::table)
         .values(
@@ -84,7 +84,7 @@ pub async fn update(
     .run(move |conn| Comment::find_for_user(&user_id, &id).first::<Comment>(conn))
     .await?;
 
-  let updated_comment: Comment = db_conn
+  let updated_comment = db_conn
     .run(move |conn| {
       diesel::update(&existing_comment)
         .set(
@@ -125,7 +125,7 @@ pub async fn delete(
 pub async fn list(params: ListParams, db_conn: DbConn) -> QueryResponse<Vec<CommentView>> {
   let recording_id = params.recording_id;
 
-  let comments: Vec<Comment> = db_conn
+  let comments = db_conn
     .run(move |conn| {
       Comment::filter_by_recording_id(&recording_id)
         .load::<Comment>(conn)

@@ -1,8 +1,9 @@
+use crate::aws::ConfigCredentialsProvider;
 use crate::config::Config;
 use crate::guards::DbConn;
 use crate::queue_handlers::{RekognitionHandler, UploadsHandler};
-use crate::{aws, PROFILE, RELEASE_PROFILE};
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
+use hyper_tls::HttpsConnector;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{tokio, Orbit, Rocket};
 use rusoto_core::{HttpClient, Region, RusotoError};
@@ -10,22 +11,15 @@ use rusoto_sqs::{
   ChangeMessageVisibilityError, ChangeMessageVisibilityRequest, DeleteMessageRequest,
   ReceiveMessageRequest, Sqs, SqsClient,
 };
-
-#[derive(thiserror::Error, Debug)]
-pub enum QueueHandlerError {
-  #[error(transparent)]
-  Ignorable(anyhow::Error),
-  #[error(transparent)]
-  Unknown(#[from] anyhow::Error),
-}
+use tokio::time::{sleep, Duration};
 
 #[async_trait]
 pub trait QueueHandler: Send + Sync {
   fn new(db_conn: DbConn, config: Config) -> Self;
   fn url(&self) -> String;
   fn name(&self) -> &'static str;
-  async fn instance_id(&self, message: String) -> Result<Option<String>, QueueHandlerError>;
-  async fn handle(&self, message: String) -> Result<(), QueueHandlerError>;
+  async fn instance_id(&self, message: String) -> Result<Option<String>>;
+  async fn handle(&self, message: String) -> Result<()>;
 }
 
 #[derive(Clone)]
@@ -44,20 +38,15 @@ impl SqsFairing {
   async fn start<T: QueueHandler>(&self, rocket: &Rocket<Orbit>) {
     let db_conn = DbConn::get_one(rocket).await.unwrap();
     let config = rocket.state::<Config>().unwrap().clone();
-    let aws_access_key_id = config.aws_access_key_id.clone();
-    let aws_secret_key = config.aws_secret_key.clone();
     let instance_id = config.instance_id.clone();
     let fairing = self.clone();
 
     tokio::spawn(async move {
-      let handler = T::new(db_conn, config);
-      let mut builder = hyper::Client::builder();
-
-      builder.pool_max_idle_per_host(0);
+      let handler = T::new(db_conn, config.clone());
 
       let client = SqsClient::new_with(
-        HttpClient::from_builder(builder, hyper_tls::HttpsConnector::new()),
-        aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
+        HttpClient::from_connector(HttpsConnector::new()),
+        ConfigCredentialsProvider::new(config),
         Region::EuWest2,
       );
 
@@ -65,7 +54,7 @@ impl SqsFairing {
         match fairing.poll(&handler, &client, &instance_id).await {
           Ok(should_delay_poll) => {
             if should_delay_poll {
-              tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+              sleep(Duration::from_secs(5)).await;
             }
           }
           Err(e) => {
@@ -134,17 +123,7 @@ impl SqsFairing {
           continue;
         }
 
-        match handler.handle(body).await {
-          Err(QueueHandlerError::Ignorable(e)) => {
-            if &*PROFILE == RELEASE_PROFILE {
-              return Err(e);
-            } else {
-              return Ok(should_delay_poll);
-            }
-          }
-          Err(e) => return Err(e.into()),
-          Ok(()) => (),
-        };
+        handler.handle(body).await?;
 
         info!(
           "[sqs] [{}] Deleting message: {:?}",
@@ -181,6 +160,7 @@ impl SqsFairing {
     };
 
     sqs_client.change_message_visibility(req).await?;
+
     Ok(())
   }
 }
@@ -196,15 +176,5 @@ impl Fairing for SqsFairing {
 
   async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
     self.init(rocket).await;
-  }
-}
-
-impl From<diesel::result::Error> for QueueHandlerError {
-  fn from(e: diesel::result::Error) -> Self {
-    if e == diesel::result::Error::NotFound {
-      QueueHandlerError::Ignorable(e.into())
-    } else {
-      anyhow::Error::from(e).into()
-    }
   }
 }

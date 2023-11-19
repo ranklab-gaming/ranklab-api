@@ -16,7 +16,7 @@ use rocket_okapi::openapi;
 use rusoto_core::Region;
 use rusoto_credential::AwsCredentials;
 use rusoto_s3::util::PreSignedRequest;
-use rusoto_s3::{DeleteObjectsRequest, PutObjectRequest, S3 as RusotoS3};
+use rusoto_s3::{Delete, DeleteObjectsRequest, ObjectIdentifier, PutObjectRequest, S3 as RusotoS3};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
@@ -152,7 +152,7 @@ pub async fn create(
   let user_id = user.id;
   let state = MediaState::Created;
 
-  let recording: Recording = db_conn
+  let recording = db_conn
     .run(move |conn| {
       diesel::insert_into(recordings::table)
         .values(
@@ -192,7 +192,7 @@ pub async fn get(
   db_conn: DbConn,
   config: &State<Config>,
 ) -> QueryResponse<RecordingView> {
-  let recording: Recording = db_conn
+  let recording = db_conn
     .run(move |conn| Recording::find_by_id(&id).first::<Recording>(conn))
     .await?;
 
@@ -248,10 +248,10 @@ pub async fn delete(
 
   let req = DeleteObjectsRequest {
     bucket: config.uploads_bucket.to_owned(),
-    delete: rusoto_s3::Delete {
+    delete: Delete {
       objects: objects_to_delete
         .into_iter()
-        .map(|key| rusoto_s3::ObjectIdentifier {
+        .map(|key| ObjectIdentifier {
           key: key.clone(),
           ..Default::default()
         })

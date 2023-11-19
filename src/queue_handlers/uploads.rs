@@ -1,11 +1,12 @@
 mod handlers;
-use crate::aws;
+use crate::aws::ConfigCredentialsProvider;
 use crate::config::Config;
-use crate::fairings::sqs::{QueueHandler, QueueHandlerError};
+use crate::fairings::sqs::QueueHandler;
 use crate::guards::DbConn;
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
+use hyper_tls::HttpsConnector;
 use rusoto_core::HttpClient;
-use rusoto_s3::{HeadObjectRequest, S3Client, S3};
+use rusoto_s3::{DeleteObjectRequest, HeadObjectRequest, S3Client, S3};
 use rusoto_signature::Region;
 use serde::Deserialize;
 
@@ -51,15 +52,9 @@ impl QueueHandler for UploadsHandler {
   }
 
   fn new(db_conn: DbConn, config: Config) -> Self {
-    let mut builder = hyper::Client::builder();
-    let aws_access_key_id = config.aws_access_key_id.clone();
-    let aws_secret_key = config.aws_secret_key.clone();
-
-    builder.pool_max_idle_per_host(0);
-
     let client = S3Client::new_with(
-      HttpClient::from_builder(builder, hyper_tls::HttpsConnector::new()),
-      aws::CredentialsProvider::new(aws_access_key_id, aws_secret_key),
+      HttpClient::from_connector(HttpsConnector::new()),
+      ConfigCredentialsProvider::new(config.clone()),
       Region::EuWest2,
     );
 
@@ -74,7 +69,7 @@ impl QueueHandler for UploadsHandler {
     self.config.uploads_queue_url.clone()
   }
 
-  async fn instance_id(&self, message: String) -> Result<Option<String>, QueueHandlerError> {
+  async fn instance_id(&self, message: String) -> Result<Option<String>> {
     let message_body = self.message_body(message)?;
 
     let record = message_body
@@ -84,15 +79,13 @@ impl QueueHandler for UploadsHandler {
 
     let original_key = self.original_key(record.s3.object.key.clone())?;
 
-    let object = self
-      .client
-      .head_object(HeadObjectRequest {
-        bucket: self.config.uploads_bucket.clone(),
-        key: original_key.to_string(),
-        ..Default::default()
-      })
-      .await
-      .map_err(anyhow::Error::from)?;
+    let head_object_params = HeadObjectRequest {
+      bucket: self.config.uploads_bucket.clone(),
+      key: original_key.clone(),
+      ..Default::default()
+    };
+
+    let object = self.client.head_object(head_object_params).await?;
 
     let instance_id: Option<String> = object
       .metadata
@@ -101,7 +94,7 @@ impl QueueHandler for UploadsHandler {
     Ok(instance_id)
   }
 
-  async fn handle(&self, message: String) -> Result<(), QueueHandlerError> {
+  async fn handle(&self, message: String) -> Result<()> {
     let message_body = self.message_body(message.clone())?;
 
     for record in message_body.records {
@@ -124,7 +117,7 @@ impl QueueHandler for UploadsHandler {
 }
 
 impl UploadsHandler {
-  fn original_key(&self, key: String) -> Result<String, QueueHandlerError> {
+  fn original_key(&self, key: String) -> Result<String> {
     let original_key = key.replace("/processed", "/originals");
     let original_key = original_key.split('_').next().unwrap_or_default();
     let original_key = original_key.split('.').next().unwrap_or_default();
@@ -132,21 +125,18 @@ impl UploadsHandler {
     Ok(original_key.to_string())
   }
 
-  fn message_body(&self, message: String) -> Result<S3Event, QueueHandlerError> {
-    let body: S3Event = serde_json::from_str(&message).map_err(anyhow::Error::from)?;
-    Ok(body)
+  fn message_body(&self, message: String) -> Result<S3Event> {
+    Ok(serde_json::from_str(&message)?)
   }
 
-  pub async fn delete_upload(&self, key: String) -> Result<(), QueueHandlerError> {
-    self
-      .client
-      .delete_object(rusoto_s3::DeleteObjectRequest {
-        bucket: self.config.uploads_bucket.clone(),
-        key: key.clone(),
-        ..Default::default()
-      })
-      .await
-      .map_err(anyhow::Error::from)?;
+  pub async fn delete_upload(&self, key: String) -> Result<()> {
+    let delete_object_request = DeleteObjectRequest {
+      bucket: self.config.uploads_bucket.clone(),
+      key: key.clone(),
+      ..Default::default()
+    };
+
+    self.client.delete_object(delete_object_request).await?;
 
     Ok(())
   }

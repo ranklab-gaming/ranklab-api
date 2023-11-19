@@ -163,7 +163,7 @@ pub async fn update(
     })
     .await;
 
-  let user: User = db_conn
+  let user = db_conn
     .run(move |conn| {
       diesel::update(&existing_user)
         .set(

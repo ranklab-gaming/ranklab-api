@@ -1,39 +1,34 @@
-use crate::aws;
+use crate::aws::ConfigCredentialsProvider;
 use crate::data_types::MediaState;
-use crate::fairings::sqs::QueueHandlerError;
 use crate::models::{Avatar, AvatarChangeset};
 use crate::queue_handlers::UploadsHandler;
+use anyhow::Result;
 use diesel::prelude::*;
 use hyper_tls::HttpsConnector;
 use rusoto_core::HttpClient;
-use rusoto_lambda::{Lambda, LambdaClient};
-use rusoto_rekognition::Rekognition;
-use rusoto_s3::S3;
+use rusoto_lambda::{InvocationRequest, Lambda, LambdaClient};
+use rusoto_rekognition::{
+  DetectModerationLabelsRequest, Image, Rekognition, RekognitionClient, S3Object,
+};
+use rusoto_s3::{HeadObjectRequest, S3};
 use rusoto_signature::Region;
 
 pub async fn handle_avatar_uploaded(
   handler: &UploadsHandler,
   key: String,
   message: String,
-) -> Result<(), QueueHandlerError> {
+) -> Result<()> {
   let config = &handler.config;
-  let builder = hyper::Client::builder();
 
   let lambda = LambdaClient::new_with(
-    HttpClient::from_builder(builder.clone(), HttpsConnector::new()),
-    aws::CredentialsProvider::new(
-      config.aws_access_key_id.clone(),
-      config.aws_secret_key.clone(),
-    ),
+    HttpClient::from_connector(HttpsConnector::new()),
+    ConfigCredentialsProvider::new(config.clone()),
     Region::EuWest2,
   );
 
-  let rekognition = rusoto_rekognition::RekognitionClient::new_with(
-    HttpClient::from_builder(builder, HttpsConnector::new()),
-    aws::CredentialsProvider::new(
-      config.aws_access_key_id.clone(),
-      config.aws_secret_key.clone(),
-    ),
+  let rekognition = RekognitionClient::new_with(
+    HttpClient::from_connector(HttpsConnector::new()),
+    ConfigCredentialsProvider::new(config.clone()),
     Region::EuWest2,
   );
 
@@ -41,15 +36,14 @@ pub async fn handle_avatar_uploaded(
 
   let object = handler
     .client
-    .head_object(rusoto_s3::HeadObjectRequest {
+    .head_object(HeadObjectRequest {
       bucket: config.uploads_bucket.clone(),
       key: key.clone(),
       ..Default::default()
     })
-    .await
-    .map_err(anyhow::Error::from)?;
+    .await?;
 
-  let avatar: Avatar = handler
+  let avatar = handler
     .db_conn
     .run(move |conn| Avatar::find_by_image_key(&image_key).first::<Avatar>(conn))
     .await?;
@@ -58,13 +52,12 @@ pub async fn handle_avatar_uploaded(
 
   handler
     .db_conn
-    .run::<_, diesel::result::QueryResult<_>>(move |conn| {
+    .run::<_, QueryResult<_>>(move |conn| {
       diesel::update(&avatar_to_update)
         .set(AvatarChangeset::default().state(MediaState::Uploaded))
         .execute(conn)
     })
-    .await
-    .map_err(QueueHandlerError::from)?;
+    .await?;
 
   let content_type = object
     .content_type
@@ -75,9 +68,9 @@ pub async fn handle_avatar_uploaded(
   }
 
   let moderation_labels = rekognition
-    .detect_moderation_labels(rusoto_rekognition::DetectModerationLabelsRequest {
-      image: rusoto_rekognition::Image {
-        s3_object: Some(rusoto_rekognition::S3Object {
+    .detect_moderation_labels(DetectModerationLabelsRequest {
+      image: Image {
+        s3_object: Some(S3Object {
           bucket: Some(config.uploads_bucket.clone()),
           name: Some(key.clone()),
           ..Default::default()
@@ -86,8 +79,7 @@ pub async fn handle_avatar_uploaded(
       },
       ..Default::default()
     })
-    .await
-    .map_err(anyhow::Error::from)?;
+    .await?;
 
   if let Some(moderation_labels) = moderation_labels.moderation_labels {
     if !moderation_labels.is_empty() {
@@ -98,14 +90,13 @@ pub async fn handle_avatar_uploaded(
   let avatar_processor_lambda_arn = config.avatar_processor_lambda_arn.clone();
 
   lambda
-    .invoke(rusoto_lambda::InvocationRequest {
+    .invoke(InvocationRequest {
       function_name: avatar_processor_lambda_arn,
       invocation_type: Some("Event".to_owned()),
       payload: Some(message.into_bytes().into()),
       ..Default::default()
     })
-    .await
-    .map_err(anyhow::Error::from)?;
+    .await?;
 
   Ok(())
 }

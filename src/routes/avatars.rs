@@ -11,7 +11,7 @@ use rocket_okapi::openapi;
 use rusoto_core::Region;
 use rusoto_credential::AwsCredentials;
 use rusoto_s3::util::PreSignedRequest;
-use rusoto_s3::{DeleteObjectsRequest, PutObjectRequest, S3 as RusotoS3};
+use rusoto_s3::{Delete, DeleteObjectsRequest, ObjectIdentifier, PutObjectRequest, S3 as RusotoS3};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -25,7 +25,7 @@ pub async fn create(
   let user = auth.into_user();
   let key = format!("avatars/originals/{}", Uuid::new_v4());
 
-  let avatar: Avatar = db_conn
+  let avatar = db_conn
     .run(move |conn| {
       diesel::insert_into(avatars::table)
         .values(AvatarChangeset::default().image_key(key).user_id(user.id))
@@ -77,24 +77,24 @@ pub async fn delete(
   let user = auth.into_user();
   let s3 = s3.into_inner();
 
-  let avatar: Avatar = db_conn
+  let avatar = db_conn
     .run(move |conn| Avatar::find_for_user(&user.id).first::<Avatar>(conn))
     .await?;
 
   let req = DeleteObjectsRequest {
     bucket: config.uploads_bucket.to_owned(),
-    delete: rusoto_s3::Delete {
+    delete: Delete {
       objects: vec![
-        rusoto_s3::ObjectIdentifier {
+        ObjectIdentifier {
           key: avatar.image_key.clone(),
           ..Default::default()
         },
-        rusoto_s3::ObjectIdentifier {
+        ObjectIdentifier {
           key: avatar.processed_image_key.clone().unwrap(),
           ..Default::default()
         },
       ],
-      quiet: Some(true),
+      ..Default::default()
     },
     ..Default::default()
   };

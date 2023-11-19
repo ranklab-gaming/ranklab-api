@@ -4,6 +4,7 @@ use crate::games;
 use crate::guards::DbConn;
 use crate::models::{Comment, Digest, DigestChangeset, Following, Recording, User};
 use crate::schema::{comments, digests};
+use chrono::Duration;
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::dsl::now;
 use diesel::prelude::*;
@@ -15,6 +16,7 @@ use serde::Serialize;
 use serde_json::json;
 use std::convert::TryInto;
 use std::sync::Arc;
+use tokio::time::sleep;
 
 #[derive(Clone)]
 pub struct CronFairing;
@@ -168,7 +170,7 @@ async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow
       .filter(|following| following.user_id == user.id)
       .collect::<Vec<_>>();
 
-    let games: Vec<DigestEmailGame> = followings
+    let games = followings
       .clone()
       .into_iter()
       .map(|following| {
@@ -196,7 +198,7 @@ async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow
         }
       })
       .filter(|game| game.count > 0)
-      .collect();
+      .collect::<Vec<_>>();
 
     if games.is_empty() {
       continue;
@@ -308,7 +310,7 @@ impl CronFairing {
 
       loop {
         scheduler.run_pending();
-        tokio::time::sleep(chrono::Duration::seconds(1).to_std().unwrap()).await;
+        sleep(Duration::seconds(1).to_std().unwrap()).await;
       }
     });
   }

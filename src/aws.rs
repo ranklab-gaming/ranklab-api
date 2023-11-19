@@ -1,26 +1,21 @@
 pub mod media_convert;
+use crate::config::Config;
 use rusoto_core::credential::{AwsCredentials, CredentialsError, ProvideAwsCredentials};
 
-pub struct CredentialsProvider {
-  access_key_id: String,
-  secret_key: String,
-}
+pub struct ConfigCredentialsProvider(Config);
 
-impl CredentialsProvider {
-  pub fn new(access_key_id: String, secret_key: String) -> Self {
-    Self {
-      access_key_id,
-      secret_key,
-    }
+impl ConfigCredentialsProvider {
+  pub fn new(config: Config) -> Self {
+    Self(config)
   }
 }
 
 #[async_trait]
-impl ProvideAwsCredentials for CredentialsProvider {
+impl ProvideAwsCredentials for ConfigCredentialsProvider {
   async fn credentials(&self) -> Result<AwsCredentials, CredentialsError> {
     Ok(AwsCredentials::new(
-      self.access_key_id.clone(),
-      self.secret_key.clone(),
+      self.0.aws_access_key_id.clone(),
+      self.0.aws_secret_key.clone(),
       None,
       None,
     ))

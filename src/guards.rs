@@ -10,7 +10,7 @@ macro_rules! try_result {
   ($expr:expr $(,)?) => {
     match $expr {
       Result::Ok(val) => val,
-      Result::Err(e) => return rocket::outcome::Outcome::Failure(::std::convert::From::from(e)),
+      Result::Err(e) => return Outcome::Failure(::std::convert::From::from(e)),
     }
   };
 }

@@ -50,6 +50,7 @@ pub fn generate_token(user: &User, config: &Config) -> String {
   };
 
   let key = EncodingKey::from_secret(config.auth_client_secret.as_ref());
+
   encode(&Header::default(), &claims, &key).unwrap()
 }
 

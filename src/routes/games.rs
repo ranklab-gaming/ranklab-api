@@ -15,7 +15,7 @@ pub async fn list(auth: Auth<Option<Jwt>>, db_conn: DbConn) -> QueryResponse<Vec
   let user = auth.into_user();
   let games = crate::games::all().iter().collect::<Vec<_>>();
 
-  let followings: Vec<Following> = match user {
+  let followings = match user {
     Some(user) => {
       db_conn
         .run(move |conn| {

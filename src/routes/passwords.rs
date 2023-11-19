@@ -48,7 +48,7 @@ pub async fn create(
 
   let name = user.name.clone();
 
-  let token: OneTimeToken = db_conn
+  let token = db_conn
     .run(move |conn| {
       let value = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
 
