@@ -1,7 +1,7 @@
 use crate::schema::{comments, recordings, users};
 use derive_builder::Builder;
 use diesel::dsl::{And, Eq, Filter};
-use diesel::helper_types::{InnerJoin, IsNull, On, Select};
+use diesel::helper_types::{InnerJoin, IsNull, NotEq, On, Select};
 use diesel::prelude::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -62,7 +62,10 @@ impl Comment {
         >,
         On<users::table, Eq<recordings::user_id, users::id>>,
       >,
-      And<Eq<users::emails_enabled, bool>, IsNull<comments::notified_at>>,
+      And<
+        And<Eq<users::emails_enabled, bool>, IsNull<comments::notified_at>>,
+        NotEq<comments::user_id, recordings::user_id>,
+      >,
     >,
     (
       <comments::table as diesel::Table>::AllColumns,
@@ -76,7 +79,8 @@ impl Comment {
       .filter(
         users::emails_enabled
           .eq(true)
-          .and(comments::notified_at.is_null()),
+          .and(comments::notified_at.is_null())
+          .and(comments::user_id.ne(recordings::user_id)),
       )
       .select((
         comments::all_columns,
