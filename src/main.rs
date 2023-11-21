@@ -32,7 +32,7 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 async fn rocket() -> Rocket<Build> {
-  let profile = (&*PROFILE).to_string();
+  let profile = (*PROFILE).to_string();
 
   let env_suffix = match profile.as_str() {
     "debug" => "development",

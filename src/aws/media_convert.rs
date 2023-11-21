@@ -33,7 +33,7 @@ pub async fn describe_endpoints(
     "POST",
     "mediaconvert",
     &rusoto_signature::Region::EuWest2,
-    &request_uri,
+    request_uri,
   );
 
   request.set_content_type("application/x-amz-json-1.1".to_owned());

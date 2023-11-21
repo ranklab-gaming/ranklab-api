@@ -246,7 +246,6 @@ impl QueueHandler for RekognitionHandler {
                       framerate_denominator: Some(240),
                       max_captures: Some(2),
                       quality: Some(80),
-                      ..Default::default()
                     }),
                     ..Default::default()
                   }),

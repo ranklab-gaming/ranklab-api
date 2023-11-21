@@ -236,7 +236,7 @@ async fn process_digests(db_conn: &DbConn, config: &Config) -> Result<(), anyhow
   }
 
   let email = Email::new(
-    &config,
+    config,
     "digest".to_owned(),
     json!({
       "cta_url" : format!("{}/directory", config.web_host),

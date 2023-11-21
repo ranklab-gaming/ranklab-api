@@ -69,7 +69,7 @@ pub async fn create(
 
   let email = match &user.credentials {
     Credentials::Password(credentials) => credentials.email.clone(),
-    Credentials::Token(credentials) => decode_token_credentials(&credentials, config)
+    Credentials::Token(credentials) => decode_token_credentials(credentials, config)
       .ok_or_else(|| MutationError::Status(Status::UnprocessableEntity))?
       .sub
       .clone(),
@@ -133,7 +133,7 @@ pub async fn create(
     )],
   );
 
-  if &*PROFILE == RELEASE_PROFILE {
+  if *PROFILE == RELEASE_PROFILE {
     user_signup_email.deliver().await.unwrap_or_default();
   }
 

@@ -39,7 +39,6 @@ pub async fn handle_recording_uploaded(handler: &UploadsHandler, key: String) ->
           name: Some(key.clone()),
           ..Default::default()
         }),
-        ..Default::default()
       },
       notification_channel: Some(NotificationChannel {
         role_arn: config.rekognition_role_arn.clone(),

@@ -82,7 +82,7 @@ pub async fn create(
     )],
   );
 
-  if &*PROFILE != TEST_PROFILE {
+  if *PROFILE != TEST_PROFILE {
     reset_password_email.deliver().await.unwrap();
   }
 

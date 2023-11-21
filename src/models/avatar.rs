@@ -33,6 +33,7 @@ impl Avatar {
     avatars::table.filter(avatars::id.eq(*id))
   }
 
+  #[allow(clippy::type_complexity)]
   pub fn find_by_id_for_user(
     id: &Uuid,
     user_id: &Uuid,
@@ -40,6 +41,7 @@ impl Avatar {
     avatars::table.filter(avatars::id.eq(*id).and(avatars::user_id.eq(*user_id)))
   }
 
+  #[allow(clippy::type_complexity)]
   pub fn find_for_user(
     user_id: &Uuid,
   ) -> Filter<avatars::table, And<Eq<avatars::user_id, Uuid>, Eq<avatars::state, MediaState>>> {

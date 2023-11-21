@@ -42,6 +42,7 @@ pub struct RecordingWithCommentCount {
 }
 
 impl Recording {
+  #[allow(clippy::type_complexity)]
   pub fn filter_by_game_id(
     game_id: &str,
   ) -> Select<
@@ -152,6 +153,7 @@ impl Recording {
       ))
   }
 
+  #[allow(clippy::type_complexity)]
   pub fn filter_for_digest(
     last_digest: Option<Digest>,
   ) -> Filter<

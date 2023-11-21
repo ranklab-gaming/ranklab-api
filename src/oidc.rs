@@ -59,7 +59,7 @@ async fn fetch_jwks(client: &reqwest::Client, jwks_uri: &str) -> Result<Jwks, re
 
 pub async fn init_cache(web_host: &str) -> Result<OidcCache, reqwest::Error> {
   let accept_invalid_certs =
-    (&*PROFILE == DEBUG_PROFILE || &*PROFILE == TEST_PROFILE) && web_host.starts_with("https");
+    (*PROFILE == DEBUG_PROFILE || *PROFILE == TEST_PROFILE) && web_host.starts_with("https");
 
   let client = reqwest::Client::builder()
     .danger_accept_invalid_certs(accept_invalid_certs)

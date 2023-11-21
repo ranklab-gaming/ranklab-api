@@ -102,13 +102,13 @@ impl QueueHandler for UploadsHandler {
       let original_key = self.original_key(key.clone())?;
 
       if key.starts_with("avatars/originals/") {
-        handle_avatar_uploaded(&self, key, message.clone()).await?;
+        handle_avatar_uploaded(self, key, message.clone()).await?;
       } else if key.starts_with("recordings/originals/") {
-        handle_recording_uploaded(&self, key).await?;
+        handle_recording_uploaded(self, key).await?;
       } else if key.starts_with("avatars/processed/") {
-        handle_avatar_processed(&self, key, original_key).await?;
+        handle_avatar_processed(self, key, original_key).await?;
       } else if key.starts_with("recordings/processed/") {
-        handle_recording_processed(&self, key, original_key).await?;
+        handle_recording_processed(self, key, original_key).await?;
       }
     }
 

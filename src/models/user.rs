@@ -39,6 +39,7 @@ impl User {
     users::table.filter(users::id.eq_any(ids))
   }
 
+  #[allow(clippy::type_complexity)]
   pub fn filter_for_digest() -> DistinctOn<
     Select<
       Filter<
