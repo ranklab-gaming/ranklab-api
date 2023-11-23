@@ -49,13 +49,38 @@ pub async fn create(
 
   let comment = db_conn
     .run(move |conn| {
+      let mut metadata_cleaner = ammonia::Builder::default();
+      let mut allowed_tags = HashSet::new();
+
+      allowed_tags.insert("svg");
+      allowed_tags.insert("path");
+
+      metadata_cleaner.tags(allowed_tags).add_tag_attributes(
+        "path",
+        &[
+          "stroke",
+          "fill",
+          "stroke-linecap",
+          "troke-linejoin",
+          "stroke-width",
+          "d",
+        ],
+      );
+
+      let metadata = match &comment.metadata {
+        CommentMetadata::Video { timestamp, drawing } => CommentMetadata::Video {
+          timestamp: *timestamp,
+          drawing: metadata_cleaner.clean(drawing).to_string(),
+        },
+      };
+
       diesel::insert_into(comments::table)
         .values(
           CommentChangeset::default()
             .body(ammonia::clean(&comment.body))
             .recording_id(recording_id)
             .user_id(user_id)
-            .metadata(serde_json::to_value(&comment.metadata).unwrap()),
+            .metadata(serde_json::to_value(metadata).unwrap()),
         )
         .get_result::<Comment>(conn)
         .unwrap()

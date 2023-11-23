@@ -9,15 +9,8 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "snake_case")]
-pub enum CommentMetadataValue {
-  Video { timestamp: i64, drawing: String },
-}
-
-#[derive(Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(untagged)]
 pub enum CommentMetadata {
-  Some(CommentMetadataValue),
-  None {},
+  Video { timestamp: i64, drawing: String },
 }
 
 #[derive(Builder, Queryable, Identifiable, Clone)]

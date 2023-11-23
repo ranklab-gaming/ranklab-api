@@ -9,7 +9,7 @@ mod session;
 mod user;
 
 pub use avatar::{Avatar, AvatarChangeset};
-pub use comment::{Comment, CommentChangeset, CommentMetadata, CommentMetadataValue};
+pub use comment::{Comment, CommentChangeset, CommentMetadata};
 pub use digest::{Digest, DigestChangeset};
 pub use following::{Following, FollowingChangeset};
 pub use game::{Game, SkillLevel};
