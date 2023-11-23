@@ -9,6 +9,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     && sudo apt-get upgrade -y \
     && sudo apt-get install -y libssl-dev libpq-dev clang jq
 
+RUN pip3 install yq
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN gh release download -p "*-$(uname -m)-linux.tar.gz" -R rui314/mold -O - | sudo tar -C /usr/local --strip-components=1 -xzf -
 RUN sudo ln -sf /usr/local/bin/mold $(realpath /usr/bin/ld)

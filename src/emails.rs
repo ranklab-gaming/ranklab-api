@@ -1,5 +1,5 @@
-use crate::aws::ConfigCredentialsProvider;
 use crate::config::Config;
+use crate::{aws::ConfigCredentialsProvider, PROFILE};
 use hyper_tls::HttpsConnector;
 use rusoto_core::{HttpClient, Region, RusotoError};
 use rusoto_sesv2::{
@@ -54,7 +54,7 @@ impl Email {
   }
 
   pub async fn deliver(self) -> Result<(), RusotoError<SendBulkEmailError>> {
-    if self.recipients.is_empty() {
+    if *PROFILE == "test" || self.recipients.is_empty() {
       return Ok(());
     }
 

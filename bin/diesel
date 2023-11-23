@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ROCKET_PROFILE=${ROCKET_PROFILE:-debug}
+DEFAULT_DATABASE_URL=$(yq -r ".$ROCKET_PROFILE.databases.default.url" Rocket.toml)
 
 if [ "$ROCKET_PROFILE" = "test" ]; then
     export $(cat .env.test | xargs)
@@ -8,4 +9,4 @@ else
     export $(cat .env.development | xargs)
 fi
 
-diesel "$@"
+diesel "$@" --database-url ${DATABASE_URL:-$DEFAULT_DATABASE_URL}

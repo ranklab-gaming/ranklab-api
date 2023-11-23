@@ -2,7 +2,7 @@
 set -e
 
 aws s3 cp s3://ranklab-development-secrets/.env.api .env.development
-aws s3 cp s3://ranklab-test-secrets/.env.api .env.test --profile test
+aws s3 cp s3://ranklab-test-secrets/.env.api .env.test --profile ${AWS_TEST_PROFILE:-test}
 echo "RANKLAB_INSTANCE_ID=$(openssl rand -hex 16)" >> .env.development
 echo "RANKLAB_INSTANCE_ID=$(openssl rand -hex 16)" >> .env.test
 cargo build
