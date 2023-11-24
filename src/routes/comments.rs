@@ -55,17 +55,20 @@ pub async fn create(
       allowed_tags.insert("svg");
       allowed_tags.insert("path");
 
-      metadata_cleaner.tags(allowed_tags).add_tag_attributes(
-        "path",
-        &[
-          "stroke",
-          "fill",
-          "stroke-linecap",
-          "stroke-linejoin",
-          "stroke-width",
-          "d",
-        ],
-      );
+      metadata_cleaner
+        .tags(allowed_tags)
+        .add_tag_attributes("svg", &["viewBox"])
+        .add_tag_attributes(
+          "path",
+          &[
+            "stroke",
+            "fill",
+            "stroke-linecap",
+            "stroke-linejoin",
+            "stroke-width",
+            "d",
+          ],
+        );
 
       let metadata = match &comment.metadata {
         CommentMetadata::Video { timestamp, drawing } => CommentMetadata::Video {
