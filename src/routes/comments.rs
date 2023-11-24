@@ -61,7 +61,7 @@ pub async fn create(
           "stroke",
           "fill",
           "stroke-linecap",
-          "troke-linejoin",
+          "stroke-linejoin",
           "stroke-width",
           "d",
         ],
