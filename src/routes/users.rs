@@ -21,6 +21,8 @@ use serde_json::json;
 use std::collections::HashMap;
 use validator::{Validate, ValidationError, ValidationErrors};
 
+const SALES_RECIPIENTS: [&str; 2] = ["eugeniodepalo@gmail.com", "matteodepalo@gmail.com"];
+
 #[derive(Deserialize, JsonSchema, Validate)]
 pub struct UpdateUserRequest {
   #[validate(length(min = 2))]
@@ -124,13 +126,12 @@ pub async fn create(
       "subject": "Someone has signed up!",
       "title": format!("{} has signed up to Ranklab", name),
       "body": format!("Their email is: {}", email),
+      "name": "Ranklab"
     }),
-    vec![Recipient::new(
-      "sales@ranklab.gg".to_owned(),
-      json!({
-        "name": "Ranklab",
-      }),
-    )],
+    SALES_RECIPIENTS
+      .iter()
+      .map(|email| Recipient::new(email.to_string(), json!({})))
+      .collect::<Vec<Recipient>>(),
   );
 
   if *PROFILE == RELEASE_PROFILE {
