@@ -5,16 +5,11 @@
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
-    }
-  ],
-  "hostRules": [
+    },
     {
-      "matchHost": "ghcr.io",
-      "hostType": "docker",
-      "username": "eugeniodepalo",
-      "encrypted": {
-        "password": "wcFMA/xDdHCJBTolAQ/7BH9hfIhnUkP8+zvQasLCgHq2kylBT2eW+GmQ8k1TTgExOtcp7GHgzgHqnId4IL18WkfQUlsWY/0SfQAjbz+IdSGym7UWLBtd7oC7bS9JcyicYK+3qwjbmTYiJ+jcoU/0iYjeGAKB0fEsxBVydaqi8wgmfCQ7bsnIZ/wCgu3bYeOs3XpR7QwQBoc4Gknzn0XVQpBB70MYSPUewOtXcwfvwjxcobh5Eb8zPSml0D3Cfyq5nGWGZajrB4XjmXM2GzXT9hZdaEajAJlM9rgYRuoMIKkpscaKIoPHLdvkETFol7atCyIhn3/cVUuT0krvm7bQpfUt5Sr3VQms/Sl5cFC9HAVJnQK3kTmRoQbfntHWe7lPhTtMq8XgpvfQ87jNRuuyGdmxuIPZQpBLLkZieDSTlTiPWCkciqWbxHWLoudw7z861U5vKyEmS1ITMdNTXUhJONwyy+9yvxMeiBAJe+1XnEyKPeGr+iyf2fmvHfOvGZhcigGLw9/AmDStAGhgRaC08VPYSQcqv4aDazxbQmyDBRl10U5WrA9COw3m0N8EvJXRJFQcCYacR6Hfwdzz2pXOmDe7E7VqThKiK53BUFvlFm8MuTTjvvLjKxDaUgot5Juh8Qj45tLH+/hZ3QXvRx8enNwxLWwAn7IDSBf5ow+XRIm9JHGu8dtNU8kay/xhyQfSfQF6bz2kLlZdtWimtjGuUddl30mHKoWtWU/IZOXFXKAC3lLNTvQWG7vYgbqVQ/ZFR5cyYOY7prF9yUpuXbUcECueHpugW1wWhiNpZ7b2015rH++8HItsIkPVXt/dHtl1voBh4H/9vhVoad2CQQ3dfkZ9/QyIK9cEYHQaMcsi"
-      }
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["ghcr.io/ranklab-gaming/ranklab-devcontainer"],
+      "enabled": false
     }
   ]
 }
