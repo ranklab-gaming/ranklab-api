@@ -22,7 +22,7 @@ html2text = "0.6.0"
 hyper = "1.0.1"
 hyper-tls = "0.5.0"
 itertools = "0.12.0"
-jsonwebtoken = "9.1.0"
+jsonwebtoken = "9.2.0"
 lazy_static = "1.4.0"
 okapi = { git = "https://github.com/ranklab-gaming/okapi" }
 rand = "0.8.5"
