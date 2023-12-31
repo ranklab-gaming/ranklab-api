@@ -6,7 +6,7 @@ version = "0.1.0"
 
 [dependencies]
 ammonia = "3.3.0"
-anyhow = "1.0.77"
+anyhow = "1.0.78"
 async-mutex = "1.4.0"
 bcrypt = "0.15.0"
 derive_builder = "0.12.0"
